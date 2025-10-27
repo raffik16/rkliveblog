@@ -15,6 +15,8 @@ Probably the most feature-rich Next.js markdown blogging template out there. Eas
 
 Check out the documentation below to get started.
 
+**NEW: Voice-Based Blogging with Claude Code** - See [Claude.md](./Claude.md) for a complete guide on creating blog posts quickly using Claude Code with voice dictation. Perfect for on-the-fly posting!
+
 Facing issues? Check the [FAQ page](https://github.com/timlrx/tailwind-nextjs-starter-blog/wiki) and do a search on past issues. Feel free to open a new issue if none has been posted previously.
 
 Feature request? Check the past discussions to see if it has been brought up previously. Otherwise, feel free to start a new discussion thread. All ideas are welcomed!
