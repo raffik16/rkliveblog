@@ -1,13 +1,13 @@
 /** @type {import("pliny/config").PlinyConfig } */
 const siteMetadata = {
-  title: 'Next.js Starter Blog',
-  author: 'Tails Azimuth',
-  headerTitle: 'TailwindBlog',
-  description: 'A blog created with Next.js and Tailwind.css',
+  title: 'rkRanched - Daily Moments & Insights',
+  author: 'Raffik Keklikian',
+  headerTitle: 'rkRanched',
+  description: 'Daily perspectives and authentic moments from everyday life. Sharing thoughts, experiences, and insights as they happen.',
   language: 'en-us',
   theme: 'system', // system, dark or light
-  siteUrl: 'https://tailwind-nextjs-starter-blog.vercel.app',
-  siteRepo: 'https://github.com/timlrx/tailwind-nextjs-starter-blog',
+  siteUrl: 'https://rkliveblog.vercel.app',
+  siteRepo: 'https://github.com/raffik16/rkliveblog',
   siteLogo: `${process.env.BASE_PATH || ''}/static/images/logo.png`,
   socialBanner: `${process.env.BASE_PATH || ''}/static/images/twitter-card.png`,
   github: 'https://github.com/raffik16',
