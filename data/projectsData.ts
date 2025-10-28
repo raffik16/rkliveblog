@@ -7,8 +7,14 @@ interface Project {
 
 const projectsData: Project[] = [
   {
+    title: 'Hudson Artists',
+    description: `Hudson Artists is a full-service creative editorial and post-production house located in downtown Detroit. Their talented team offers expert editorial, color grading, VFX/finishing (Flame), sound design, and motion graphics. Specializing in commercials and branded content, particularly within the automotive sector (working with clients like Ford and Chevrolet), they partner closely with top agencies and brands. Hudson Artists provides a collaborative environment focused on delivering high-level creative execution. Their beautiful site leverages Simian API integration to showcase their impressive portfolio of work.`,
+    imgSrc: 'https://gvoijz4507.ufs.sh/f/AVhJO3buWf1cQaYmNL5z0Sm4knhlpxseJCfEc78WUDjzdRX1',
+    href: 'https://hudsonartists.tv/',
+  },
+  {
     title: 'Nu Context',
-    description: `Nu Context is a dynamic and innovative production company, characterized by its dedication to outstanding work and the creative individuals behind it. Since 2006, they have transformed the 'impossible' into a realm of possibilities, driven by a culture of creativity and radical collaboration. Featuring a diverse range of directors and a proactive production team, Nu Context stands out for its commitment to elevating campaigns and bringing groundbreaking ideas to life. Their portfolio includes notable projects like campaigns for The Oscars, Volvo, The Kardashians, and Dancing with the Stars, showcasing their versatility and unique approach to production.`,
+    description: `Nu Context is a dynamic creative production company known for innovative solutions and radical collaboration since 2006. Specializing in turning challenging concepts into reality, their diverse roster of directors and proactive production team excel at elevating campaigns. Explore their portfolio featuring high-profile work for The Oscars, Volvo, The Kardashians, and Dancing with the Stars, showcasing their versatility in producing groundbreaking content.`,
     imgSrc: 'https://rafficdn.vercel.app/_vercel/image?url=images/nucontext.jpg&w=768&q=100',
     href: 'https://nucontext.com',
   },
@@ -20,7 +26,7 @@ const projectsData: Project[] = [
   },
   {
     title: 'Ember',
-    description: `Ember's mega menu, a bespoke creation for both desktop and mobile, exemplifies the brand's ethos of precision and elegance. The custom-built navigation system reflects Ember's innovative spirit, offering users a fluid journey through their temperature control universe. From the Ember Mug to the pioneering Baby Bottle System, the mega menu is a portal to a world where design and technology converge, ensuring every user interaction is as refined and satisfying as Ember's promise of the perfect temperature experience.`,
+    description: `Discover Ember's innovative temperature control solutions with ease using our custom-designed mega menu. Optimized for both desktop and mobile devices, this intuitive navigation system provides a seamless user experience. Effortlessly browse our product lines, from the iconic Ember Mug to the advanced Baby Bottle System. Reflecting Ember's dedication to precision engineering and elegant design, our mega menu helps you quickly find the perfect temperature technology for your life.`,
     imgSrc: 'https://rafficdn.vercel.app/_vercel/image?url=images/ember3.png&w=768&q=100',
     href: 'https://ember.com',
   },
