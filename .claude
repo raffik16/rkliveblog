@@ -1,0 +1,900 @@
+# rkRanched Blog - Claude Code Standards & Configuration
+
+This file defines the baseline standards for creating and managing blog posts in the rkRanched blog repository. All blog posts must adhere to these conventions to ensure consistency, proper SEO, and optimal user experience.
+
+---
+
+## Quick Start: Creating a Blog Post
+
+### Voice Command Template
+```
+"Create a blog post titled '[TITLE]' about [TOPIC]. Tag it with [tag1, tag2, tag3]."
+```
+
+Claude will automatically:
+1. Generate kebab-case filename from title
+2. Create MDX file in `/data/blog/`
+3. Add proper frontmatter with current date (2025-11-02 format)
+4. Apply default values for unspecified fields
+5. Format content with proper structure
+
+---
+
+## File Standards
+
+### Location & Naming
+- **Directory**: `/data/blog/`
+- **Format**: `kebab-case-title.mdx`
+- **Rules**:
+  - Lowercase only
+  - Hyphens for spaces
+  - No special characters except hyphens
+  - Must end with `.mdx` extension
+
+**Examples:**
+- ✅ `understanding-react-hooks.mdx`
+- ✅ `my-weekend-project-2025.mdx`
+- ❌ `Understanding_React_Hooks.mdx` (uppercase, underscores)
+- ❌ `my-post.md` (wrong extension)
+
+### Nested Routes (Optional)
+For multi-part series:
+```
+/data/blog/
+└── series-name/
+    ├── part-1-introduction.mdx
+    └── part-2-advanced.mdx
+```
+
+---
+
+## Frontmatter Standards
+
+### Default Template (Copy & Use)
+```yaml
+---
+title: 'Your Post Title Here'
+date: '2025-11-02'
+tags: ['tag1', 'tag2', 'tag3']
+draft: false
+summary: 'Brief 150-200 character description for SEO and social media previews.'
+authors: ['default']
+layout: PostLayout
+---
+```
+
+### Field Reference Table
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `title` | string | ✅ Yes | - | Post title (appears in heading, SEO, social cards) |
+| `date` | date | ✅ Yes | - | Publication date in YYYY-MM-DD format |
+| `tags` | array | ❌ No | `[]` | Lowercase kebab-case tags: `['next-js', 'react']` |
+| `draft` | boolean | ❌ No | `false` | Set `true` to hide from production builds |
+| `summary` | string | ⭐ Recommended | - | 150-200 chars for SEO and social sharing |
+| `authors` | array | ❌ No | `['default']` | Author slugs: `['default']` or `['sparrowhawk']` |
+| `layout` | string | ❌ No | `PostLayout` | Layout template (see Layout Guide below) |
+| `lastmod` | date | ❌ No | - | Last modified date (YYYY-MM-DD) for SEO |
+| `images` | JSON array | ❌ No | - | Featured images: `['/static/images/hero.jpg']` |
+| `bibliography` | string | ❌ No | - | BibTeX file for citations: `references-data.bib` |
+| `canonicalUrl` | string | ❌ No | - | Canonical URL if content is republished |
+
+### Field Validation Rules
+
+**Title:**
+- Required, non-empty string
+- Use title case or sentence case
+- Keep under 60 characters for SEO
+
+**Date:**
+- Required, format: `YYYY-MM-DD`
+- Always use current date: `2025-11-02`
+- No timestamps, just date
+
+**Tags:**
+- Array format: `['tag1', 'tag2', 'tag3']`
+- Lowercase kebab-case only
+- 3-5 tags recommended
+- Use existing tags when possible (see Tag Standards)
+- Single quotes inside array
+
+**Draft:**
+- Boolean: `true` or `false`
+- Default: `false` (published)
+- Set `true` for work-in-progress posts
+
+**Summary:**
+- String, 150-200 characters ideal
+- Used in blog listings, SEO meta description, social cards
+- Should be compelling and descriptive
+- No markdown formatting in summary
+
+**Authors:**
+- Array of author slugs
+- Available: `['default']` (Raffik Keklikian), `['sparrowhawk']`
+- Single author: `['default']`
+- Multiple: `['default', 'sparrowhawk']`
+
+**Images:**
+- JSON array format: `['/static/images/image.jpg']`
+- First image is featured/hero image
+- Must start with `/static/images/`
+- Store files in `/public/static/images/`
+
+---
+
+## Layout Guide
+
+### Available Layouts
+
+#### 1. PostLayout (Default)
+**When to use:**
+- Standard blog posts
+- Technical articles
+- Tutorials
+- Most content
+
+**Features:**
+- 2-column layout with sidebar
+- Author info with avatar
+- Publication date and reading time
+- Table of contents in sidebar
+- Tags displayed
+- Previous/Next navigation
+- "Discuss on Twitter" link
+
+**Frontmatter:**
+```yaml
+layout: PostLayout  # or omit (it's the default)
+```
+
+#### 2. PostSimple
+**When to use:**
+- Essays and long-form content
+- Minimal distraction reading
+- Text-focused posts
+- Personal reflections
+
+**Features:**
+- Single column, centered
+- Minimal UI
+- No sidebar
+- Focus on content only
+- Previous/Next navigation
+
+**Frontmatter:**
+```yaml
+layout: PostSimple
+```
+
+#### 3. PostBanner
+**When to use:**
+- Photo essays
+- Visual-heavy content
+- Posts with hero images
+- Image-centric articles
+
+**Features:**
+- Large banner/hero image at top
+- Visual-first design
+- Image from `images` field displayed prominently
+
+**Frontmatter:**
+```yaml
+layout: PostBanner
+images: ['/static/images/hero-image.jpg']  # Required for banner
+```
+
+---
+
+## Tag Standards
+
+### Current Active Tags
+Reference `/app/tag-data.json` for counts. Active tags include:
+- `claude-code`
+- `blogging`
+- `workflow`
+- `ai`
+- `next-js`
+- `math`
+- `ols`
+- `github`
+- `guide`
+- `multi-author`
+- `feature`
+
+### Tag Conventions
+1. **Format**: Lowercase kebab-case
+   - ✅ `next-js`, `react-hooks`, `web-development`
+   - ❌ `Next.js`, `React_Hooks`, `webDevelopment`
+
+2. **Quantity**: 3-5 tags per post (recommended)
+
+3. **Reuse**: Prefer existing tags to maintain consistency
+
+4. **Array Syntax**: `['tag1', 'tag2', 'tag3']`
+
+5. **Auto-Generation**: Tags create:
+   - Tag pages at `/tags/tag-name`
+   - Tag counts in listings
+   - Search index entries
+
+### Tag Categories (Suggestions)
+- **Technology**: `next-js`, `react`, `typescript`, `python`
+- **Topics**: `ai`, `math`, `web-development`, `design`
+- **Content Type**: `tutorial`, `guide`, `essay`, `reference`
+- **Meta**: `blogging`, `workflow`, `tools`
+
+---
+
+## Content Structure Standards
+
+### Standard Blog Post Template
+```markdown
+---
+frontmatter here
+---
+
+# Introduction / Opening
+
+Brief introduction that hooks the reader and establishes context.
+
+## Main Section 1
+
+Content for first major section. Use clear headings.
+
+### Subsection (if needed)
+
+More detailed content under main section.
+
+## Main Section 2
+
+Continue with logical flow.
+
+## Main Section 3
+
+Additional sections as needed.
+
+## Conclusion
+
+Wrap up the post with key takeaways or next steps.
+
+---
+
+## Resources (Optional)
+
+- [Link 1](url)
+- [Link 2](url)
+```
+
+### Content Best Practices
+
+**Headings:**
+- H1 (`#`) for introduction/opening (once at top)
+- H2 (`##`) for main sections
+- H3 (`###`) for subsections
+- No H4+ unless absolutely necessary
+
+**Paragraphs:**
+- Keep paragraphs 2-4 sentences
+- One idea per paragraph
+- Blank line between paragraphs
+
+**Lists:**
+- Ordered lists for sequential steps
+- Unordered lists for non-sequential items
+- Keep list items concise
+
+**Code Blocks:**
+- Always specify language
+- Use filename syntax for context: ` ```javascript:app.js `
+- Keep code examples focused and minimal
+
+**Emphasis:**
+- **Bold** for important terms or emphasis
+- *Italic* for subtle emphasis or titles
+- `Inline code` for code, filenames, commands
+
+---
+
+## Image Standards
+
+### Storage & Paths
+- **Storage location**: `/public/static/images/`
+- **Reference format**: `/static/images/filename.jpg`
+- **Subdirectories allowed**: `/static/images/blog/post-name/image.jpg`
+
+### Image Usage in MDX
+```markdown
+![Descriptive alt text](/static/images/image-name.jpg)
+```
+
+### Featured Images (Frontmatter)
+```yaml
+images: ['/static/images/featured-image.jpg']
+```
+- Used for Open Graph/Twitter cards
+- PostBanner layout displays as hero image
+- First image in array is primary
+
+### Image Best Practices
+- Use descriptive alt text for accessibility
+- Optimize images before adding (compress, resize)
+- Use appropriate formats (JPG for photos, PNG for graphics)
+- Keep file sizes reasonable (<500KB recommended)
+
+---
+
+## MDX Features & Components
+
+### Available Markdown Features
+
+**Text Formatting:**
+```markdown
+**Bold text**
+*Italic text*
+`Inline code`
+~~Strikethrough~~ (via GitHub Flavored Markdown)
+```
+
+**Links:**
+```markdown
+[Link text](https://example.com)
+```
+
+**Blockquotes:**
+```markdown
+> This is a blockquote
+> It can span multiple lines
+```
+
+**Tables:**
+```markdown
+| Column 1 | Column 2 | Column 3 |
+|----------|----------|----------|
+| Data 1   | Data 2   | Data 3   |
+```
+
+### Code Blocks
+````markdown
+```language:filename.ext
+code here
+```
+````
+
+**Examples:**
+````markdown
+```javascript:app.js
+function greet(name) {
+  return `Hello, ${name}!`;
+}
+```
+
+```python:main.py
+def greet(name):
+    return f"Hello, {name}!"
+```
+
+```bash
+npm install
+yarn dev
+```
+````
+
+**Supported languages:**
+- `javascript`, `typescript`, `jsx`, `tsx`
+- `python`, `java`, `go`, `rust`
+- `bash`, `shell`, `sh`
+- `css`, `scss`, `html`
+- `json`, `yaml`, `markdown`
+- Many more via Prism
+
+### Math Equations (KaTeX)
+
+**Inline math:**
+```markdown
+The equation $E = mc^2$ is Einstein's famous formula.
+```
+
+**Block math:**
+```markdown
+$$
+\frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
+$$
+```
+
+**Example:**
+```markdown
+The quadratic formula:
+
+$$
+x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
+$$
+
+Where $a \neq 0$.
+```
+
+### Available MDX Components
+
+Import and use these components in MDX:
+
+**Image Component:**
+```jsx
+<Image src="/static/images/photo.jpg" alt="Description" width={800} height={600} />
+```
+
+**Table of Contents (Inline):**
+```jsx
+<TOCInline toc={props.toc} exclude="Overview" />
+```
+
+**Newsletter Form:**
+```jsx
+<BlogNewsletterForm />
+```
+
+### Citations & Bibliography
+
+For academic/research posts:
+
+1. Add BibTeX file to `/data/` directory
+2. Reference in frontmatter:
+```yaml
+bibliography: references-data.bib
+```
+3. Cite in content using standard citation syntax
+
+---
+
+## Author Configuration
+
+### Available Authors
+
+**Default Author (Primary):**
+```yaml
+authors: ['default']
+```
+- Name: Raffik Keklikian
+- Avatar: `/static/images/avatar.png`
+- Occupation: Developer & Writer
+- Company: rkRanched
+- Social: X, LinkedIn, GitHub, Instagram
+
+**Sparrowhawk (Example):**
+```yaml
+authors: ['sparrowhawk']
+```
+- Name: Sparrow Hawk
+- Example/demo author
+
+### Multiple Authors
+```yaml
+authors: ['default', 'sparrowhawk']
+```
+
+### Adding New Authors
+Create file: `/data/authors/author-slug.mdx`
+
+```yaml
+---
+name: 'Full Name'
+avatar: '/static/images/author-avatar.jpg'
+occupation: 'Job Title'
+company: 'Company Name'
+email: 'email@example.com'
+twitter: 'https://twitter.com/username'
+linkedin: 'https://linkedin.com/in/username'
+github: 'https://github.com/username'
+---
+
+Brief bio here (optional).
+```
+
+---
+
+## Draft & Publishing Workflow
+
+### Draft Posts
+```yaml
+draft: true
+```
+- Hidden from production builds
+- Visible in development (`yarn dev`)
+- Not included in tag counts or search index
+- Won't appear in blog listings in production
+
+### Publishing Posts
+```yaml
+draft: false
+```
+- Visible in production
+- Included in all listings and indexes
+- Tag counts updated
+- Search index includes content
+
+### Workflow
+1. Create post with `draft: true`
+2. Write and refine content locally
+3. Preview with `yarn dev`
+4. When ready, set `draft: false`
+5. Build and deploy: `yarn build && yarn start`
+
+---
+
+## Voice Command Templates
+
+### Basic Post Creation
+```
+"Create a blog post titled '[TITLE]' about [TOPIC]."
+```
+
+### Post with Tags
+```
+"Create a blog post titled '[TITLE]' about [TOPIC]. Tag it with [tag1], [tag2], and [tag3]."
+```
+
+### Draft Post
+```
+"Create a draft blog post titled '[TITLE]' about [TOPIC]."
+```
+
+### Specific Layout
+```
+"Create a blog post titled '[TITLE]' using PostSimple layout about [TOPIC]."
+```
+
+### Technical Post with Code
+```
+"Create a technical blog post titled '[TITLE]' about [TOPIC] with code examples in [LANGUAGE]. Tag it with [tags]."
+```
+
+### Multi-Section Post
+```
+"Create a blog post titled '[TITLE]' with sections on [SECTION1], [SECTION2], and [SECTION3]. Tag it with [tags]."
+```
+
+### Essay/Long-Form
+```
+"Create a simple essay titled '[TITLE]' about [TOPIC]. Use PostSimple layout and tag it with [tags]."
+```
+
+---
+
+## Automated Standards (Claude Should Apply)
+
+### When Creating Posts, Always:
+
+1. **Generate proper filename**:
+   - Convert title to kebab-case
+   - Lowercase only
+   - Remove special characters
+   - Add `.mdx` extension
+
+2. **Set date to current date**: `2025-11-02`
+
+3. **Apply defaults for omitted fields**:
+   - `layout: PostLayout`
+   - `authors: ['default']`
+   - `draft: false`
+   - `tags: []` (but recommend user provides tags)
+
+4. **Validate frontmatter**:
+   - Required fields present
+   - Correct date format
+   - Tags in array format and kebab-case
+   - Images paths start with `/static/images/`
+
+5. **Structure content properly**:
+   - Clear introduction
+   - Logical section headings
+   - Proper markdown formatting
+   - Code blocks with language specified
+
+6. **Generate compelling summary**:
+   - 150-200 characters
+   - Descriptive and engaging
+   - No markdown formatting
+
+### When User Provides:
+
+**Just a title:**
+- Create file with title
+- Generate slug
+- Add current date
+- Ask for tags or use empty array
+- Create basic structure with placeholder content
+
+**Title + content description:**
+- Create full post with proper structure
+- Infer appropriate tags from content
+- Generate summary from content
+- Structure content logically
+
+**Title + tags + content:**
+- Create complete post
+- Use provided tags (convert to kebab-case if needed)
+- Generate summary
+- Apply proper formatting
+
+**Multiple posts:**
+- Create separate files for each
+- Apply standards to each post
+- Ensure unique slugs
+
+---
+
+## Validation Checklist
+
+Before considering a post complete, verify:
+
+- [ ] Frontmatter properly formatted (valid YAML)
+- [ ] Required fields present: `title`, `date`
+- [ ] Date in correct format: `YYYY-MM-DD`
+- [ ] Tags in array format and kebab-case: `['tag1', 'tag2']`
+- [ ] Summary present and 150-200 characters
+- [ ] Images paths correct (start with `/static/images/`)
+- [ ] Draft status set correctly (`true` or `false`)
+- [ ] Layout appropriate for content type
+- [ ] Authors field present
+- [ ] Content has clear structure with headings
+- [ ] Code blocks have language specified
+- [ ] Links are valid and properly formatted
+- [ ] Alt text provided for all images
+- [ ] No markdown syntax errors
+- [ ] File saved in `/data/blog/` with `.mdx` extension
+- [ ] Filename is kebab-case
+
+---
+
+## Development Commands
+
+```bash
+# Start development server
+yarn dev
+
+# Build for production
+yarn build
+
+# Start production server (after build)
+yarn start
+
+# Run linter
+yarn lint
+
+# Format code
+yarn format
+```
+
+### Testing Posts Locally
+
+1. Start dev server: `yarn dev`
+2. Navigate to: `http://localhost:3000/blog`
+3. Find your post in listings
+4. Click to view full post
+5. Verify formatting, images, layout
+6. Check tag pages: `http://localhost:3000/tags/tag-name`
+
+---
+
+## SEO & Metadata
+
+### Auto-Generated SEO Elements
+- **Structured data**: JSON-LD for articles
+- **Open Graph**: For social sharing (Facebook, LinkedIn)
+- **Twitter Cards**: For Twitter sharing
+- **Reading time**: Calculated automatically
+- **Table of Contents**: Generated from headings
+
+### Optimize SEO By:
+1. Writing compelling titles (<60 chars)
+2. Adding descriptive summaries (150-200 chars)
+3. Using relevant tags
+4. Including featured images
+5. Using proper heading hierarchy
+6. Adding alt text to images
+7. Setting canonical URLs if republishing
+
+---
+
+## Error Prevention
+
+### Common Issues & Solutions
+
+**Issue**: Post not appearing
+- **Cause**: `draft: true` set
+- **Fix**: Set `draft: false`
+
+**Issue**: Build errors
+- **Cause**: Invalid YAML in frontmatter
+- **Fix**: Check for:
+  - Missing quotes around strings with special chars
+  - Incorrect array syntax
+  - Invalid date format
+  - Unclosed strings
+
+**Issue**: Images not loading
+- **Cause**: Incorrect path
+- **Fix**: Ensure path starts with `/static/images/`
+- **Fix**: Verify file exists in `/public/static/images/`
+
+**Issue**: Tags not working
+- **Cause**: Wrong format
+- **Fix**: Use array syntax: `['tag1', 'tag2']`
+- **Fix**: Convert to kebab-case lowercase
+
+**Issue**: Code blocks not highlighting
+- **Cause**: Missing language specification
+- **Fix**: Add language: ` ```javascript `
+
+**Issue**: Math not rendering
+- **Cause**: Not using KaTeX syntax
+- **Fix**: Use `$inline$` or `$$block$$` syntax
+
+---
+
+## Site Configuration Reference
+
+**Site Details:**
+- Title: "rkRanched - Daily Moments & Insights"
+- Author: Raffik Keklikian
+- URL: `https://rkliveblog.vercel.app`
+
+**Features Enabled:**
+- Comments: Giscus (GitHub Discussions)
+- Newsletter: Buttondown
+- Search: kbar
+- Analytics: Umami
+
+**Configuration File:** `/data/siteMetadata.js`
+
+---
+
+## Quick Reference: Directory Structure
+
+```
+rkliveblog/
+├── .claude                           ← This file
+├── data/
+│   ├── blog/                         ← CREATE POSTS HERE
+│   │   ├── your-post.mdx            ← Individual post
+│   │   ├── another-post.mdx         ← Another post
+│   │   └── series-name/             ← Multi-part posts
+│   │       ├── part-1.mdx
+│   │       └── part-2.mdx
+│   ├── authors/                      ← Author profiles
+│   │   ├── default.mdx              ← Default author (Raffik)
+│   │   └── sparrowhawk.mdx          ← Example author
+│   └── siteMetadata.js               ← Site configuration
+├── public/
+│   └── static/
+│       └── images/                   ← PUT IMAGES HERE
+├── app/
+│   ├── blog/                         ← Blog pages (auto-generated)
+│   └── tag-data.json                 ← Tag counts (auto-generated)
+├── layouts/
+│   ├── PostLayout.tsx                ← Default layout
+│   ├── PostSimple.tsx                ← Simple layout
+│   └── PostBanner.tsx                ← Banner layout
+└── components/
+    └── MDXComponents.tsx             ← Available MDX components
+```
+
+---
+
+## Example: Complete Blog Post
+
+**File:** `/data/blog/getting-started-with-nextjs.mdx`
+
+```markdown
+---
+title: 'Getting Started with Next.js in 2025'
+date: '2025-11-02'
+tags: ['next-js', 'react', 'tutorial']
+draft: false
+summary: 'A comprehensive guide to starting your first Next.js project, covering setup, routing, and deployment.'
+authors: ['default']
+layout: PostLayout
+---
+
+# Introduction to Next.js
+
+Next.js has become the go-to framework for React developers who want to build fast, production-ready applications. In this guide, I'll walk you through everything you need to get started.
+
+## Why Next.js?
+
+Next.js offers several key advantages:
+
+- **Server-side rendering** for improved performance
+- **File-based routing** for intuitive navigation
+- **API routes** for backend functionality
+- **Built-in optimization** for images, fonts, and more
+
+## Setting Up Your First Project
+
+Getting started is simple. Open your terminal and run:
+
+```bash
+npx create-next-app@latest my-app
+cd my-app
+yarn dev
+```
+
+This creates a new Next.js project with all the latest features enabled.
+
+## Understanding the Project Structure
+
+Your new project has this structure:
+
+```
+my-app/
+├── app/           # App router (Next.js 13+)
+├── public/        # Static files
+├── components/    # React components
+└── package.json   # Dependencies
+```
+
+## Creating Your First Page
+
+In Next.js 13+, pages are created in the `app` directory. Create a new file:
+
+```typescript:app/about/page.tsx
+export default function About() {
+  return (
+    <div>
+      <h1>About Us</h1>
+      <p>Welcome to our Next.js app!</p>
+    </div>
+  );
+}
+```
+
+Visit `/about` to see your new page.
+
+## Deployment
+
+Deploy your app to Vercel with one command:
+
+```bash
+yarn build
+vercel deploy
+```
+
+## Conclusion
+
+You now have a solid foundation for building with Next.js. Experiment with routing, components, and API routes to build something amazing!
+
+---
+
+## Resources
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Next.js GitHub](https://github.com/vercel/next.js)
+- [Learn Next.js](https://nextjs.org/learn)
+```
+
+---
+
+## Version History
+
+- **v1.0** (2025-11-02): Initial .claude configuration file created
+  - Established all baseline standards from existing blog structure
+  - Defined frontmatter requirements and validation rules
+  - Documented layouts, tags, images, and MDX features
+  - Added voice command templates and automation rules
+
+---
+
+## Support & Documentation
+
+- **Next.js**: https://nextjs.org/docs
+- **Contentlayer**: https://contentlayer.dev
+- **MDX**: https://mdxjs.com
+- **Tailwind CSS**: https://tailwindcss.com/docs
+- **KaTeX**: https://katex.org
+- **Claude Code**: https://docs.claude.com/en/docs/claude-code
+
+---
+
+**Last Updated**: 2025-11-02
+**Maintained By**: Raffik Keklikian
+**Repository**: rkliveblog
