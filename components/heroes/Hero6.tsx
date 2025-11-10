@@ -1,12 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import {
-  CountUpAnimation,
-  FloatingElement,
-  GradientFlow,
-  StaggeredText,
-} from '../animations'
+import { CountUpAnimation, FloatingElement, GradientFlow, StaggeredText } from '../animations'
 
 export default function Hero6() {
   return (
@@ -20,7 +15,7 @@ export default function Hero6() {
         {/* Main Hero Card - Ultra Frosted Glass */}
         <div className="relative overflow-hidden rounded-[2rem] border border-white/30 bg-white/10 p-6 shadow-2xl backdrop-blur-3xl sm:rounded-[2.5rem] sm:p-12 lg:p-16">
           {/* Vibrant Gradient Border Glow */}
-          <div className="pointer-events-none absolute inset-0 rounded-[2rem] bg-gradient-to-r from-primary-500/20 via-purple-500/20 to-cyan-500/20 opacity-50 blur-xl sm:rounded-[2.5rem]" />
+          <div className="from-primary-500/20 pointer-events-none absolute inset-0 rounded-[2rem] bg-gradient-to-r via-purple-500/20 to-cyan-500/20 opacity-50 blur-xl sm:rounded-[2.5rem]" />
 
           {/* Inner Content */}
           <div className="relative">
@@ -28,11 +23,11 @@ export default function Hero6() {
             <div className="mb-8 text-center sm:mb-12 lg:mb-16">
               <StaggeredText
                 text="Daily Moments"
-                className="mb-2 text-[clamp(2rem,8vw,5rem)] font-bold leading-tight text-white drop-shadow-lg sm:mb-4 sm:text-6xl lg:text-8xl"
+                className="mb-2 text-[clamp(2rem,8vw,5rem)] leading-tight font-bold text-white drop-shadow-lg sm:mb-4 sm:text-6xl lg:text-8xl"
               />
               <StaggeredText
                 text="& Insights"
-                className="bg-gradient-to-r from-primary-400 via-orange-300 to-primary-500 bg-clip-text text-[clamp(2rem,8vw,5rem)] font-bold leading-tight text-transparent drop-shadow-lg sm:text-6xl lg:text-8xl"
+                className="from-primary-400 to-primary-500 bg-gradient-to-r via-orange-300 bg-clip-text text-[clamp(2rem,8vw,5rem)] leading-tight font-bold text-transparent drop-shadow-lg sm:text-6xl lg:text-8xl"
                 delay={0.3}
               />
               <p className="mx-auto mt-4 max-w-3xl px-2 text-base leading-relaxed text-white/90 sm:mt-8 sm:text-xl lg:text-2xl">
@@ -47,7 +42,7 @@ export default function Hero6() {
               <FloatingElement duration={3.5} yOffset={15} delay={0}>
                 <div className="group relative overflow-hidden rounded-2xl border border-white/40 bg-gradient-to-br from-white/20 to-white/5 p-4 shadow-xl backdrop-blur-2xl transition-all duration-500 hover:scale-105 hover:border-white/60 sm:rounded-3xl sm:p-6 lg:rounded-[2rem] lg:p-8">
                   {/* Card Glow on Hover */}
-                  <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-primary-500/0 to-orange-500/0 opacity-0 transition-opacity duration-500 group-hover:opacity-30 sm:rounded-3xl lg:rounded-[2rem]" />
+                  <div className="from-primary-500/0 pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br to-orange-500/0 opacity-0 transition-opacity duration-500 group-hover:opacity-30 sm:rounded-3xl lg:rounded-[2rem]" />
 
                   <div className="relative">
                     <CountUpAnimation
@@ -121,9 +116,9 @@ export default function Hero6() {
             {/* CTA Buttons - Liquid Glass Style */}
             <div className="flex flex-col justify-center gap-3 sm:flex-row sm:gap-6">
               <Link href="/blog" className="w-full sm:w-auto">
-                <button className="group relative w-full overflow-hidden rounded-2xl border border-white/30 bg-gradient-to-r from-primary-500 to-orange-500 px-6 py-3 font-bold text-white shadow-2xl shadow-primary-500/50 backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:border-white/50 hover:shadow-primary-500/70 sm:px-10 sm:py-5">
+                <button className="group from-primary-500 shadow-primary-500/50 hover:shadow-primary-500/70 relative w-full overflow-hidden rounded-2xl border border-white/30 bg-gradient-to-r to-orange-500 px-6 py-3 font-bold text-white shadow-2xl backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:border-white/50 sm:px-10 sm:py-5">
                   <span className="relative z-10 text-sm sm:text-lg">Read Latest Posts</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary-600 to-orange-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  <div className="from-primary-600 absolute inset-0 bg-gradient-to-r to-orange-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                 </button>
               </Link>
 
@@ -138,11 +133,11 @@ export default function Hero6() {
 
         {/* Floating Accent Elements */}
         <FloatingElement duration={5} yOffset={30} delay={0}>
-          <div className="pointer-events-none absolute left-4 top-10 h-24 w-24 rounded-full bg-gradient-to-br from-primary-500/30 to-orange-500/30 blur-3xl sm:left-10 sm:top-20 sm:h-48 sm:w-48 lg:h-64 lg:w-64" />
+          <div className="from-primary-500/30 pointer-events-none absolute top-10 left-4 h-24 w-24 rounded-full bg-gradient-to-br to-orange-500/30 blur-3xl sm:top-20 sm:left-10 sm:h-48 sm:w-48 lg:h-64 lg:w-64" />
         </FloatingElement>
 
         <FloatingElement duration={6} yOffset={40} delay={1}>
-          <div className="pointer-events-none absolute bottom-10 right-4 h-24 w-24 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-500/30 blur-3xl sm:bottom-20 sm:right-10 sm:h-48 sm:w-48 lg:h-64 lg:w-64" />
+          <div className="pointer-events-none absolute right-4 bottom-10 h-24 w-24 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-500/30 blur-3xl sm:right-10 sm:bottom-20 sm:h-48 sm:w-48 lg:h-64 lg:w-64" />
         </FloatingElement>
       </div>
     </GradientFlow>
