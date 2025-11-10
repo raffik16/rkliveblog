@@ -21,18 +21,18 @@ export default function Hero6() {
             {/* Title Section */}
             <div className="mb-12 text-center sm:mb-16">
               <StaggeredText
-                text="Floating Data"
+                text="Daily Moments"
                 className="mb-4 text-5xl font-bold text-white drop-shadow-lg sm:text-6xl lg:text-8xl"
               />
               <StaggeredText
-                text="In Motion"
+                text="& Insights"
                 className="from-primary-400 to-primary-500 bg-gradient-to-r via-orange-300 bg-clip-text text-5xl font-bold text-transparent drop-shadow-lg sm:text-6xl lg:text-8xl"
                 delay={0.3}
               />
               <p className="mx-auto mt-8 max-w-3xl text-lg leading-relaxed text-white/90 sm:text-xl lg:text-2xl">
-                Experience the perfect fusion of elegant floating animations and dynamic data
-                visualization. Watch your metrics come alive with smooth count-ups on flowing
-                gradient backgrounds.
+                Welcome to my corner of the internet. Here I share authentic thoughts, everyday
+                experiences, and personal insights as they unfold. Join me on this journey of
+                continuous discovery and genuine storytelling.
               </p>
             </div>
 
@@ -45,13 +45,13 @@ export default function Hero6() {
 
                   <div className="relative">
                     <CountUpAnimation
-                      value={10000}
+                      value={147}
                       duration={2.5}
                       className="mb-2 block bg-gradient-to-br from-white to-white/80 bg-clip-text text-4xl font-black text-transparent sm:text-5xl lg:text-6xl"
                       suffix="+"
                     />
                     <p className="text-sm font-medium text-white/90 sm:text-base lg:text-lg">
-                      Happy Clients
+                      Posts Written
                     </p>
                   </div>
                 </div>
@@ -63,13 +63,13 @@ export default function Hero6() {
 
                   <div className="relative">
                     <CountUpAnimation
-                      value={500}
+                      value={365}
                       duration={2}
                       className="mb-2 block bg-gradient-to-br from-white to-white/80 bg-clip-text text-4xl font-black text-transparent sm:text-5xl lg:text-6xl"
                       suffix="+"
                     />
                     <p className="text-sm font-medium text-white/90 sm:text-base lg:text-lg">
-                      Projects Done
+                      Days Blogging
                     </p>
                   </div>
                 </div>
@@ -81,13 +81,13 @@ export default function Hero6() {
 
                   <div className="relative">
                     <CountUpAnimation
-                      value={98}
+                      value={1247}
                       duration={2.2}
                       className="mb-2 block bg-gradient-to-br from-white to-white/80 bg-clip-text text-4xl font-black text-transparent sm:text-5xl lg:text-6xl"
-                      suffix="%"
+                      suffix="+"
                     />
                     <p className="text-sm font-medium text-white/90 sm:text-base lg:text-lg">
-                      Success Rate
+                      Coffees Consumed
                     </p>
                   </div>
                 </div>
@@ -99,13 +99,13 @@ export default function Hero6() {
 
                   <div className="relative">
                     <CountUpAnimation
-                      value={15}
+                      value={23}
                       duration={1.8}
                       className="mb-2 block bg-gradient-to-br from-white to-white/80 bg-clip-text text-4xl font-black text-transparent sm:text-5xl lg:text-6xl"
                       suffix="+"
                     />
                     <p className="text-sm font-medium text-white/90 sm:text-base lg:text-lg">
-                      Years Experience
+                      Topics Explored
                     </p>
                   </div>
                 </div>
@@ -115,12 +115,12 @@ export default function Hero6() {
             {/* CTA Buttons - Liquid Glass Style */}
             <div className="flex flex-col justify-center gap-4 sm:flex-row sm:gap-6">
               <button className="group from-primary-500 shadow-primary-500/50 hover:shadow-primary-500/70 relative overflow-hidden rounded-2xl border border-white/30 bg-gradient-to-r to-orange-500 px-8 py-4 font-bold text-white shadow-2xl backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:border-white/50 sm:px-10 sm:py-5">
-                <span className="relative z-10 text-base sm:text-lg">View Dashboard</span>
+                <span className="relative z-10 text-base sm:text-lg">Read Latest Posts</span>
                 <div className="from-primary-600 absolute inset-0 bg-gradient-to-r to-orange-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               </button>
 
               <button className="group relative overflow-hidden rounded-2xl border border-white/40 bg-white/10 px-8 py-4 font-bold text-white shadow-xl backdrop-blur-2xl transition-all duration-300 hover:scale-105 hover:border-white/60 hover:bg-white/20 sm:px-10 sm:py-5">
-                <span className="relative z-10 text-base sm:text-lg">Learn More</span>
+                <span className="relative z-10 text-base sm:text-lg">Join the Journey</span>
               </button>
             </div>
           </div>
