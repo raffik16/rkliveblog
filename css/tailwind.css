@@ -7,34 +7,36 @@
 /* Core theme configuration */
 @theme {
   /* Font families */
-  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+  --font-sans:
+    var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
     'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
-  /* Colors */
-  /* Copied from https://tailwindcss.com/docs/theme#default-theme-variable-reference */
-  --color-primary-50: oklch(0.971 0.014 343.198);
-  --color-primary-100: oklch(0.948 0.028 342.258);
-  --color-primary-200: oklch(0.899 0.061 343.231);
-  --color-primary-300: oklch(0.823 0.12 346.018);
-  --color-primary-400: oklch(0.718 0.202 349.761);
-  --color-primary-500: oklch(0.656 0.241 354.308);
-  --color-primary-600: oklch(0.592 0.249 0.584);
-  --color-primary-700: oklch(0.525 0.223 3.958);
-  --color-primary-800: oklch(0.459 0.187 3.815);
-  --color-primary-900: oklch(0.408 0.153 2.432);
-  --color-primary-950: oklch(0.284 0.109 3.907);
+  /* Brand Colors - RK Ranched */
+  /* PRIMARY: Blaze Orange (#FF5B04) - Links, accents, interactive elements */
+  --color-primary-50: oklch(0.97 0.03 30);
+  --color-primary-100: oklch(0.94 0.06 30);
+  --color-primary-200: oklch(0.88 0.1 30);
+  --color-primary-300: oklch(0.8 0.15 30);
+  --color-primary-400: oklch(0.73 0.19 30);
+  --color-primary-500: oklch(0.67 0.22 30);
+  --color-primary-600: oklch(0.6 0.22 30);
+  --color-primary-700: oklch(0.52 0.2 30);
+  --color-primary-800: oklch(0.43 0.17 30);
+  --color-primary-900: oklch(0.35 0.14 30);
+  --color-primary-950: oklch(0.25 0.1 30);
 
-  --color-gray-50: oklch(0.985 0.002 247.839);
-  --color-gray-100: oklch(0.967 0.003 264.542);
-  --color-gray-200: oklch(0.928 0.006 264.531);
-  --color-gray-300: oklch(0.872 0.01 258.338);
-  --color-gray-400: oklch(0.707 0.022 261.325);
-  --color-gray-500: oklch(0.551 0.027 264.364);
-  --color-gray-600: oklch(0.446 0.03 256.802);
-  --color-gray-700: oklch(0.373 0.034 259.733);
-  --color-gray-800: oklch(0.278 0.033 256.848);
-  --color-gray-900: oklch(0.21 0.034 264.665);
-  --color-gray-950: oklch(0.13 0.028 261.692);
+  /* GRAY: Mirage (#16232A), Deep Sea Green (#075056), Wild Sand (#E4EEF0) */
+  --color-gray-50: oklch(0.98 0.005 220);
+  --color-gray-100: oklch(0.95 0.008 220);
+  --color-gray-200: oklch(0.9 0.01 220);
+  --color-gray-300: oklch(0.82 0.015 215);
+  --color-gray-400: oklch(0.68 0.02 210);
+  --color-gray-500: oklch(0.54 0.025 205);
+  --color-gray-600: oklch(0.43 0.03 202);
+  --color-gray-700: oklch(0.35 0.035 200);
+  --color-gray-800: oklch(0.27 0.03 205);
+  --color-gray-900: oklch(0.19 0.025 220);
+  --color-gray-950: oklch(0.14 0.02 230);
 
   /* Line heights */
   --line-height-11: 2.75rem;
