@@ -1,6 +1,6 @@
 'use client'
 
-import { Hero1, Hero2, Hero3, Hero4, Hero5 } from '@/components/heroes'
+import { Hero1, Hero2, Hero3, Hero4, Hero5, Hero6 } from '@/components/heroes'
 import { useState } from 'react'
 
 export default function HeroesShowcase() {
@@ -12,6 +12,7 @@ export default function HeroesShowcase() {
     { id: 3, name: 'Typography & Morphing', component: <Hero3 /> },
     { id: 4, name: 'Data Driven Design', component: <Hero4 /> },
     { id: 5, name: 'Parallax Universe', component: <Hero5 /> },
+    { id: 6, name: 'Floating Data In Motion (Best of 1 & 4)', component: <Hero6 /> },
   ]
 
   return (
@@ -81,6 +82,15 @@ export default function HeroesShowcase() {
               <li>✓ ParallaxScroll</li>
               <li>✓ FloatingElement</li>
               <li>✓ TiltCard</li>
+            </ul>
+          )}
+          {activeHero === 6 && (
+            <ul className="space-y-1 text-gray-300">
+              <li>✓ FloatingElement</li>
+              <li>✓ GradientFlow</li>
+              <li>✓ StaggeredText</li>
+              <li>✓ CountUpAnimation</li>
+              <li>✓ ScrollProgress</li>
             </ul>
           )}
         </div>
