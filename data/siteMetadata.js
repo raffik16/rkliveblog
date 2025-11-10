@@ -3,7 +3,8 @@ const siteMetadata = {
   title: 'rkRanched - Daily Moments & Insights',
   author: 'Raffik Keklikian',
   headerTitle: 'rkRanched',
-  description: 'Daily perspectives and authentic moments from everyday life. Sharing thoughts, experiences, and insights as they happen.',
+  description:
+    'Daily perspectives and authentic moments from everyday life. Sharing thoughts, experiences, and insights as they happen.',
   language: 'en-us',
   theme: 'system', // system, dark or light
   siteUrl: 'https://rkliveblog.vercel.app',
@@ -16,7 +17,7 @@ const siteMetadata = {
   instagram: 'https://www.instagram.com/raffisranch',
   locale: 'en-US',
   // set to true if you want a navbar fixed to the top
-  stickyNav: false,
+  stickyNav: true,
   analytics: {
     // If you want to use an analytics provider you have to add it to the
     // content security policy in the `next.config.js` file.
