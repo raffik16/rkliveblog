@@ -24,7 +24,7 @@ export default function StaggeredText({ text, className = '', delay = 0 }: Stagg
       opacity: 1,
       y: 0,
       transition: {
-        type: 'spring',
+        type: 'spring' as const,
         damping: 12,
         stiffness: 200,
       },
