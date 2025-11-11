@@ -92,7 +92,7 @@ const ProjectCard = ({ title, description, imgSrc, href, index }: ProjectCardPro
                 href={href}
                 aria-label={`Link to ${title}`}
                 target="_blank"
-                rel="noopener"
+                rel="noopener noreferrer"
                 className="hover:text-primary-500 transition-colors"
               >
                 {title}
@@ -110,7 +110,7 @@ const ProjectCard = ({ title, description, imgSrc, href, index }: ProjectCardPro
             <Link
               href={href}
               target="_blank"
-              rel="noopener"
+              rel="noopener noreferrer"
               className="group/link text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 inline-flex items-center gap-2 text-base font-semibold transition-all hover:gap-3"
               aria-label={`Visit ${title}`}
             >
