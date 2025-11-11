@@ -49,7 +49,12 @@ const ProjectCard = ({ title, description, imgSrc, href, index }: ProjectCardPro
         {imgSrc && (
           <div className="relative aspect-video w-full overflow-hidden">
             {href ? (
-              <Link href={href} aria-label={`Link to ${title}`} target="_blank" rel="noopener">
+              <Link
+                href={href}
+                aria-label={`Link to ${title}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <motion.div
                   animate={{ scale: isHovered ? 1.05 : 1 }}
                   transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
