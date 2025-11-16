@@ -6,7 +6,7 @@ import './TextType.css'
 
 interface TextTypeProps extends React.HTMLAttributes<HTMLElement> {
   text: string | string[]
-  as?: keyof JSX.IntrinsicElements
+  as?: React.ElementType
   typingSpeed?: number
   initialDelay?: number
   pauseDuration?: number
