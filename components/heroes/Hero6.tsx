@@ -1,12 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { CountUpAnimation, FloatingElement, GradientFlow, StaggeredText } from '../animations'
+import { CountUpAnimation, FloatingElement, GradientFlow, TextType } from '../animations'
 
 export default function Hero6() {
   return (
     <GradientFlow
-      className="relative flex min-h-screen w-full items-center justify-center overflow-hidden"
+      className="relative flex w-full items-center justify-center overflow-hidden"
       colors={['#FF5B04', '#FF8C42', '#075056', '#16232A', '#FF5B04']}
       duration={12}
     >
@@ -21,14 +21,14 @@ export default function Hero6() {
           <div className="relative">
             {/* Title Section */}
             <div className="mb-8 text-center sm:mb-12 lg:mb-16">
-              <StaggeredText
-                text="Daily Moments"
+              <TextType
+                text={['Daily Moments', 'Personal Insights', 'Life Updates', 'Authentic Stories']}
+                as="h1"
+                typingSpeed={75}
+                pauseDuration={1500}
+                showCursor={true}
+                cursorCharacter="|"
                 className="mb-2 text-[clamp(2rem,8vw,5rem)] leading-tight font-bold text-white drop-shadow-lg sm:mb-4 sm:text-6xl lg:text-8xl"
-              />
-              <StaggeredText
-                text="& Insights"
-                className="from-primary-400 to-primary-500 bg-gradient-to-r via-orange-300 bg-clip-text text-[clamp(2rem,8vw,5rem)] leading-tight font-bold text-transparent drop-shadow-lg sm:text-6xl lg:text-8xl"
-                delay={0.3}
               />
               <p className="mx-auto mt-4 max-w-3xl px-2 text-base leading-relaxed text-white/90 sm:mt-8 sm:text-xl lg:text-2xl">
                 Welcome to my corner of the internet. Here I share authentic thoughts, everyday
