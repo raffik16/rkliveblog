@@ -26,9 +26,8 @@ export default function Hero6() {
                 as="h1"
                 typingSpeed={75}
                 pauseDuration={1500}
-                showCursor={true}
-                cursorCharacter="|"
-                className="mb-2 text-[clamp(2rem,8vw,5rem)] leading-tight font-bold text-white drop-shadow-lg sm:mb-4 sm:text-6xl lg:text-8xl"
+                showCursor={false}
+                className="text-[clamp(2rem,8vw,5rem)] leading-tight font-bold whitespace-nowrap text-white drop-shadow-lg sm:text-6xl lg:text-8xl"
               />
               <p className="mx-auto mt-4 max-w-3xl px-2 text-base leading-relaxed text-white/90 sm:mt-8 sm:text-xl lg:text-2xl">
                 Welcome to my corner of the internet. Here I share authentic thoughts, everyday

@@ -51,6 +51,7 @@ const TextType: React.FC<TextTypeProps> = ({
   const [isDeleting, setIsDeleting] = useState(false)
   const [currentTextIndex, setCurrentTextIndex] = useState(0)
   const [isVisible, setIsVisible] = useState(!startOnVisible)
+  const [minHeight, setMinHeight] = useState(0)
   const cursorRef = useRef(null)
   const containerRef = useRef(null)
 
@@ -97,6 +98,16 @@ const TextType: React.FC<TextTypeProps> = ({
       })
     }
   }, [showCursor, cursorBlinkDuration])
+
+  // Calculate and store minimum height when text is fully displayed
+  useEffect(() => {
+    if (containerRef.current && displayedText.length > 0 && !isDeleting) {
+      const height = containerRef.current.offsetHeight
+      if (height > minHeight) {
+        setMinHeight(height)
+      }
+    }
+  }, [displayedText, isDeleting, minHeight])
 
   useEffect(() => {
     if (!isVisible) return
@@ -174,8 +185,16 @@ const TextType: React.FC<TextTypeProps> = ({
   const WrapperComponent = Component as React.ElementType
 
   return (
-    <WrapperComponent ref={containerRef} className={`text-type ${className}`} {...props}>
-      <span className="text-type__content" style={{ color: getCurrentTextColor() || 'inherit' }}>
+    <WrapperComponent
+      ref={containerRef}
+      className={`text-type ${className}`}
+      style={{ minHeight: minHeight > 0 ? `${minHeight}px` : undefined }}
+      {...props}
+    >
+      <span
+        className="text-type__content whitespace-nowrap"
+        style={{ color: getCurrentTextColor() || 'inherit' }}
+      >
         {displayedText}
       </span>
       {showCursor && (
