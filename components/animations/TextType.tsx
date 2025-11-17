@@ -102,7 +102,8 @@ const TextType: React.FC<TextTypeProps> = ({
   // Calculate and store minimum height when text is fully displayed
   useEffect(() => {
     if (containerRef.current && displayedText.length > 0 && !isDeleting) {
-      const height = containerRef.current.offsetHeight
+      const element = containerRef.current as HTMLElement
+      const height = element.offsetHeight
       if (height > minHeight) {
         setMinHeight(height)
       }
