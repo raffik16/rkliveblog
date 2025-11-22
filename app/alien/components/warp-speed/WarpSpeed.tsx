@@ -61,13 +61,13 @@ export default function WarpSpeed() {
 
       const speed = warpMetrics.engaged ? warpMetrics.warpFactor * 10 : 2
 
-      // Calculate lateral drift based on heading
-      const driftX = heading * 0.5
+      // Calculate lateral drift based on heading - much gentler
+      const driftX = heading * 0.05
 
       starsRef.current.forEach((star) => {
         star.z -= speed
 
-        // Apply lateral movement based on heading
+        // Apply lateral movement based on heading - smooth and subtle
         star.x += driftX
 
         if (star.z <= 0) {
@@ -147,13 +147,13 @@ export default function WarpSpeed() {
 
   const handleSteer = (direction: number) => {
     setHeading(direction)
-    // Animate tilt/banking effect
+    // Animate tilt/banking effect - very smooth and subtle
     gsap.to(
       { value: tiltAngle },
       {
-        value: -direction * 0.3, // Negative for realistic banking
-        duration: 0.5,
-        ease: 'power2.out',
+        value: -direction * 0.15, // Much gentler banking (was 0.3)
+        duration: 1.2, // Slower transition (was 0.5)
+        ease: 'power1.inOut', // Smoother easing
         onUpdate: function () {
           setTiltAngle((this.targets()[0] as { value: number }).value)
         },
