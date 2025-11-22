@@ -86,7 +86,7 @@ export default function VelocityMetrics() {
       duration: 5,
       ease: 'power2.out',
       onUpdate: function () {
-        setMetrics({ ...this.targets()[0] as SpeedMetrics })
+        setMetrics({ ...(this.targets()[0] as SpeedMetrics) })
       },
       onComplete: () => setIsAccelerating(false),
     })
@@ -100,7 +100,7 @@ export default function VelocityMetrics() {
       duration: 3,
       ease: 'power2.in',
       onUpdate: function () {
-        setMetrics({ ...this.targets()[0] as SpeedMetrics })
+        setMetrics({ ...(this.targets()[0] as SpeedMetrics) })
       },
       onComplete: () => {
         setMetrics((m) => ({ ...m, acceleration: 0 }))
@@ -116,7 +116,7 @@ export default function VelocityMetrics() {
       duration: 0.5,
       ease: 'power4.in',
       onUpdate: function () {
-        setMetrics({ ...this.targets()[0] as SpeedMetrics })
+        setMetrics({ ...(this.targets()[0] as SpeedMetrics) })
       },
       onComplete: () => {
         setMetrics((m) => ({ ...m, acceleration: 0 }))
@@ -142,9 +142,7 @@ export default function VelocityMetrics() {
             <div className="font-mono text-2xl font-bold text-cyan-400">
               {metrics.maxSpeed.toLocaleString()} km/s
             </div>
-            <div className="mt-2 text-sm text-purple-400">
-              {getSpeedOfLight()}% Speed of Light
-            </div>
+            <div className="mt-2 text-sm text-purple-400">{getSpeedOfLight()}% Speed of Light</div>
           </div>
         </div>
 
@@ -169,7 +167,7 @@ export default function VelocityMetrics() {
       <div className="grid gap-4 rounded-lg bg-black/50 p-4 md:grid-cols-3">
         <div className="space-y-1">
           <div className="text-xs text-gray-500">Current Medium</div>
-          <div className="font-mono text-lg font-bold uppercase text-cyan-300">
+          <div className="font-mono text-lg font-bold text-cyan-300 uppercase">
             {metrics.currentMedium}
           </div>
         </div>

@@ -94,7 +94,7 @@ export default function TransMedium() {
           {Array.from({ length: 20 }).map((_, i) => (
             <div
               key={i}
-              className="absolute animate-float text-2xl opacity-30"
+              className="animate-float absolute text-2xl opacity-30"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
@@ -110,14 +110,14 @@ export default function TransMedium() {
         {/* Alien Craft */}
         <div
           ref={craftRef}
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
           style={{ y: 200 }}
         >
           <div className="relative">
             {/* Craft Body */}
             <div className="relative h-20 w-40 rounded-full bg-gradient-to-b from-gray-300 to-gray-600 shadow-2xl">
               {/* Dome */}
-              <div className="absolute left-1/2 top-0 h-10 w-16 -translate-x-1/2 -translate-y-4 rounded-t-full bg-gradient-to-b from-cyan-300 to-cyan-600 opacity-70" />
+              <div className="absolute top-0 left-1/2 h-10 w-16 -translate-x-1/2 -translate-y-4 rounded-t-full bg-gradient-to-b from-cyan-300 to-cyan-600 opacity-70" />
 
               {/* Lights */}
               <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 gap-2">
@@ -137,22 +137,22 @@ export default function TransMedium() {
             </div>
 
             {/* Propulsion Effect */}
-            <div className="absolute left-1/2 top-full h-20 w-1 -translate-x-1/2 bg-gradient-to-b from-cyan-400 to-transparent blur-sm" />
+            <div className="absolute top-full left-1/2 h-20 w-1 -translate-x-1/2 bg-gradient-to-b from-cyan-400 to-transparent blur-sm" />
           </div>
         </div>
 
         {/* Water Surface Line (when in water) */}
         {medium.medium === 'water' && (
-          <div className="absolute left-0 right-0 top-1/3 border-t-4 border-dashed border-blue-300 opacity-50" />
+          <div className="absolute top-1/3 right-0 left-0 border-t-4 border-dashed border-blue-300 opacity-50" />
         )}
 
         {/* Metrics Display */}
-        <div className="absolute right-6 top-6 space-y-2 rounded-lg bg-black/80 p-4 backdrop-blur-sm">
+        <div className="absolute top-6 right-6 space-y-2 rounded-lg bg-black/80 p-4 backdrop-blur-sm">
           <h3 className="text-xl font-bold text-cyan-400">Trans-Medium Travel</h3>
           <div className="space-y-1 text-sm">
             <div className="flex justify-between gap-4">
               <span className="text-gray-400">Current Medium:</span>
-              <span className="font-mono uppercase text-cyan-300">{medium.medium}</span>
+              <span className="font-mono text-cyan-300 uppercase">{medium.medium}</span>
             </div>
             {medium.altitude !== undefined && (
               <div className="flex justify-between gap-4">
@@ -217,7 +217,7 @@ export default function TransMedium() {
         </div>
 
         {/* Performance Badge */}
-        <div className="absolute bottom-6 right-6">
+        <div className="absolute right-6 bottom-6">
           <div className="rounded-full bg-green-600 px-4 py-2 text-sm font-bold text-white shadow-lg">
             ⚡ No Performance Compromise
           </div>

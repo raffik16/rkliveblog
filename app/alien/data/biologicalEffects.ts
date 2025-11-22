@@ -52,13 +52,7 @@ export const biologicalEffectsData: BiologicalEffect[] = [
     distance: 20,
     electricalFieldStrength: 3500,
     duration: 180,
-    symptoms: [
-      'Nausea',
-      'Fatigue',
-      'Hair loss',
-      'Radiation burns',
-      'Immune system suppression',
-    ],
+    symptoms: ['Nausea', 'Fatigue', 'Hair loss', 'Radiation burns', 'Immune system suppression'],
   },
   {
     id: 'BE-005',
@@ -84,11 +78,6 @@ export const biologicalEffectsData: BiologicalEffect[] = [
     distance: 12,
     electricalFieldStrength: 6000,
     duration: 90,
-    symptoms: [
-      'Tingling sensations',
-      'Muscle spasms',
-      'Disorientation',
-      'Mood changes',
-    ],
+    symptoms: ['Tingling sensations', 'Muscle spasms', 'Disorientation', 'Mood changes'],
   },
 ]

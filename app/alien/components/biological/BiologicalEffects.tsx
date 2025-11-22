@@ -94,7 +94,7 @@ export default function BiologicalEffects() {
               </div>
             </div>
             <div className="mt-2 text-sm font-semibold text-gray-300">{effect.id}</div>
-            <div className="mt-1 text-xs capitalize text-gray-400">{effect.type} Effects</div>
+            <div className="mt-1 text-xs text-gray-400 capitalize">{effect.type} Effects</div>
             <div className="mt-2 text-xs text-gray-500">{effect.distance}m from source</div>
           </button>
         ))}
@@ -107,7 +107,7 @@ export default function BiologicalEffects() {
             <h3 className="text-xl font-bold text-cyan-400">
               {getTypeIcon(selectedEffect.type)} {selectedEffect.id} - Detailed Analysis
             </h3>
-            <div className="mt-1 text-sm capitalize text-gray-400">{selectedEffect.type}</div>
+            <div className="mt-1 text-sm text-gray-400 capitalize">{selectedEffect.type}</div>
           </div>
           <div
             className={`rounded-lg border px-4 py-2 text-sm font-bold uppercase ${getSeverityColor(selectedEffect.severity)}`}
@@ -187,7 +187,7 @@ export default function BiologicalEffects() {
               </div>
             </div>
             {/* Craft position */}
-            <div className="absolute left-0 top-1/2 flex -translate-y-1/2 items-center gap-2">
+            <div className="absolute top-1/2 left-0 flex -translate-y-1/2 items-center gap-2">
               <div className="h-8 w-8 animate-pulse rounded-full bg-cyan-500 shadow-lg shadow-cyan-500/50" />
               <div className="text-xs font-semibold text-cyan-400">CRAFT</div>
             </div>
@@ -198,7 +198,7 @@ export default function BiologicalEffects() {
             >
               <div className="flex flex-col items-center">
                 <div className="h-16 w-0.5 bg-white" />
-                <div className="mt-1 whitespace-nowrap rounded bg-white px-2 py-1 text-xs font-bold text-black">
+                <div className="mt-1 rounded bg-white px-2 py-1 text-xs font-bold whitespace-nowrap text-black">
                   {selectedEffect.distance}m
                 </div>
               </div>

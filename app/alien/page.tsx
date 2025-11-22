@@ -28,7 +28,7 @@ export default function AlienAppPage() {
         <div className="mx-auto max-w-7xl px-4 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400">
+              <h1 className="bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-4xl font-bold text-transparent">
                 🛸 Alien Spacecraft Command Center
               </h1>
               <p className="mt-2 text-gray-400">
@@ -51,7 +51,7 @@ export default function AlienAppPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                className={`rounded-lg px-4 py-2 text-sm font-semibold whitespace-nowrap transition ${
                   activeTab === tab.id
                     ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-500/30'
                     : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
@@ -101,7 +101,7 @@ export default function AlienAppPage() {
                   </button>
                 </div>
               </div>
-              <div className="absolute right-0 top-0 h-full w-1/3 opacity-10">
+              <div className="absolute top-0 right-0 h-full w-1/3 opacity-10">
                 <div className="text-9xl">🛸</div>
               </div>
             </div>
@@ -188,7 +188,9 @@ export default function AlienAppPage() {
               <div className="flex gap-4">
                 <div className="text-3xl">⚠️</div>
                 <div>
-                  <h4 className="mb-2 font-bold text-yellow-400">Research & Educational Use Only</h4>
+                  <h4 className="mb-2 font-bold text-yellow-400">
+                    Research & Educational Use Only
+                  </h4>
                   <p className="text-sm text-yellow-200">
                     This platform simulates observed UAP (Unidentified Aerial Phenomena)
                     characteristics based on documented reports and scientific analysis. All

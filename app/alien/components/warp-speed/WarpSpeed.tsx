@@ -6,7 +6,9 @@ import { WarpMetrics } from '../../types'
 
 export default function WarpSpeed() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const starsRef = useRef<any[]>([])
+  const starsRef = useRef<Array<{ x: number; y: number; z: number; prevX: number; prevY: number }>>(
+    []
+  )
   const animationRef = useRef<number | undefined>(undefined)
   const [warpMetrics, setWarpMetrics] = useState<WarpMetrics>({
     engaged: false,
@@ -111,7 +113,7 @@ export default function WarpSpeed() {
       spacetimeCurvature: 0,
       duration: 2,
       onUpdate: function () {
-        setWarpMetrics({ ...this.targets()[0] as WarpMetrics, engaged: false })
+        setWarpMetrics({ ...(this.targets()[0] as WarpMetrics), engaged: false })
       },
     })
   }
@@ -120,7 +122,7 @@ export default function WarpSpeed() {
     <div className="relative w-full overflow-hidden rounded-xl border border-gray-700 bg-black">
       <canvas ref={canvasRef} className="h-[600px] w-full" />
 
-      <div className="absolute left-6 top-6 space-y-2 rounded-lg bg-black/80 p-4 backdrop-blur-sm">
+      <div className="absolute top-6 left-6 space-y-2 rounded-lg bg-black/80 p-4 backdrop-blur-sm">
         <h3 className="text-xl font-bold text-cyan-400">Warp Drive System</h3>
         <div className="space-y-1 text-sm">
           <div className="flex justify-between gap-4">

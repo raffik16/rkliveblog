@@ -20,19 +20,13 @@ export default function Observability() {
     const interval = setInterval(() => {
       setData((prev) => {
         const newData = {
-          radarSignature: stealthMode
-            ? Math.random() * 2
-            : 100 + Math.random() * 50,
-          infraredSignature: stealthMode
-            ? 280 + Math.random() * 10
-            : 400 + Math.random() * 100,
+          radarSignature: stealthMode ? Math.random() * 2 : 100 + Math.random() * 50,
+          infraredSignature: stealthMode ? 280 + Math.random() * 10 : 400 + Math.random() * 100,
           visualDetection: !stealthMode,
           electromagneticEmissions: stealthMode
             ? Math.random() * 100
             : 10000 + Math.random() * 10000,
-          acousticSignature: stealthMode
-            ? Math.random() * 5
-            : 70 + Math.random() * 30,
+          acousticSignature: stealthMode ? Math.random() * 5 : 70 + Math.random() * 30,
           timestamp: Date.now(),
         }
 
@@ -67,9 +61,7 @@ export default function Observability() {
           </p>
         </div>
         <div className={`rounded-lg border px-4 py-2 font-bold ${detectionLevel.bg}`}>
-          <span className={detectionLevel.color}>
-            🎯 Detection Level: {detectionLevel.level}
-          </span>
+          <span className={detectionLevel.color}>🎯 Detection Level: {detectionLevel.level}</span>
         </div>
       </div>
 
@@ -251,10 +243,7 @@ export default function Observability() {
             {history.length > 1 && (
               <polyline
                 points={history
-                  .map(
-                    (d, i) =>
-                      `${(i / 30) * 600},${100 - (d.radarSignature / 200) * 100}`
-                  )
+                  .map((d, i) => `${(i / 30) * 600},${100 - (d.radarSignature / 200) * 100}`)
                   .join(' ')}
                 fill="none"
                 stroke="#06b6d4"
@@ -266,10 +255,7 @@ export default function Observability() {
             {history.length > 1 && (
               <polyline
                 points={history
-                  .map(
-                    (d, i) =>
-                      `${(i / 30) * 600},${100 - (d.acousticSignature / 100) * 100}`
-                  )
+                  .map((d, i) => `${(i / 30) * 600},${100 - (d.acousticSignature / 100) * 100}`)
                   .join(' ')}
                 fill="none"
                 stroke="#10b981"
@@ -295,19 +281,27 @@ export default function Observability() {
         <h3 className="mb-3 text-sm font-semibold text-gray-400">Detection Systems Status</h3>
         <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
           <div className="flex items-center gap-2 rounded bg-gray-900/50 p-2">
-            <div className={`h-2 w-2 rounded-full ${stealthMode ? 'bg-green-500' : 'bg-red-500'}`} />
+            <div
+              className={`h-2 w-2 rounded-full ${stealthMode ? 'bg-green-500' : 'bg-red-500'}`}
+            />
             <span className="text-xs text-gray-300">Radar Evasion</span>
           </div>
           <div className="flex items-center gap-2 rounded bg-gray-900/50 p-2">
-            <div className={`h-2 w-2 rounded-full ${stealthMode ? 'bg-green-500' : 'bg-red-500'}`} />
+            <div
+              className={`h-2 w-2 rounded-full ${stealthMode ? 'bg-green-500' : 'bg-red-500'}`}
+            />
             <span className="text-xs text-gray-300">IR Suppression</span>
           </div>
           <div className="flex items-center gap-2 rounded bg-gray-900/50 p-2">
-            <div className={`h-2 w-2 rounded-full ${stealthMode ? 'bg-green-500' : 'bg-red-500'}`} />
+            <div
+              className={`h-2 w-2 rounded-full ${stealthMode ? 'bg-green-500' : 'bg-red-500'}`}
+            />
             <span className="text-xs text-gray-300">Active Cloaking</span>
           </div>
           <div className="flex items-center gap-2 rounded bg-gray-900/50 p-2">
-            <div className={`h-2 w-2 rounded-full ${stealthMode ? 'bg-green-500' : 'bg-red-500'}`} />
+            <div
+              className={`h-2 w-2 rounded-full ${stealthMode ? 'bg-green-500' : 'bg-red-500'}`}
+            />
             <span className="text-xs text-gray-300">Noise Reduction</span>
           </div>
         </div>

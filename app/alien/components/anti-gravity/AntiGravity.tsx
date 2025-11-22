@@ -8,7 +8,7 @@ export default function AntiGravity() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const craftRef = useRef<HTMLDivElement>(null)
   const animationRef = useRef<number | undefined>(undefined)
-  const particlesRef = useRef<any[]>([])
+  const particlesRef = useRef<Array<{ x: number; y: number; size: number; speed: number }>>([])
 
   const [metrics, setMetrics] = useState<AntiGravityMetrics>({
     gravityReduction: 0,
@@ -112,7 +112,7 @@ export default function AntiGravity() {
       duration: 2,
       ease: 'power2.out',
       onUpdate: function () {
-        setMetrics({ ...this.targets()[0] as AntiGravityMetrics })
+        setMetrics({ ...(this.targets()[0] as AntiGravityMetrics) })
       },
     })
 
@@ -134,7 +134,7 @@ export default function AntiGravity() {
       duration: 2,
       ease: 'power2.in',
       onUpdate: function () {
-        setMetrics({ ...this.targets()[0] as AntiGravityMetrics })
+        setMetrics({ ...(this.targets()[0] as AntiGravityMetrics) })
       },
     })
 
@@ -180,13 +180,13 @@ export default function AntiGravity() {
         {/* UFO Craft */}
         <div
           ref={craftRef}
-          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
         >
           <div className="relative">
             {/* Main body */}
             <div className="relative h-16 w-32 rounded-full bg-gradient-to-b from-gray-400 to-gray-700 shadow-2xl">
               {/* Dome */}
-              <div className="absolute left-1/2 top-0 h-8 w-12 -translate-x-1/2 -translate-y-3 rounded-t-full bg-gradient-to-b from-purple-400 to-purple-700 opacity-80" />
+              <div className="absolute top-0 left-1/2 h-8 w-12 -translate-x-1/2 -translate-y-3 rounded-t-full bg-gradient-to-b from-purple-400 to-purple-700 opacity-80" />
 
               {/* Bottom lights */}
               <div className="absolute bottom-1 left-1/2 flex -translate-x-1/2 gap-1">
@@ -203,7 +203,7 @@ export default function AntiGravity() {
             {/* Anti-gravity beam */}
             {metrics.gravityReduction > 0 && (
               <div
-                className="absolute left-1/2 top-full h-32 w-20 -translate-x-1/2 bg-gradient-to-b from-purple-500/50 to-transparent blur-md"
+                className="absolute top-full left-1/2 h-32 w-20 -translate-x-1/2 bg-gradient-to-b from-purple-500/50 to-transparent blur-md"
                 style={{ opacity: metrics.gravityReduction / 100 }}
               />
             )}
@@ -211,7 +211,7 @@ export default function AntiGravity() {
         </div>
 
         {/* Wind direction indicator */}
-        <div className="absolute right-4 top-4 rounded-lg bg-black/80 p-3 backdrop-blur-sm">
+        <div className="absolute top-4 right-4 rounded-lg bg-black/80 p-3 backdrop-blur-sm">
           <div className="text-center">
             <div className="mb-2 text-xs text-gray-400">Wind Direction</div>
             {getWindArrow()}
