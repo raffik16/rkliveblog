@@ -21,6 +21,8 @@ export default function WarpSpeed() {
   const [starDensity, setStarDensity] = useState(800)
   const [colorIntensity, setColorIntensity] = useState(100)
   const [trailLength, setTrailLength] = useState(0.2)
+  const [heading, setHeading] = useState(0) // -45 to 45 degrees (left/right steering)
+  const [tiltAngle, setTiltAngle] = useState(0) // Visual tilt for banking effect
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -53,10 +55,20 @@ export default function WarpSpeed() {
       ctx.save()
       ctx.translate(canvas.width / 2, canvas.height / 2)
 
+      // Apply rotation based on heading (tilt effect)
+      const tiltRad = (tiltAngle * Math.PI) / 180
+      ctx.rotate(tiltRad)
+
       const speed = warpMetrics.engaged ? warpMetrics.warpFactor * 10 : 2
+
+      // Calculate lateral drift based on heading
+      const driftX = heading * 0.5
 
       starsRef.current.forEach((star) => {
         star.z -= speed
+
+        // Apply lateral movement based on heading
+        star.x += driftX
 
         if (star.z <= 0) {
           star.z = canvas.width
@@ -103,7 +115,7 @@ export default function WarpSpeed() {
       }
       window.removeEventListener('resize', resizeCanvas)
     }
-  }, [warpMetrics, starDensity, colorIntensity, trailLength])
+  }, [warpMetrics, starDensity, colorIntensity, trailLength, heading, tiltAngle])
 
   const engageWarp = (factor: number) => {
     setWarpMetrics({
@@ -134,9 +146,45 @@ export default function WarpSpeed() {
     }
   }
 
+  const handleSteer = (direction: number) => {
+    setHeading(direction)
+    // Animate tilt/banking effect
+    gsap.to(
+      { value: tiltAngle },
+      {
+        value: -direction * 0.3, // Negative for realistic banking
+        duration: 0.5,
+        ease: 'power2.out',
+        onUpdate: function () {
+          setTiltAngle((this.targets()[0] as { value: number }).value)
+        },
+      }
+    )
+  }
+
+  const centerSteering = () => {
+    handleSteer(0)
+  }
+
+  const getHeadingDisplay = () => {
+    if (heading === 0) return 'CENTER'
+    if (heading > 0) return `RIGHT ${Math.abs(heading).toFixed(0)}°`
+    return `LEFT ${Math.abs(heading).toFixed(0)}°`
+  }
+
   return (
     <div className="relative h-[calc(100vh-300px)] min-h-[600px] w-full overflow-hidden rounded-xl border border-gray-700 bg-black">
       <canvas ref={canvasRef} className="h-full w-full" />
+
+      {/* Heading Indicator - Top Center */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 rounded-lg border border-cyan-900/50 bg-black/90 px-6 py-3 backdrop-blur-md">
+        <div className="text-center">
+          <div className="text-xs text-gray-400">HEADING</div>
+          <div className="mt-1 font-mono text-lg font-bold text-cyan-400">
+            {getHeadingDisplay()}
+          </div>
+        </div>
+      </div>
 
       {/* Fixed Control Panel - Top Left */}
       <div className="absolute top-4 left-4 max-h-[calc(100%-2rem)] w-80 space-y-3 overflow-y-auto rounded-lg border border-cyan-900/50 bg-black/90 p-4 backdrop-blur-md">
@@ -171,6 +219,48 @@ export default function WarpSpeed() {
             <span className="font-mono text-pink-300">
               {warpMetrics.spacetimeCurvature.toFixed(2)}
             </span>
+          </div>
+        </div>
+
+        {/* Steering Control */}
+        <div className="space-y-2 rounded-lg border border-orange-900 bg-orange-950/30 p-3">
+          <label className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">🎯 Steering Control</span>
+            <span className="font-mono text-orange-400">{heading.toFixed(0)}°</span>
+          </label>
+          <input
+            type="range"
+            min="-45"
+            max="45"
+            step="1"
+            value={heading}
+            onChange={(e) => handleSteer(parseFloat(e.target.value))}
+            className="w-full accent-orange-500"
+          />
+          <div className="flex justify-between text-xs text-gray-500">
+            <span>← LEFT 45°</span>
+            <span>CENTER</span>
+            <span>RIGHT 45° →</span>
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            <button
+              onClick={() => handleSteer(-30)}
+              className="rounded bg-orange-700 px-2 py-1 text-xs font-semibold text-white transition hover:bg-orange-600"
+            >
+              ← Hard Left
+            </button>
+            <button
+              onClick={centerSteering}
+              className="rounded bg-green-700 px-2 py-1 text-xs font-semibold text-white transition hover:bg-green-600"
+            >
+              ⊙ Center
+            </button>
+            <button
+              onClick={() => handleSteer(30)}
+              className="rounded bg-orange-700 px-2 py-1 text-xs font-semibold text-white transition hover:bg-orange-600"
+            >
+              Hard Right →
+            </button>
           </div>
         </div>
 
@@ -292,6 +382,7 @@ export default function WarpSpeed() {
                 setColorIntensity(150)
                 setTrailLength(0.3)
                 engageWarp(7)
+                centerSteering()
               }}
               className="w-full rounded bg-purple-800/50 px-3 py-2 text-left text-xs text-white transition hover:bg-purple-700/50"
             >
@@ -304,11 +395,12 @@ export default function WarpSpeed() {
                 setColorIntensity(80)
                 setTrailLength(0.4)
                 engageWarp(9)
+                handleSteer(20)
               }}
               className="w-full rounded bg-purple-800/50 px-3 py-2 text-left text-xs text-white transition hover:bg-purple-700/50"
             >
               <div className="font-semibold">Grey Scout Mode</div>
-              <div className="text-gray-400">Minimal, long trails</div>
+              <div className="text-gray-400">Minimal, evasive maneuvers</div>
             </button>
             <button
               onClick={() => {
@@ -316,6 +408,7 @@ export default function WarpSpeed() {
                 setColorIntensity(200)
                 setTrailLength(0.15)
                 engageWarp(5)
+                centerSteering()
               }}
               className="w-full rounded bg-purple-800/50 px-3 py-2 text-left text-xs text-white transition hover:bg-purple-700/50"
             >
@@ -323,6 +416,28 @@ export default function WarpSpeed() {
               <div className="text-gray-400">Maximum visual impact</div>
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Visual Banking Indicator - Bottom Center */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+        <div className="flex items-center gap-2 rounded-lg border border-gray-700 bg-black/80 px-4 py-2 backdrop-blur-sm">
+          <div className="text-xs text-gray-400">BANK:</div>
+          <div
+            className="h-8 w-24 rounded border border-gray-600 bg-gray-900"
+            style={{ position: 'relative' }}
+          >
+            {/* Horizon line */}
+            <div className="absolute top-1/2 left-0 h-px w-full bg-cyan-500" />
+            {/* Bank indicator */}
+            <div
+              className="absolute top-1/2 left-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-orange-500 shadow-lg shadow-orange-500/50"
+              style={{
+                transform: `translate(-50%, -50%) rotate(${tiltAngle}deg) translateY(-8px)`,
+              }}
+            />
+          </div>
+          <div className="font-mono text-xs text-orange-400">{tiltAngle.toFixed(1)}°</div>
         </div>
       </div>
     </div>
