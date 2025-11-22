@@ -141,9 +141,8 @@ export default function WarpSpeed() {
   }
 
   const handleWarpFactorChange = (value: number) => {
-    if (warpMetrics.engaged) {
-      engageWarp(value)
-    }
+    // Always engage warp when slider is moved
+    engageWarp(value)
   }
 
   const handleSteer = (direction: number) => {
