@@ -1,4 +1,11 @@
 {
+  "webgl": 1,
+  "canvas": 1,
+  "gsap": 1,
+  "nextjs": 1,
+  "react": 1,
+  "animation": 1,
+  "simulation": 1,
   "claude-code": 1,
   "blogging": 1,
   "workflow": 1,
