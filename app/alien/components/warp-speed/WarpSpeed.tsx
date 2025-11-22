@@ -7,7 +7,7 @@ import { WarpMetrics } from '../../types'
 export default function WarpSpeed() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const starsRef = useRef<any[]>([])
-  const animationRef = useRef<number>()
+  const animationRef = useRef<number | undefined>(undefined)
   const [warpMetrics, setWarpMetrics] = useState<WarpMetrics>({
     engaged: false,
     warpFactor: 1,

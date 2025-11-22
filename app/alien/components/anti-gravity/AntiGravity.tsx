@@ -7,7 +7,7 @@ import { AntiGravityMetrics } from '../../types'
 export default function AntiGravity() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const craftRef = useRef<HTMLDivElement>(null)
-  const animationRef = useRef<number>()
+  const animationRef = useRef<number | undefined>(undefined)
   const particlesRef = useRef<any[]>([])
 
   const [metrics, setMetrics] = useState<AntiGravityMetrics>({
