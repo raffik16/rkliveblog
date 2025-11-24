@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diaper DJ - Baby Cry Remix Studio</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 Diaper DJ</h1>
+            <p class="tagline">Turn Tears Into Tracks</p>
+            <p class="subtitle">Transform changing-table meltdowns into musical masterpieces</p>
+        </header>
+
+        <main>
+            <div class="workflow">
+                <div class="step-card" id="step1">
+                    <div class="step-number">1</div>
+                    <h3>🎤 Record Your Melody</h3>
+                    <p>Hum or sing any tune you like</p>
+                    <div class="controls">
+                        <button id="recordHumBtn" class="btn btn-primary">
+                            <span class="btn-icon">⏺️</span>
+                            Record Hum
+                        </button>
+                        <button id="stopHumBtn" class="btn btn-secondary" disabled>
+                            <span class="btn-icon">⏹️</span>
+                            Stop
+                        </button>
+                    </div>
+                    <div class="status" id="humStatus">Not recorded</div>
+                    <div class="waveform-container">
+                        <canvas id="humWaveform"></canvas>
+                    </div>
+                    <button id="playHumBtn" class="btn btn-play" disabled>
+                        <span class="btn-icon">▶️</span>
+                        Play Hum
+                    </button>
+                </div>
+
+                <div class="arrow">→</div>
+
+                <div class="step-card" id="step2">
+                    <div class="step-number">2</div>
+                    <h3>👶 Capture Baby Cries</h3>
+                    <p>Record your baby's unique sound</p>
+                    <div class="controls">
+                        <button id="recordCryBtn" class="btn btn-primary" disabled>
+                            <span class="btn-icon">⏺️</span>
+                            Record Cry
+                        </button>
+                        <button id="stopCryBtn" class="btn btn-secondary" disabled>
+                            <span class="btn-icon">⏹️</span>
+                            Stop
+                        </button>
+                    </div>
+                    <div class="status" id="cryStatus">Not recorded</div>
+                    <div class="waveform-container">
+                        <canvas id="cryWaveform"></canvas>
+                    </div>
+                    <button id="playCryBtn" class="btn btn-play" disabled>
+                        <span class="btn-icon">▶️</span>
+                        Play Cry
+                    </button>
+                </div>
+
+                <div class="arrow">→</div>
+
+                <div class="step-card" id="step3">
+                    <div class="step-number">3</div>
+                    <h3>🎚️ Create Remix</h3>
+                    <p>Mix and match for the perfect beat</p>
+                    <div class="controls">
+                        <button id="remixBtn" class="btn btn-remix" disabled>
+                            <span class="btn-icon">🎛️</span>
+                            Generate Remix
+                        </button>
+                    </div>
+                    <div class="status" id="remixStatus">Waiting for audio</div>
+                    <div class="remix-controls" id="remixControls" style="display: none;">
+                        <div class="slider-group">
+                            <label>🎵 Cry Pitch</label>
+                            <input type="range" id="pitchSlider" min="-12" max="12" value="0" step="1">
+                            <span id="pitchValue">0</span>
+                        </div>
+                        <div class="slider-group">
+                            <label>🔊 Cry Volume</label>
+                            <input type="range" id="cryVolumeSlider" min="0" max="100" value="70" step="1">
+                            <span id="cryVolumeValue">70%</span>
+                        </div>
+                        <div class="slider-group">
+                            <label>🎼 Hum Volume</label>
+                            <input type="range" id="humVolumeSlider" min="0" max="100" value="50" step="1">
+                            <span id="humVolumeValue">50%</span>
+                        </div>
+                        <div class="slider-group">
+                            <label>⚡ BPM</label>
+                            <input type="range" id="bpmSlider" min="60" max="180" value="120" step="5">
+                            <span id="bpmValue">120</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="playback-section" id="playbackSection" style="display: none;">
+                <h2>🎧 Your Masterpiece</h2>
+                <div class="playback-card">
+                    <div class="track-info">
+                        <div class="track-title" id="trackTitle">Untitled Remix</div>
+                        <div class="track-details">
+                            <span id="trackBpm">120 BPM</span>
+                            <span class="separator">•</span>
+                            <span id="trackDuration">0:00</span>
+                        </div>
+                    </div>
+                    <div class="playback-visualizer">
+                        <canvas id="playbackWaveform"></canvas>
+                    </div>
+                    <div class="playback-controls">
+                        <button id="playRemixBtn" class="btn btn-large">
+                            <span class="btn-icon">▶️</span>
+                            Play Remix
+                        </button>
+                        <button id="pauseRemixBtn" class="btn btn-large" style="display: none;">
+                            <span class="btn-icon">⏸️</span>
+                            Pause
+                        </button>
+                        <button id="downloadRemixBtn" class="btn btn-download">
+                            <span class="btn-icon">💾</span>
+                            Download
+                        </button>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tips-section">
+                <h3>💡 Pro Tips</h3>
+                <div class="tips-grid">
+                    <div class="tip-card">
+                        <span class="tip-icon">🎤</span>
+                        <p>Hum nursery rhymes or your baby's favorite songs</p>
+                    </div>
+                    <div class="tip-card">
+                        <span class="tip-icon">🎹</span>
+                        <p>Adjust pitch to make cries sound melodic</p>
+                    </div>
+                    <div class="tip-card">
+                        <span class="tip-icon">🔄</span>
+                        <p>Try different BPM settings for various vibes</p>
+                    </div>
+                    <div class="tip-card">
+                        <span class="tip-icon">💾</span>
+                        <p>Save your favorite remixes to replay during changes</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>🎶 Made with love for parents everywhere • Diaper DJ v1.0</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "diaper-dj",
+  "version": "1.0.0",
+  "description": "Transform diaper-changing meltdowns into musical masterpieces",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 3002 -o"
+  },
+  "keywords": ["baby", "music", "remix", "audio", "diaper", "entertainment"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

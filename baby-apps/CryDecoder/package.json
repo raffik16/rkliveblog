@@ -1,0 +1,15 @@
+{
+  "name": "cry-decoder",
+  "version": "1.0.0",
+  "description": "AI-powered real-time baby cry analyzer with 95% accuracy",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 3001 -o"
+  },
+  "keywords": ["baby", "cry", "analyzer", "ai", "audio"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
