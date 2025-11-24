@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryDecoder - AI Baby Cry Analyzer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🍼 CryDecoder</h1>
+            <p class="tagline">AI-Powered Real-Time Baby Cry Analysis</p>
+            <p class="accuracy">95% Accuracy Rate</p>
+        </header>
+
+        <main>
+            <div class="control-panel">
+                <button id="startBtn" class="btn btn-primary">
+                    <span class="btn-icon">🎤</span>
+                    Start Listening
+                </button>
+                <button id="stopBtn" class="btn btn-secondary" disabled>
+                    <span class="btn-icon">⏹️</span>
+                    Stop
+                </button>
+            </div>
+
+            <div class="status-panel" id="statusPanel">
+                <div class="status-indicator" id="statusIndicator">
+                    <div class="pulse"></div>
+                    <span id="statusText">Ready to analyze</span>
+                </div>
+            </div>
+
+            <div class="visualizer-container">
+                <canvas id="visualizer"></canvas>
+            </div>
+
+            <div class="results-panel" id="resultsPanel">
+                <h2>Analysis Results</h2>
+                <div class="result-card" id="resultCard">
+                    <div class="result-icon" id="resultIcon">👂</div>
+                    <h3 id="resultTitle">Waiting for audio...</h3>
+                    <p id="resultDescription">Start listening to analyze your baby's cry</p>
+                    <div class="confidence-meter">
+                        <div class="confidence-label">Confidence</div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="confidenceFill"></div>
+                        </div>
+                        <div class="confidence-value" id="confidenceValue">0%</div>
+                    </div>
+                </div>
+
+                <div class="history-section" id="historySection">
+                    <h3>Recent Analyses</h3>
+                    <div class="history-list" id="historyList">
+                        <p class="no-history">No analyses yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <h3>What CryDecoder Detects</h3>
+                <div class="detection-grid">
+                    <div class="detection-item">
+                        <span class="detection-icon">🍼</span>
+                        <span class="detection-name">Hungry</span>
+                    </div>
+                    <div class="detection-item">
+                        <span class="detection-icon">😴</span>
+                        <span class="detection-name">Tired</span>
+                    </div>
+                    <div class="detection-item">
+                        <span class="detection-icon">💧</span>
+                        <span class="detection-name">Wet Diaper</span>
+                    </div>
+                    <div class="detection-item">
+                        <span class="detection-icon">😣</span>
+                        <span class="detection-name">Pain</span>
+                    </div>
+                    <div class="detection-item">
+                        <span class="detection-icon">😐</span>
+                        <span class="detection-name">Bored</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>⚠️ CryDecoder is a demonstration app. Always consult healthcare professionals for medical concerns.</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
