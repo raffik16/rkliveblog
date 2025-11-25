@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { CountUpAnimation, FloatingElement, GradientFlow, TextType } from '../animations'
+import { CountUpAnimation, FloatingElement, GradientFlow, TextType, HoverWords } from '../animations'
 
 export default function Hero6() {
   return (
@@ -30,9 +30,11 @@ export default function Hero6() {
                 className="text-[clamp(2rem,8vw,5rem)] leading-tight font-bold whitespace-nowrap text-white drop-shadow-lg sm:text-6xl lg:text-8xl"
               />
               <p className="mx-auto mt-4 max-w-3xl px-2 text-base leading-relaxed text-white/90 sm:mt-8 sm:text-xl lg:text-2xl">
-                Welcome to my corner of the internet. Here I share authentic thoughts, everyday
-                experiences, and personal insights as they unfold. Join me on this journey of
-                continuous discovery and genuine storytelling.
+                <HoverWords
+                  text="Welcome to my corner of the internet. Here I share authentic thoughts, everyday experiences, and personal insights as they unfold. Join me on this journey of continuous discovery and genuine storytelling."
+                  hoverEffect="lift"
+                  wordClassName="transition-colors hover:text-white"
+                />
               </p>
             </div>
 

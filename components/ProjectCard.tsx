@@ -4,6 +4,7 @@ import Image from './Image'
 import Link from './Link'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
+import { HoverWords } from './animations'
 
 interface ProjectCardProps {
   title: string
@@ -86,19 +87,26 @@ const ProjectCard = ({ title, description, imgSrc, href, index }: ProjectCardPro
 
         {/* Content Section */}
         <div className="relative p-6 sm:p-8">
-          <h2 className="mb-3 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-3xl dark:from-white dark:to-gray-300">
+          <h2 className="mb-3 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl dark:text-white">
             {href ? (
               <Link
                 href={href}
                 aria-label={`Link to ${title}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-primary-500 transition-colors"
               >
-                {title}
+                <HoverWords
+                  text={title}
+                  hoverEffect="scale"
+                  wordClassName="hover:text-primary-500 transition-colors"
+                />
               </Link>
             ) : (
-              title
+              <HoverWords
+                text={title}
+                hoverEffect="scale"
+                wordClassName="hover:text-primary-500 transition-colors"
+              />
             )}
           </h2>
 
