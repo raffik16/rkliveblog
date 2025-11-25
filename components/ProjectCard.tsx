@@ -98,6 +98,9 @@ const ProjectCard = ({ title, description, imgSrc, href, index }: ProjectCardPro
                 <HoverWords
                   text={title}
                   hoverEffect="scale"
+                  animateOnView
+                  entranceEffect="slideIn"
+                  staggerDelay={0.06}
                   wordClassName="hover:text-primary-500 transition-colors"
                 />
               </Link>
@@ -105,6 +108,9 @@ const ProjectCard = ({ title, description, imgSrc, href, index }: ProjectCardPro
               <HoverWords
                 text={title}
                 hoverEffect="scale"
+                animateOnView
+                entranceEffect="slideIn"
+                staggerDelay={0.06}
                 wordClassName="hover:text-primary-500 transition-colors"
               />
             )}

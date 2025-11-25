@@ -39,6 +39,9 @@ export default function Hero6() {
                 <HoverWords
                   text="Welcome to my corner of the internet. Here I share authentic thoughts, everyday experiences, and personal insights as they unfold. Join me on this journey of continuous discovery and genuine storytelling."
                   hoverEffect="lift"
+                  animateOnView
+                  entranceEffect="fadeUp"
+                  staggerDelay={0.03}
                   wordClassName="transition-colors hover:text-white"
                 />
               </p>

@@ -146,6 +146,9 @@ export default function ListLayoutWithTags({
                               <HoverWords
                                 text={title}
                                 hoverEffect="lift"
+                                animateOnView
+                                entranceEffect="fadeUp"
+                                staggerDelay={0.04}
                                 wordClassName="hover:text-primary-500 transition-colors"
                               />
                             </Link>
