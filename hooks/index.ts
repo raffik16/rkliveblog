@@ -1,1 +1,1 @@
-export { useUTMTitle, useUTMTitleKey } from './useUTMTitle'
+export { useUTMTitle, useUTMTitleKey, useIsCustomTitle } from './useUTMTitle'
