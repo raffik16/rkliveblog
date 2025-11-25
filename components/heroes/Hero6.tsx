@@ -1,7 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { CountUpAnimation, FloatingElement, GradientFlow, TextType, HoverWords } from '../animations'
+import {
+  CountUpAnimation,
+  FloatingElement,
+  GradientFlow,
+  TextType,
+  HoverWords,
+} from '../animations'
 
 export default function Hero6() {
   return (
