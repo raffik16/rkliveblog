@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, Variants } from 'framer-motion'
 import { ReactNode } from 'react'
 
 interface HoverWordsProps {
@@ -12,31 +12,31 @@ interface HoverWordsProps {
   children?: ReactNode
 }
 
-const hoverVariants = {
+const hoverVariants: Record<string, Variants> = {
   lift: {
     initial: { y: 0 },
-    hover: { y: -4, transition: { duration: 0.2, ease: 'easeOut' } },
+    hover: { y: -4, transition: { duration: 0.2, ease: 'easeOut' as const } },
   },
   scale: {
     initial: { scale: 1 },
-    hover: { scale: 1.1, transition: { duration: 0.2, ease: 'easeOut' } },
+    hover: { scale: 1.1, transition: { duration: 0.2, ease: 'easeOut' as const } },
   },
   glow: {
     initial: { textShadow: '0 0 0px transparent' },
     hover: {
       textShadow: '0 0 20px currentColor',
-      transition: { duration: 0.2, ease: 'easeOut' },
+      transition: { duration: 0.2, ease: 'easeOut' as const },
     },
   },
   color: {
     initial: { color: 'inherit' },
-    hover: { color: '#FF5B04', transition: { duration: 0.2, ease: 'easeOut' } },
+    hover: { color: '#FF5B04', transition: { duration: 0.2, ease: 'easeOut' as const } },
   },
   bounce: {
     initial: { y: 0 },
     hover: {
       y: [0, -6, 0],
-      transition: { duration: 0.4, ease: 'easeInOut' },
+      transition: { duration: 0.4, ease: 'easeInOut' as const },
     },
   },
 }
