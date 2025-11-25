@@ -40,8 +40,9 @@ export default function Hero6() {
                   text="Welcome to my corner of the internet. Here I share authentic thoughts, everyday experiences, and personal insights as they unfold. Join me on this journey of continuous discovery and genuine storytelling."
                   hoverEffect="lift"
                   animateOnView
-                  entranceEffect="fadeUp"
-                  staggerDelay={0.03}
+                  entranceEffect="elegant"
+                  staggerDelay={0.025}
+                  initialDelay={0.2}
                   wordClassName="transition-colors hover:text-white"
                 />
               </p>

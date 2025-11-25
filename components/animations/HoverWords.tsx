@@ -10,8 +10,9 @@ interface HoverWordsProps {
   wordClassName?: string
   hoverEffect?: 'lift' | 'scale' | 'glow' | 'color' | 'bounce'
   animateOnView?: boolean
-  entranceEffect?: 'fadeUp' | 'fadeIn' | 'slideIn' | 'blur' | 'wave'
+  entranceEffect?: 'fadeUp' | 'fadeIn' | 'slideIn' | 'blur' | 'wave' | 'elegant'
   staggerDelay?: number
+  initialDelay?: number
   children?: ReactNode
 }
 
@@ -44,26 +45,34 @@ const hoverVariants: Record<string, Variants> = {
   },
 }
 
+// Elegant spring-like easing for smooth animations
+const elegantEase = [0.25, 0.1, 0.25, 1] as const // cubic-bezier for smooth feel
+const smoothEase = [0.4, 0, 0.2, 1] as const // Material Design standard easing
+
 const entranceVariants: Record<string, { hidden: Variant; visible: Variant }> = {
   fadeUp: {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
+    hidden: { opacity: 0, y: 24, scale: 0.96 },
+    visible: { opacity: 1, y: 0, scale: 1 },
   },
   fadeIn: {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1 },
+    hidden: { opacity: 0, scale: 0.98 },
+    visible: { opacity: 1, scale: 1 },
   },
   slideIn: {
-    hidden: { opacity: 0, x: -20 },
-    visible: { opacity: 1, x: 0 },
+    hidden: { opacity: 0, x: -24, scale: 0.96 },
+    visible: { opacity: 1, x: 0, scale: 1 },
   },
   blur: {
-    hidden: { opacity: 0, filter: 'blur(10px)' },
-    visible: { opacity: 1, filter: 'blur(0px)' },
+    hidden: { opacity: 0, filter: 'blur(12px)', scale: 0.95 },
+    visible: { opacity: 1, filter: 'blur(0px)', scale: 1 },
   },
   wave: {
-    hidden: { opacity: 0, y: 20, rotateX: 90 },
+    hidden: { opacity: 0, y: 24, rotateX: 90 },
     visible: { opacity: 1, y: 0, rotateX: 0 },
+  },
+  elegant: {
+    hidden: { opacity: 0, y: 32, scale: 0.9, filter: 'blur(4px)' },
+    visible: { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' },
   },
 }
 
@@ -76,17 +85,20 @@ export default function HoverWords({
   animateOnView = false,
   entranceEffect = 'fadeUp',
   staggerDelay = 0.05,
+  initialDelay = 0,
 }: HoverWordsProps) {
   const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, margin: '-50px' })
+  const isInView = useInView(ref, { once: true, margin: '-100px' })
   const words = text.split(' ')
   const hoverVar = hoverVariants[hoverEffect]
   const entranceVar = entranceVariants[entranceEffect]
 
   const containerVariants: Variants = {
-    hidden: {},
+    hidden: { opacity: 0 },
     visible: {
+      opacity: 1,
       transition: {
+        delayChildren: initialDelay,
         staggerChildren: staggerDelay,
       },
     },
@@ -97,8 +109,8 @@ export default function HoverWords({
     visible: {
       ...entranceVar.visible,
       transition: {
-        duration: 0.4,
-        ease: [0.22, 1, 0.36, 1] as const,
+        duration: entranceEffect === 'elegant' ? 0.7 : 0.5,
+        ease: entranceEffect === 'elegant' ? elegantEase : smoothEase,
       },
     },
     hover: hoverVar.hover,
@@ -137,7 +149,10 @@ export default function HoverWords({
           className={`inline-block cursor-default ${wordClassName}`}
           variants={wordVariants}
           whileHover="hover"
-          style={{ perspective: entranceEffect === 'wave' ? '1000px' : undefined }}
+          style={{
+            perspective: entranceEffect === 'wave' ? '1000px' : undefined,
+            transformStyle: entranceEffect === 'wave' ? 'preserve-3d' : undefined,
+          }}
         >
           {word}
           {index < words.length - 1 && <span>&nbsp;</span>}
