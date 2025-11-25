@@ -5,11 +5,13 @@ import { formatDate } from 'pliny/utils/formatDate'
 import NewsletterForm from '@/components/NewsletterForm'
 import { Hero6 } from '@/components/heroes'
 import { HeroTitleVariation } from '@/data/heroTitles'
+import { CoreContent } from 'pliny/utils/contentlayer'
+import { Blog } from 'contentlayer/generated'
 
 const MAX_DISPLAY = 5
 
 interface HomeProps {
-  posts: any[]
+  posts: CoreContent<Blog>[]
   titleConfig?: HeroTitleVariation
 }
 
