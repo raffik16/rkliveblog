@@ -1,6 +1,6 @@
 'use client'
 
-import { motion, Variants, useInView } from 'framer-motion'
+import { motion, Variants, Variant, useInView } from 'framer-motion'
 import { ReactNode, useRef } from 'react'
 
 interface HoverWordsProps {
@@ -44,7 +44,7 @@ const hoverVariants: Record<string, Variants> = {
   },
 }
 
-const entranceVariants: Record<string, { hidden: object; visible: object }> = {
+const entranceVariants: Record<string, { hidden: Variant; visible: Variant }> = {
   fadeUp: {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
