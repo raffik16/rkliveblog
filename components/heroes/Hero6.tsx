@@ -23,9 +23,13 @@ function HeroContent({ titles, subtitle }: { titles: string[]; subtitle?: string
     <div className="relative">
       {/* Title Section */}
       <div className="mb-8 text-center sm:mb-12 lg:mb-16">
+        {/* SEO-friendly h1 with actual text for search engines and screen readers */}
+        <h1 className="sr-only">{titles.join(' | ')}</h1>
+        {/* Visual animated title (hidden from screen readers to avoid duplication) */}
         <TextType
           text={titles}
-          as="h1"
+          as="div"
+          aria-hidden="true"
           typingSpeed={75}
           pauseDuration={1500}
           showCursor={false}
