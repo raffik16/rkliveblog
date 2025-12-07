@@ -1,8 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
-import { gsap } from 'gsap'
+import { motion, useMotionValue, useSpring } from 'framer-motion'
 import {
   PhysicsState,
   PhysicsConfig,
@@ -11,7 +10,7 @@ import {
   ControlState,
   Particle,
 } from '../../types'
-import { TRICKS, getTrickById } from '../../data/tricks'
+import { getTrickById } from '../../data/tricks'
 
 interface SkatePhysicsProps {
   showDebug?: boolean
@@ -30,7 +29,6 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
   const particleIdRef = useRef<number>(0)
 
   const [physicsConfig, setPhysicsConfig] = useState<PhysicsConfig>(DEFAULT_PHYSICS_CONFIG)
-  const [isPlaying, setIsPlaying] = useState(true)
 
   const physicsState = useRef<PhysicsState>({
     position: { x: 200, y: GROUND_Y },
@@ -72,15 +70,13 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
   const trickProgressRef = useRef<number>(0)
   const airTimeRef = useRef<number>(0)
 
-  // Motion values for smooth board animation
   const boardRotateX = useMotionValue(0)
   const boardRotateY = useMotionValue(0)
   const boardRotateZ = useMotionValue(0)
-  const boardY = useMotionValue(0)
 
-  const springRotateX = useSpring(boardRotateX, { stiffness: 300, damping: 30 })
-  const springRotateY = useSpring(boardRotateY, { stiffness: 300, damping: 30 })
-  const springRotateZ = useSpring(boardRotateZ, { stiffness: 300, damping: 30 })
+  useSpring(boardRotateX, { stiffness: 300, damping: 30 })
+  useSpring(boardRotateY, { stiffness: 300, damping: 30 })
+  useSpring(boardRotateZ, { stiffness: 300, damping: 30 })
 
   const createParticle = useCallback(
     (
@@ -114,7 +110,7 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
       p.alpha = p.life
       p.x += p.vx * deltaTime
       p.y += p.vy * deltaTime
-      p.vy += 200 * deltaTime // gravity
+      p.vy += 200 * deltaTime
       return p.life > 0
     })
   }, [])
@@ -126,17 +122,13 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
       ctx.fillStyle = p.color
 
       if (p.type === 'spark') {
-        // Draw spark as a small bright circle
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2)
         ctx.fill()
-
-        // Glow effect
         ctx.shadowBlur = 10
         ctx.shadowColor = p.color
         ctx.fill()
       } else if (p.type === 'dust') {
-        // Draw dust as fading circle
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.size * (0.5 + p.life * 0.5), 0, Math.PI * 2)
         ctx.fill()
@@ -154,7 +146,6 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
       const state = physicsState.current
       const config = physicsConfig
 
-      // Apply horizontal movement
       if (controls.current.left) {
         state.velocity.x -= config.pushForce * deltaTime * 3
       }
@@ -162,17 +153,14 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
         state.velocity.x += config.pushForce * deltaTime * 3
       }
 
-      // Apply gravity
       if (!state.isGrounded) {
         state.velocity.y += config.gravity * deltaTime
         airTimeRef.current += deltaTime
       }
 
-      // Apply friction and air resistance
       if (state.isGrounded) {
         state.velocity.x *= Math.pow(config.friction, deltaTime * 60)
 
-        // Generate dust particles when moving fast on ground
         if (Math.abs(state.velocity.x) > 200 && Math.random() < 0.3) {
           createParticle(
             state.position.x + (Math.random() - 0.5) * BOARD_WIDTH,
@@ -186,21 +174,17 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
         state.velocity.x *= Math.pow(config.airResistance, deltaTime * 60)
       }
 
-      // Clamp velocity
       state.velocity.x = Math.max(
         -config.maxVelocity,
         Math.min(config.maxVelocity, state.velocity.x)
       )
 
-      // Update position
       state.position.x += state.velocity.x * deltaTime
       state.position.y += state.velocity.y * deltaTime
 
-      // Ground collision
       if (state.position.y >= GROUND_Y) {
         state.position.y = GROUND_Y
         if (!state.isGrounded && state.velocity.y > 50) {
-          // Landing impact
           for (let i = 0; i < 5; i++) {
             createParticle(
               state.position.x + (Math.random() - 0.5) * BOARD_WIDTH,
@@ -211,7 +195,6 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
             )
           }
 
-          // Generate sparks if landing while moving fast
           if (Math.abs(state.velocity.x) > 150) {
             for (let i = 0; i < 3; i++) {
               createParticle(
@@ -228,7 +211,6 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
         state.velocity.y = 0
         state.isGrounded = true
 
-        // Record air time
         if (airTimeRef.current > 0) {
           setMetrics((prev) => ({
             ...prev,
@@ -238,9 +220,7 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
           airTimeRef.current = 0
         }
 
-        // Reset rotations on landing
         if (currentTrick) {
-          // Complete trick and add score
           const trick = getTrickById(currentTrick)
           if (trick) {
             setMetrics((prev) => ({
@@ -262,14 +242,12 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
         state.isGrounded = false
       }
 
-      // Wrap around screen
       const canvas = canvasRef.current
       if (canvas) {
         if (state.position.x < -BOARD_WIDTH) state.position.x = canvas.width + BOARD_WIDTH
         if (state.position.x > canvas.width + BOARD_WIDTH) state.position.x = -BOARD_WIDTH
       }
 
-      // Update trick animation
       if (currentTrick && !state.isGrounded) {
         const trick = getTrickById(currentTrick)
         if (trick) {
@@ -279,7 +257,6 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
             trickProgressRef.current = 1
           }
 
-          // Interpolate keyframes
           const progress = trickProgressRef.current
           let prevKeyframe = trick.keyframes[0]
           let nextKeyframe = trick.keyframes[trick.keyframes.length - 1]
@@ -292,9 +269,8 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
             }
           }
 
-          const t =
-            (progress - prevKeyframe.time) / (nextKeyframe.time - prevKeyframe.time) || 0
-          const easeT = t * t * (3 - 2 * t) // smoothstep
+          const t = (progress - prevKeyframe.time) / (nextKeyframe.time - prevKeyframe.time) || 0
+          const easeT = t * t * (3 - 2 * t)
 
           state.rotation.x =
             prevKeyframe.rotation.x + (nextKeyframe.rotation.x - prevKeyframe.rotation.x) * easeT
@@ -309,7 +285,6 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
         }
       }
 
-      // Update metrics
       const speed = Math.abs(state.velocity.x)
       const height = Math.max(0, GROUND_Y - state.position.y)
 
@@ -328,120 +303,118 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
         onMetricsUpdate(metrics)
       }
     },
-    [physicsConfig, currentTrick, createParticle, boardRotateX, boardRotateY, boardRotateZ, metrics, onMetricsUpdate]
+    [
+      physicsConfig,
+      currentTrick,
+      createParticle,
+      boardRotateX,
+      boardRotateY,
+      boardRotateZ,
+      metrics,
+      onMetricsUpdate,
+    ]
   )
 
-  const drawSkateboard = useCallback(
-    (ctx: CanvasRenderingContext2D) => {
-      const state = physicsState.current
-      const { x, y } = state.position
+  const drawSkateboard = useCallback((ctx: CanvasRenderingContext2D) => {
+    const state = physicsState.current
+    const { x, y } = state.position
 
-      ctx.save()
-      ctx.translate(x, y)
+    ctx.save()
+    ctx.translate(x, y)
 
-      // Apply 3D-like rotation transforms
-      const rotX = state.rotation.x * (Math.PI / 180)
-      const rotY = state.rotation.y * (Math.PI / 180)
-      const rotZ = state.rotation.z * (Math.PI / 180)
+    const rotX = state.rotation.x * (Math.PI / 180)
+    const rotY = state.rotation.y * (Math.PI / 180)
+    const rotZ = state.rotation.z * (Math.PI / 180)
 
-      // Simulate 3D by scaling based on rotation
-      const scaleY = Math.cos(rotX)
-      const scaleX = Math.cos(rotY)
+    const scaleY = Math.cos(rotX)
+    const scaleX = Math.cos(rotY)
 
-      ctx.rotate(rotZ)
-      ctx.scale(scaleX || 0.1, scaleY || 0.1)
+    ctx.rotate(rotZ)
+    ctx.scale(scaleX || 0.1, scaleY || 0.1)
 
-      // Draw skateboard deck
-      const gradient = ctx.createLinearGradient(-BOARD_WIDTH / 2, 0, BOARD_WIDTH / 2, 0)
-      gradient.addColorStop(0, '#2d1f1f')
-      gradient.addColorStop(0.5, '#4a3535')
-      gradient.addColorStop(1, '#2d1f1f')
+    const gradient = ctx.createLinearGradient(-BOARD_WIDTH / 2, 0, BOARD_WIDTH / 2, 0)
+    gradient.addColorStop(0, '#2d1f1f')
+    gradient.addColorStop(0.5, '#4a3535')
+    gradient.addColorStop(1, '#2d1f1f')
 
-      ctx.fillStyle = gradient
+    ctx.fillStyle = gradient
+    ctx.beginPath()
+    ctx.roundRect(-BOARD_WIDTH / 2, -BOARD_HEIGHT / 2, BOARD_WIDTH, BOARD_HEIGHT, 8)
+    ctx.fill()
+
+    ctx.fillStyle = '#ff6b35'
+    ctx.beginPath()
+    ctx.roundRect(
+      -BOARD_WIDTH / 2 + 10,
+      -BOARD_HEIGHT / 2 + 3,
+      BOARD_WIDTH - 20,
+      BOARD_HEIGHT - 6,
+      4
+    )
+    ctx.fill()
+
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'
+    for (let i = 0; i < 20; i++) {
+      const gx = -BOARD_WIDTH / 2 + 15 + (i * (BOARD_WIDTH - 30)) / 20
+      const gy = -BOARD_HEIGHT / 2 + 5 + Math.random() * (BOARD_HEIGHT - 10)
+      ctx.fillRect(gx, gy, 2, 2)
+    }
+
+    ctx.fillStyle = '#888'
+    ctx.fillRect(-BOARD_WIDTH / 2 + 15, BOARD_HEIGHT / 2, 20, 8)
+    ctx.fillRect(BOARD_WIDTH / 2 - 35, BOARD_HEIGHT / 2, 20, 8)
+
+    ctx.fillStyle = '#333'
+    const wheelPositions = [
+      { x: -BOARD_WIDTH / 2 + 18, y: BOARD_HEIGHT / 2 + 8 },
+      { x: -BOARD_WIDTH / 2 + 32, y: BOARD_HEIGHT / 2 + 8 },
+      { x: BOARD_WIDTH / 2 - 32, y: BOARD_HEIGHT / 2 + 8 },
+      { x: BOARD_WIDTH / 2 - 18, y: BOARD_HEIGHT / 2 + 8 },
+    ]
+
+    wheelPositions.forEach((pos) => {
       ctx.beginPath()
-      ctx.roundRect(-BOARD_WIDTH / 2, -BOARD_HEIGHT / 2, BOARD_WIDTH, BOARD_HEIGHT, 8)
+      ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2)
       ctx.fill()
 
-      // Deck design
-      ctx.fillStyle = '#ff6b35'
+      ctx.fillStyle = '#555'
       ctx.beginPath()
-      ctx.roundRect(-BOARD_WIDTH / 2 + 10, -BOARD_HEIGHT / 2 + 3, BOARD_WIDTH - 20, BOARD_HEIGHT - 6, 4)
+      ctx.arc(pos.x - 2, pos.y - 2, 3, 0, Math.PI * 2)
       ctx.fill()
-
-      // Grip tape texture
-      ctx.fillStyle = 'rgba(0,0,0,0.3)'
-      for (let i = 0; i < 20; i++) {
-        const gx = -BOARD_WIDTH / 2 + 15 + (i * (BOARD_WIDTH - 30)) / 20
-        const gy = -BOARD_HEIGHT / 2 + 5 + (Math.random() * (BOARD_HEIGHT - 10))
-        ctx.fillRect(gx, gy, 2, 2)
-      }
-
-      // Draw trucks
-      ctx.fillStyle = '#888'
-      // Front truck
-      ctx.fillRect(-BOARD_WIDTH / 2 + 15, BOARD_HEIGHT / 2, 20, 8)
-      // Back truck
-      ctx.fillRect(BOARD_WIDTH / 2 - 35, BOARD_HEIGHT / 2, 20, 8)
-
-      // Draw wheels
       ctx.fillStyle = '#333'
-      const wheelPositions = [
-        { x: -BOARD_WIDTH / 2 + 18, y: BOARD_HEIGHT / 2 + 8 },
-        { x: -BOARD_WIDTH / 2 + 32, y: BOARD_HEIGHT / 2 + 8 },
-        { x: BOARD_WIDTH / 2 - 32, y: BOARD_HEIGHT / 2 + 8 },
-        { x: BOARD_WIDTH / 2 - 18, y: BOARD_HEIGHT / 2 + 8 },
-      ]
+    })
 
-      wheelPositions.forEach((pos) => {
-        ctx.beginPath()
-        ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2)
-        ctx.fill()
+    ctx.restore()
 
-        // Wheel highlight
-        ctx.fillStyle = '#555'
-        ctx.beginPath()
-        ctx.arc(pos.x - 2, pos.y - 2, 3, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.fillStyle = '#333'
-      })
-
-      ctx.restore()
-
-      // Draw shadow
-      ctx.save()
-      ctx.fillStyle = `rgba(0,0,0,${0.3 * (1 - (GROUND_Y - state.position.y) / 200)})`
-      ctx.beginPath()
-      ctx.ellipse(
-        x,
-        GROUND_Y + 15,
-        BOARD_WIDTH / 2 * (1 - (GROUND_Y - state.position.y) / 400),
-        8 * (1 - (GROUND_Y - state.position.y) / 400),
-        0,
-        0,
-        Math.PI * 2
-      )
-      ctx.fill()
-      ctx.restore()
-    },
-    []
-  )
+    ctx.save()
+    ctx.fillStyle = `rgba(0,0,0,${0.3 * (1 - (GROUND_Y - state.position.y) / 200)})`
+    ctx.beginPath()
+    ctx.ellipse(
+      x,
+      GROUND_Y + 15,
+      (BOARD_WIDTH / 2) * (1 - (GROUND_Y - state.position.y) / 400),
+      8 * (1 - (GROUND_Y - state.position.y) / 400),
+      0,
+      0,
+      Math.PI * 2
+    )
+    ctx.fill()
+    ctx.restore()
+  }, [])
 
   const drawBackground = useCallback((ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
-    // Sky gradient
     const skyGradient = ctx.createLinearGradient(0, 0, 0, GROUND_Y)
     skyGradient.addColorStop(0, '#1a1a2e')
     skyGradient.addColorStop(1, '#16213e')
     ctx.fillStyle = skyGradient
     ctx.fillRect(0, 0, canvas.width, GROUND_Y)
 
-    // Ground
     const groundGradient = ctx.createLinearGradient(0, GROUND_Y, 0, canvas.height)
     groundGradient.addColorStop(0, '#2c3e50')
     groundGradient.addColorStop(1, '#1a252f')
     ctx.fillStyle = groundGradient
     ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y)
 
-    // Ground line
     ctx.strokeStyle = '#4a5568'
     ctx.lineWidth = 2
     ctx.beginPath()
@@ -449,7 +422,6 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
     ctx.lineTo(canvas.width, GROUND_Y)
     ctx.stroke()
 
-    // Grid lines on ground
     ctx.strokeStyle = 'rgba(74, 85, 104, 0.3)'
     ctx.lineWidth = 1
     for (let i = 0; i < canvas.width; i += 50) {
@@ -462,8 +434,6 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
 
   const animate = useCallback(
     (timestamp: number) => {
-      if (!isPlaying) return
-
       const deltaTime = Math.min((timestamp - lastTimeRef.current) / 1000, 0.1)
       lastTimeRef.current = timestamp
 
@@ -471,7 +441,6 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
       const ctx = canvas?.getContext('2d')
       if (!canvas || !ctx) return
 
-      // Clear and draw
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       drawBackground(ctx, canvas)
       updatePhysics(deltaTime)
@@ -479,22 +448,35 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
       drawParticles(ctx)
       drawSkateboard(ctx)
 
-      // Debug info
       if (showDebug) {
         ctx.fillStyle = '#00ff00'
         ctx.font = '12px monospace'
-        ctx.fillText(`Pos: ${physicsState.current.position.x.toFixed(0)}, ${physicsState.current.position.y.toFixed(0)}`, 10, 20)
-        ctx.fillText(`Vel: ${physicsState.current.velocity.x.toFixed(0)}, ${physicsState.current.velocity.y.toFixed(0)}`, 10, 35)
+        ctx.fillText(
+          `Pos: ${physicsState.current.position.x.toFixed(0)}, ${physicsState.current.position.y.toFixed(0)}`,
+          10,
+          20
+        )
+        ctx.fillText(
+          `Vel: ${physicsState.current.velocity.x.toFixed(0)}, ${physicsState.current.velocity.y.toFixed(0)}`,
+          10,
+          35
+        )
         ctx.fillText(`Grounded: ${physicsState.current.isGrounded}`, 10, 50)
         ctx.fillText(`Particles: ${particlesRef.current.length}`, 10, 65)
       }
 
       animationRef.current = requestAnimationFrame(animate)
     },
-    [isPlaying, showDebug, drawBackground, updatePhysics, updateParticles, drawParticles, drawSkateboard]
+    [
+      showDebug,
+      drawBackground,
+      updatePhysics,
+      updateParticles,
+      drawParticles,
+      drawSkateboard,
+    ]
   )
 
-  // Handle keyboard input
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       switch (e.key.toLowerCase()) {
@@ -559,7 +541,6 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
     }
   }, [physicsConfig.jumpForce, currentTrick])
 
-  // Initialize and start animation
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -585,71 +566,63 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Main Canvas */}
-      <div className="relative rounded-xl overflow-hidden border border-gray-700">
-        <canvas
-          ref={canvasRef}
-          className="w-full h-[350px] bg-gray-900"
-        />
+      <div className="relative overflow-hidden rounded-xl border border-gray-700">
+        <canvas ref={canvasRef} className="h-[350px] w-full bg-gray-900" />
 
-        {/* Current trick display */}
         {currentTrick && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-orange-500/80 rounded-lg"
+            className="absolute left-1/2 top-4 -translate-x-1/2 rounded-lg bg-orange-500/80 px-4 py-2"
           >
-            <span className="text-white font-bold text-lg">
+            <span className="text-lg font-bold text-white">
               {getTrickById(currentTrick)?.displayName}
             </span>
           </motion.div>
         )}
 
-        {/* Score display */}
-        <div className="absolute top-4 right-4 text-right">
+        <div className="absolute right-4 top-4 text-right">
           <div className="text-2xl font-bold text-white">{metrics.score.toLocaleString()}</div>
           {metrics.trickCombo > 0 && (
-            <div className="text-orange-400 text-sm">x{metrics.trickCombo} combo</div>
+            <div className="text-sm text-orange-400">x{metrics.trickCombo} combo</div>
           )}
         </div>
       </div>
 
-      {/* Controls info */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-        <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
-          <div className="text-gray-400 mb-1">Move</div>
+      <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
+        <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-3">
+          <div className="mb-1 text-gray-400">Move</div>
           <div className="flex gap-2">
-            <kbd className="px-2 py-1 bg-gray-700 rounded text-xs">A/D</kbd>
+            <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">A/D</kbd>
             <span className="text-gray-500">or</span>
-            <kbd className="px-2 py-1 bg-gray-700 rounded text-xs">←/→</kbd>
+            <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">←/→</kbd>
           </div>
         </div>
-        <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
-          <div className="text-gray-400 mb-1">Jump</div>
-          <kbd className="px-2 py-1 bg-gray-700 rounded text-xs">Space</kbd>
+        <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-3">
+          <div className="mb-1 text-gray-400">Jump</div>
+          <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">Space</kbd>
         </div>
-        <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
-          <div className="text-gray-400 mb-1">Tricks (in air)</div>
+        <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-3">
+          <div className="mb-1 text-gray-400">Tricks (in air)</div>
           <div className="flex gap-1">
-            <kbd className="px-2 py-1 bg-gray-700 rounded text-xs">1</kbd>
-            <kbd className="px-2 py-1 bg-gray-700 rounded text-xs">2</kbd>
-            <kbd className="px-2 py-1 bg-gray-700 rounded text-xs">3</kbd>
-            <kbd className="px-2 py-1 bg-gray-700 rounded text-xs">4</kbd>
+            <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">1</kbd>
+            <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">2</kbd>
+            <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">3</kbd>
+            <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">4</kbd>
           </div>
         </div>
-        <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
-          <div className="text-gray-400 mb-1">Speed</div>
-          <div className="text-xl font-mono text-cyan-400">{metrics.speed.toFixed(0)} px/s</div>
+        <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-3">
+          <div className="mb-1 text-gray-400">Speed</div>
+          <div className="font-mono text-xl text-cyan-400">{metrics.speed.toFixed(0)} px/s</div>
         </div>
       </div>
 
-      {/* Physics Controls */}
-      <div className="bg-gray-800/30 rounded-xl p-4 border border-gray-700">
-        <h3 className="text-lg font-semibold text-white mb-4">Physics Configuration</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="rounded-xl border border-gray-700 bg-gray-800/30 p-4">
+        <h3 className="mb-4 text-lg font-semibold text-white">Physics Configuration</h3>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <div>
-            <label className="text-gray-400 text-sm block mb-1">
+            <label className="mb-1 block text-sm text-gray-400">
               Gravity: {physicsConfig.gravity}
             </label>
             <input
@@ -664,7 +637,7 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
             />
           </div>
           <div>
-            <label className="text-gray-400 text-sm block mb-1">
+            <label className="mb-1 block text-sm text-gray-400">
               Jump Force: {physicsConfig.jumpForce}
             </label>
             <input
@@ -679,7 +652,7 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
             />
           </div>
           <div>
-            <label className="text-gray-400 text-sm block mb-1">
+            <label className="mb-1 block text-sm text-gray-400">
               Friction: {physicsConfig.friction.toFixed(2)}
             </label>
             <input
@@ -695,7 +668,7 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
             />
           </div>
           <div>
-            <label className="text-gray-400 text-sm block mb-1">
+            <label className="mb-1 block text-sm text-gray-400">
               Push Force: {physicsConfig.pushForce}
             </label>
             <input
@@ -712,7 +685,7 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
         </div>
         <button
           onClick={() => setPhysicsConfig(DEFAULT_PHYSICS_CONFIG)}
-          className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors"
+          className="mt-4 rounded-lg bg-gray-700 px-4 py-2 text-sm transition-colors hover:bg-gray-600"
         >
           Reset to Defaults
         </button>

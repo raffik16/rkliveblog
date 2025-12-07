@@ -115,7 +115,7 @@ export default function ParticlePlayground() {
 
   const createParticle = useCallback((x: number, y: number, config: ParticleConfig) => {
     const angleSpread = (config.spread * Math.PI) / 180
-    const baseAngle = -Math.PI / 2 // Upward
+    const baseAngle = -Math.PI / 2
 
     for (let i = 0; i < config.count; i++) {
       const angle = baseAngle + (Math.random() - 0.5) * angleSpread
@@ -147,7 +147,6 @@ export default function ParticlePlayground() {
         p.y += p.vy * deltaTime
         p.vy += activeConfig.gravity * deltaTime
 
-        // Add some randomness for dust type
         if (p.type === 'dust') {
           p.vx += (Math.random() - 0.5) * 50 * deltaTime
         }
@@ -159,61 +158,53 @@ export default function ParticlePlayground() {
     [activeConfig]
   )
 
-  const drawParticles = useCallback(
-    (ctx: CanvasRenderingContext2D) => {
-      particlesRef.current.forEach((p) => {
-        ctx.save()
-        ctx.globalAlpha = p.alpha
+  const drawParticles = useCallback((ctx: CanvasRenderingContext2D) => {
+    particlesRef.current.forEach((p) => {
+      ctx.save()
+      ctx.globalAlpha = p.alpha
 
-        if (p.type === 'spark') {
-          // Draw spark with glow
-          const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2)
-          gradient.addColorStop(0, p.color)
-          gradient.addColorStop(0.5, p.color + '80')
-          gradient.addColorStop(1, 'transparent')
+      if (p.type === 'spark') {
+        const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2)
+        gradient.addColorStop(0, p.color)
+        gradient.addColorStop(0.5, p.color + '80')
+        gradient.addColorStop(1, 'transparent')
 
-          ctx.fillStyle = gradient
-          ctx.beginPath()
-          ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2)
-          ctx.fill()
+        ctx.fillStyle = gradient
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2)
+        ctx.fill()
 
-          // Core
-          ctx.fillStyle = '#ffffff'
-          ctx.beginPath()
-          ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2)
-          ctx.fill()
-        } else if (p.type === 'dust') {
-          // Soft dust particle
-          const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size)
-          gradient.addColorStop(0, p.color)
-          gradient.addColorStop(1, 'transparent')
+        ctx.fillStyle = '#ffffff'
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2)
+        ctx.fill()
+      } else if (p.type === 'dust') {
+        const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size)
+        gradient.addColorStop(0, p.color)
+        gradient.addColorStop(1, 'transparent')
 
-          ctx.fillStyle = gradient
-          ctx.beginPath()
-          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
-          ctx.fill()
-        } else if (p.type === 'trail') {
-          // Draw trail with motion blur effect
-          ctx.strokeStyle = p.color
-          ctx.lineWidth = p.size
-          ctx.lineCap = 'round'
-          ctx.beginPath()
-          ctx.moveTo(p.x - p.vx * 0.05, p.y - p.vy * 0.05)
-          ctx.lineTo(p.x, p.y)
-          ctx.stroke()
-        } else {
-          // Impact - sharp edges
-          ctx.fillStyle = p.color
-          ctx.beginPath()
-          ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2)
-          ctx.fill()
-        }
+        ctx.fillStyle = gradient
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
+        ctx.fill()
+      } else if (p.type === 'trail') {
+        ctx.strokeStyle = p.color
+        ctx.lineWidth = p.size
+        ctx.lineCap = 'round'
+        ctx.beginPath()
+        ctx.moveTo(p.x - p.vx * 0.05, p.y - p.vy * 0.05)
+        ctx.lineTo(p.x, p.y)
+        ctx.stroke()
+      } else {
+        ctx.fillStyle = p.color
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2)
+        ctx.fill()
+      }
 
-        ctx.restore()
-      })
-    },
-    []
-  )
+      ctx.restore()
+    })
+  }, [])
 
   const animate = useCallback(
     (timestamp: number) => {
@@ -224,11 +215,9 @@ export default function ParticlePlayground() {
       const ctx = canvas?.getContext('2d')
       if (!canvas || !ctx) return
 
-      // Clear with fade effect for trails
       ctx.fillStyle = 'rgba(17, 24, 39, 0.2)'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      // Emit particles continuously if enabled
       if (continuousEmit && isEmittingRef.current) {
         createParticle(emitPositionRef.current.x, emitPositionRef.current.y, activeConfig)
       }
@@ -236,7 +225,6 @@ export default function ParticlePlayground() {
       updateParticles(deltaTime)
       drawParticles(ctx)
 
-      // Draw emitter position indicator
       if (isEmittingRef.current) {
         ctx.strokeStyle = '#4ade80'
         ctx.lineWidth = 2
@@ -309,35 +297,29 @@ export default function ParticlePlayground() {
 
   return (
     <div className="space-y-6">
-      {/* Canvas Area */}
       <div className="relative">
         <canvas
           ref={canvasRef}
-          className="w-full h-[400px] bg-gray-900 rounded-xl cursor-crosshair border border-gray-700"
+          className="h-[400px] w-full cursor-crosshair rounded-xl border border-gray-700 bg-gray-900"
           onClick={handleCanvasClick}
           onMouseMove={handleMouseMove}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
         />
-
-        {/* Overlay Stats */}
-        <div className="absolute top-4 left-4 bg-black/50 backdrop-blur px-3 py-2 rounded-lg">
+        <div className="absolute left-4 top-4 rounded-lg bg-black/50 px-3 py-2 backdrop-blur">
           <div className="text-sm text-gray-400">
-            Particles: <span className="text-white font-mono">{particleCount}</span>
+            Particles: <span className="font-mono text-white">{particleCount}</span>
           </div>
         </div>
-
-        <div className="absolute top-4 right-4 bg-black/50 backdrop-blur px-3 py-2 rounded-lg text-sm text-gray-400">
+        <div className="absolute right-4 top-4 rounded-lg bg-black/50 px-3 py-2 text-sm text-gray-400 backdrop-blur">
           Click or drag to emit particles
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Presets */}
-        <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-          <div className="flex justify-between items-center mb-4">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-4">
+          <div className="mb-4 flex items-center justify-between">
             <h3 className="font-semibold text-white">Presets</h3>
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -359,10 +341,10 @@ export default function ParticlePlayground() {
                   setCustomConfig(preset.config)
                   setIsCustomMode(false)
                 }}
-                className={`p-3 rounded-lg border text-left transition-all ${
+                className={`rounded-lg border p-3 text-left transition-all ${
                   selectedPreset.name === preset.name && !isCustomMode
-                    ? 'bg-orange-500/20 border-orange-500'
-                    : 'bg-gray-900/50 border-gray-700 hover:border-gray-600'
+                    ? 'border-orange-500 bg-orange-500/20'
+                    : 'border-gray-700 bg-gray-900/50 hover:border-gray-600'
                 }`}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -376,11 +358,11 @@ export default function ParticlePlayground() {
           <div className="mt-4 flex gap-2">
             <button
               onClick={clearParticles}
-              className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors"
+              className="flex-1 rounded-lg bg-gray-700 px-4 py-2 text-sm transition-colors hover:bg-gray-600"
             >
               Clear All
             </button>
-            <label className="flex items-center gap-2 px-4 py-2 bg-gray-700 rounded-lg text-sm cursor-pointer">
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-gray-700 px-4 py-2 text-sm">
               <input
                 type="checkbox"
                 checked={continuousEmit}
@@ -392,15 +374,14 @@ export default function ParticlePlayground() {
           </div>
         </div>
 
-        {/* Custom Config */}
-        <div className={`bg-gray-800/50 rounded-xl p-4 border border-gray-700 ${!isCustomMode && 'opacity-50'}`}>
-          <h3 className="font-semibold text-white mb-4">Custom Configuration</h3>
+        <div
+          className={`rounded-xl border border-gray-700 bg-gray-800/50 p-4 ${!isCustomMode && 'opacity-50'}`}
+        >
+          <h3 className="mb-4 font-semibold text-white">Custom Configuration</h3>
 
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-gray-400 block mb-1">
-                Count: {customConfig.count}
-              </label>
+              <label className="mb-1 block text-sm text-gray-400">Count: {customConfig.count}</label>
               <input
                 type="range"
                 min="1"
@@ -415,7 +396,7 @@ export default function ParticlePlayground() {
             </div>
 
             <div>
-              <label className="text-sm text-gray-400 block mb-1">
+              <label className="mb-1 block text-sm text-gray-400">
                 Lifetime: {customConfig.lifetime.toFixed(1)}s
               </label>
               <input
@@ -433,9 +414,7 @@ export default function ParticlePlayground() {
             </div>
 
             <div>
-              <label className="text-sm text-gray-400 block mb-1">
-                Speed: {customConfig.speed}
-              </label>
+              <label className="mb-1 block text-sm text-gray-400">Speed: {customConfig.speed}</label>
               <input
                 type="range"
                 min="10"
@@ -450,7 +429,7 @@ export default function ParticlePlayground() {
             </div>
 
             <div>
-              <label className="text-sm text-gray-400 block mb-1">Size: {customConfig.size}</label>
+              <label className="mb-1 block text-sm text-gray-400">Size: {customConfig.size}</label>
               <input
                 type="range"
                 min="1"
@@ -465,7 +444,7 @@ export default function ParticlePlayground() {
             </div>
 
             <div>
-              <label className="text-sm text-gray-400 block mb-1">
+              <label className="mb-1 block text-sm text-gray-400">
                 Gravity: {customConfig.gravity}
               </label>
               <input
@@ -482,7 +461,7 @@ export default function ParticlePlayground() {
             </div>
 
             <div>
-              <label className="text-sm text-gray-400 block mb-1">
+              <label className="mb-1 block text-sm text-gray-400">
                 Spread: {customConfig.spread}°
               </label>
               <input
@@ -499,13 +478,13 @@ export default function ParticlePlayground() {
             </div>
 
             <div className="flex items-center gap-4">
-              <label className="text-sm text-gray-400">Color:</label>
+              <span className="text-sm text-gray-400">Color:</span>
               <input
                 type="color"
                 value={customConfig.color}
                 onChange={(e) => setCustomConfig((prev) => ({ ...prev, color: e.target.value }))}
                 disabled={!isCustomMode}
-                className="w-12 h-8 rounded cursor-pointer"
+                className="h-8 w-12 cursor-pointer rounded"
               />
 
               <label className="flex items-center gap-2 text-sm text-gray-400">
@@ -523,16 +502,16 @@ export default function ParticlePlayground() {
             </div>
 
             <div>
-              <label className="text-sm text-gray-400 block mb-2">Type:</label>
+              <span className="mb-2 block text-sm text-gray-400">Type:</span>
               <div className="flex gap-2">
                 {(['spark', 'dust', 'trail', 'impact'] as const).map((type) => (
                   <button
                     key={type}
                     onClick={() => setCustomConfig((prev) => ({ ...prev, type }))}
                     disabled={!isCustomMode}
-                    className={`px-3 py-1 text-sm rounded border ${
+                    className={`rounded border px-3 py-1 text-sm ${
                       customConfig.type === type
-                        ? 'bg-orange-500/20 border-orange-500 text-white'
+                        ? 'border-orange-500 bg-orange-500/20 text-white'
                         : 'border-gray-600 text-gray-400'
                     }`}
                   >
