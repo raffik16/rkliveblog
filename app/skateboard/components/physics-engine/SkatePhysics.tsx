@@ -17,7 +17,6 @@ interface SkatePhysicsProps {
   onMetricsUpdate?: (metrics: SkateboardMetrics) => void
 }
 
-const GROUND_Y = 280
 const BOARD_WIDTH = 120
 const BOARD_HEIGHT = 20
 
@@ -27,11 +26,12 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
   const lastTimeRef = useRef<number>(0)
   const particlesRef = useRef<Particle[]>([])
   const particleIdRef = useRef<number>(0)
+  const groundYRef = useRef<number>(200)
 
   const [physicsConfig, setPhysicsConfig] = useState<PhysicsConfig>(DEFAULT_PHYSICS_CONFIG)
 
   const physicsState = useRef<PhysicsState>({
-    position: { x: 200, y: GROUND_Y },
+    position: { x: 200, y: 200 },
     velocity: { x: 0, y: 0 },
     acceleration: { x: 0, y: 0 },
     rotation: { x: 0, y: 0, z: 0 },
@@ -165,7 +165,7 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
         if (Math.abs(state.velocity.x) > 200 && Math.random() < 0.3) {
           createParticle(
             state.position.x + (Math.random() - 0.5) * BOARD_WIDTH,
-            GROUND_Y + 5,
+            groundYRef.current + 5,
             'dust',
             -state.velocity.x * 0.1,
             -20
@@ -183,13 +183,13 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
       state.position.x += state.velocity.x * deltaTime
       state.position.y += state.velocity.y * deltaTime
 
-      if (state.position.y >= GROUND_Y) {
-        state.position.y = GROUND_Y
+      if (state.position.y >= groundYRef.current) {
+        state.position.y = groundYRef.current
         if (!state.isGrounded && state.velocity.y > 50) {
           for (let i = 0; i < 5; i++) {
             createParticle(
               state.position.x + (Math.random() - 0.5) * BOARD_WIDTH,
-              GROUND_Y,
+              groundYRef.current,
               'impact',
               (Math.random() - 0.5) * 100,
               -Math.random() * 100
@@ -200,7 +200,7 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
             for (let i = 0; i < 3; i++) {
               createParticle(
                 state.position.x + (state.velocity.x > 0 ? -BOARD_WIDTH / 2 : BOARD_WIDTH / 2),
-                GROUND_Y,
+                groundYRef.current,
                 'spark',
                 state.velocity.x * 0.5,
                 -50
@@ -287,7 +287,7 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
       }
 
       const speed = Math.abs(state.velocity.x)
-      const height = Math.max(0, GROUND_Y - state.position.y)
+      const height = Math.max(0, groundYRef.current - state.position.y)
 
       setMetrics((prev) => ({
         ...prev,
@@ -388,13 +388,13 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
     ctx.restore()
 
     ctx.save()
-    ctx.fillStyle = `rgba(0,0,0,${0.3 * (1 - (GROUND_Y - state.position.y) / 200)})`
+    ctx.fillStyle = `rgba(0,0,0,${0.3 * (1 - (groundYRef.current - state.position.y) / 200)})`
     ctx.beginPath()
     ctx.ellipse(
       x,
-      GROUND_Y + 15,
-      (BOARD_WIDTH / 2) * (1 - (GROUND_Y - state.position.y) / 400),
-      8 * (1 - (GROUND_Y - state.position.y) / 400),
+      groundYRef.current + 15,
+      (BOARD_WIDTH / 2) * (1 - (groundYRef.current - state.position.y) / 400),
+      8 * (1 - (groundYRef.current - state.position.y) / 400),
       0,
       0,
       Math.PI * 2
@@ -404,30 +404,30 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
   }, [])
 
   const drawBackground = useCallback((ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
-    const skyGradient = ctx.createLinearGradient(0, 0, 0, GROUND_Y)
+    const skyGradient = ctx.createLinearGradient(0, 0, 0, groundYRef.current)
     skyGradient.addColorStop(0, '#1a1a2e')
     skyGradient.addColorStop(1, '#16213e')
     ctx.fillStyle = skyGradient
-    ctx.fillRect(0, 0, canvas.width, GROUND_Y)
+    ctx.fillRect(0, 0, canvas.width, groundYRef.current)
 
-    const groundGradient = ctx.createLinearGradient(0, GROUND_Y, 0, canvas.height)
+    const groundGradient = ctx.createLinearGradient(0, groundYRef.current, 0, canvas.height)
     groundGradient.addColorStop(0, '#2c3e50')
     groundGradient.addColorStop(1, '#1a252f')
     ctx.fillStyle = groundGradient
-    ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y)
+    ctx.fillRect(0, groundYRef.current, canvas.width, canvas.height - groundYRef.current)
 
     ctx.strokeStyle = '#4a5568'
     ctx.lineWidth = 2
     ctx.beginPath()
-    ctx.moveTo(0, GROUND_Y)
-    ctx.lineTo(canvas.width, GROUND_Y)
+    ctx.moveTo(0, groundYRef.current)
+    ctx.lineTo(canvas.width, groundYRef.current)
     ctx.stroke()
 
     ctx.strokeStyle = 'rgba(74, 85, 104, 0.3)'
     ctx.lineWidth = 1
     for (let i = 0; i < canvas.width; i += 50) {
       ctx.beginPath()
-      ctx.moveTo(i, GROUND_Y)
+      ctx.moveTo(i, groundYRef.current)
       ctx.lineTo(i, canvas.height)
       ctx.stroke()
     }
@@ -578,6 +578,8 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
     const resizeCanvas = () => {
       canvas.width = canvas.offsetWidth
       canvas.height = canvas.offsetHeight
+      groundYRef.current = canvas.height - 50
+      physicsState.current.position.y = groundYRef.current
     }
 
     resizeCanvas()
