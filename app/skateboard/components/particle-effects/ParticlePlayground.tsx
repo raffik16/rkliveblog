@@ -268,6 +268,38 @@ export default function ParticlePlayground() {
     isEmittingRef.current = false
   }
 
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault()
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const rect = canvas.getBoundingClientRect()
+    const touch = e.touches[0]
+    const x = touch.clientX - rect.left
+    const y = touch.clientY - rect.top
+
+    emitPositionRef.current = { x, y }
+    createParticle(x, y, activeConfig)
+    isEmittingRef.current = true
+  }
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault()
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const rect = canvas.getBoundingClientRect()
+    const touch = e.touches[0]
+    emitPositionRef.current = {
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top,
+    }
+  }
+
+  const handleTouchEnd = () => {
+    isEmittingRef.current = false
+  }
+
   const clearParticles = () => {
     particlesRef.current = []
   }
@@ -296,43 +328,46 @@ export default function ParticlePlayground() {
   }, [animate])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="relative">
         <canvas
           ref={canvasRef}
-          className="h-[400px] w-full cursor-crosshair rounded-xl border border-gray-700 bg-gray-900"
+          className="h-[280px] w-full cursor-crosshair touch-none rounded-xl border border-gray-700 bg-gray-900 md:h-[400px]"
           onClick={handleCanvasClick}
           onMouseMove={handleMouseMove}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         />
-        <div className="absolute top-4 left-4 rounded-lg bg-black/50 px-3 py-2 backdrop-blur">
-          <div className="text-sm text-gray-400">
+        <div className="absolute top-2 left-2 rounded-lg bg-black/50 px-2 py-1 backdrop-blur md:top-4 md:left-4 md:px-3 md:py-2">
+          <div className="text-xs text-gray-400 md:text-sm">
             Particles: <span className="font-mono text-white">{particleCount}</span>
           </div>
         </div>
-        <div className="absolute top-4 right-4 rounded-lg bg-black/50 px-3 py-2 text-sm text-gray-400 backdrop-blur">
-          Click or drag to emit particles
+        <div className="absolute top-2 right-2 rounded-lg bg-black/50 px-2 py-1 text-xs text-gray-400 backdrop-blur md:top-4 md:right-4 md:px-3 md:py-2 md:text-sm">
+          Tap or drag to emit
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-4">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-semibold text-white">Presets</h3>
-            <label className="flex items-center gap-2 text-sm">
+      <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-3 md:p-4">
+          <div className="mb-3 flex items-center justify-between md:mb-4">
+            <h3 className="text-sm font-semibold text-white md:text-base">Presets</h3>
+            <label className="flex items-center gap-1.5 text-xs md:gap-2 md:text-sm">
               <input
                 type="checkbox"
                 checked={isCustomMode}
                 onChange={(e) => setIsCustomMode(e.target.checked)}
                 className="accent-orange-500"
               />
-              <span className="text-gray-400">Custom Mode</span>
+              <span className="text-gray-400">Custom</span>
             </label>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-1.5 md:grid-cols-2 md:gap-2">
             {PARTICLE_PRESETS.map((preset) => (
               <motion.button
                 key={preset.name}
@@ -341,7 +376,7 @@ export default function ParticlePlayground() {
                   setCustomConfig(preset.config)
                   setIsCustomMode(false)
                 }}
-                className={`rounded-lg border p-3 text-left transition-all ${
+                className={`rounded-lg border p-2 text-left transition-all md:p-3 ${
                   selectedPreset.name === preset.name && !isCustomMode
                     ? 'border-orange-500 bg-orange-500/20'
                     : 'border-gray-700 bg-gray-900/50 hover:border-gray-600'
@@ -349,20 +384,24 @@ export default function ParticlePlayground() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <div className="font-medium text-white">{preset.name}</div>
-                <div className="text-xs text-gray-500">{preset.config.count} particles</div>
+                <div className="truncate text-xs font-medium text-white md:text-sm">
+                  {preset.name}
+                </div>
+                <div className="hidden text-xs text-gray-500 md:block">
+                  {preset.config.count} particles
+                </div>
               </motion.button>
             ))}
           </div>
 
-          <div className="mt-4 flex gap-2">
+          <div className="mt-3 flex gap-2 md:mt-4">
             <button
               onClick={clearParticles}
-              className="flex-1 rounded-lg bg-gray-700 px-4 py-2 text-sm transition-colors hover:bg-gray-600"
+              className="flex-1 rounded-lg bg-gray-700 px-3 py-2 text-xs transition-colors hover:bg-gray-600 md:px-4 md:text-sm"
             >
               Clear All
             </button>
-            <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-gray-700 px-4 py-2 text-sm">
+            <label className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-gray-700 px-3 py-2 text-xs md:gap-2 md:px-4 md:text-sm">
               <input
                 type="checkbox"
                 checked={continuousEmit}
@@ -375,9 +414,11 @@ export default function ParticlePlayground() {
         </div>
 
         <div
-          className={`rounded-xl border border-gray-700 bg-gray-800/50 p-4 ${!isCustomMode && 'opacity-50'}`}
+          className={`rounded-xl border border-gray-700 bg-gray-800/50 p-3 md:p-4 ${!isCustomMode && 'opacity-50'}`}
         >
-          <h3 className="mb-4 font-semibold text-white">Custom Configuration</h3>
+          <h3 className="mb-3 text-sm font-semibold text-white md:mb-4 md:text-base">
+            Custom Configuration
+          </h3>
 
           <div className="space-y-4">
             <div>

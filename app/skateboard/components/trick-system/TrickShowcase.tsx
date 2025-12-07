@@ -108,57 +108,65 @@ export default function TrickShowcase({ onTrickSelect }: TrickShowcaseProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <div className="space-y-4 lg:col-span-1">
-        <h3 className="mb-4 text-lg font-semibold text-white">Trick Library</h3>
+    <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
+      <div className="order-2 space-y-3 md:space-y-4 lg:order-1 lg:col-span-1">
+        <h3 className="text-base font-semibold text-white md:mb-4 md:text-lg">Trick Library</h3>
 
-        {Object.entries(TRICK_CATEGORIES).map(([category, trickIds]) => (
-          <div key={category} className="space-y-2">
-            <h4 className="text-sm font-medium tracking-wider text-gray-400 uppercase">
-              {category}
-            </h4>
-            {trickIds.map((trickId) => {
-              const trick = getTrickById(trickId)
-              if (!trick) return null
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-1 lg:gap-0 lg:space-y-4">
+          {Object.entries(TRICK_CATEGORIES).map(([category, trickIds]) => (
+            <div key={category} className="contents lg:block lg:space-y-2">
+              <h4 className="col-span-2 text-xs font-medium tracking-wider text-gray-400 uppercase sm:col-span-3 lg:text-sm">
+                {category}
+              </h4>
+              {trickIds.map((trickId) => {
+                const trick = getTrickById(trickId)
+                if (!trick) return null
 
-              return (
-                <motion.button
-                  key={trick.id}
-                  onClick={() => handleTrickSelect(trick)}
-                  className={`w-full rounded-lg border p-3 text-left transition-all ${
-                    selectedTrick.id === trick.id
-                      ? 'border-orange-500 bg-orange-500/20 text-white'
-                      : 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
-                  }`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{trick.displayName}</span>
-                    <span className="text-sm">{getDifficultyStars(trick.difficulty)}</span>
-                  </div>
-                  <div className="mt-1 text-xs text-gray-500">
-                    {trick.baseScore} pts • {(trick.duration * 1000).toFixed(0)}ms
-                  </div>
-                </motion.button>
-              )
-            })}
-          </div>
-        ))}
+                return (
+                  <motion.button
+                    key={trick.id}
+                    onClick={() => handleTrickSelect(trick)}
+                    className={`w-full rounded-lg border p-2 text-left transition-all md:p-3 ${
+                      selectedTrick.id === trick.id
+                        ? 'border-orange-500 bg-orange-500/20 text-white'
+                        : 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="truncate text-sm font-medium md:text-base">
+                        {trick.displayName}
+                      </span>
+                      <span className="shrink-0 text-xs md:text-sm">
+                        {getDifficultyStars(trick.difficulty)}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500 md:mt-1">
+                      {trick.baseScore} pts • {(trick.duration * 1000).toFixed(0)}ms
+                    </div>
+                  </motion.button>
+                )
+              })}
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="space-y-4 lg:col-span-2">
-        <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-xl font-bold text-white">{selectedTrick.displayName}</h3>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-400">Difficulty:</span>
-              <span>{getDifficultyStars(selectedTrick.difficulty)}</span>
+      <div className="order-1 space-y-3 md:space-y-4 lg:order-2 lg:col-span-2">
+        <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-3 md:p-6">
+          <div className="mb-3 flex items-center justify-between md:mb-4">
+            <h3 className="text-lg font-bold text-white md:text-xl">{selectedTrick.displayName}</h3>
+            <div className="flex items-center gap-1 md:gap-2">
+              <span className="hidden text-sm text-gray-400 sm:inline">Difficulty:</span>
+              <span className="text-sm md:text-base">
+                {getDifficultyStars(selectedTrick.difficulty)}
+              </span>
             </div>
           </div>
 
           <div
-            className="relative h-64 overflow-hidden rounded-lg bg-gradient-to-b from-gray-900 to-gray-800"
+            className="relative h-48 overflow-hidden rounded-lg bg-gradient-to-b from-gray-900 to-gray-800 md:h-64"
             style={{ perspective: '1000px' }}
           >
             <div className="absolute right-0 bottom-8 left-0 h-px bg-gray-600" />
@@ -203,20 +211,19 @@ export default function TrickShowcase({ onTrickSelect }: TrickShowcaseProps) {
             </div>
           </div>
 
-          <div className="mt-4 flex items-center gap-4">
-            <button
-              onClick={togglePlayback}
-              className="rounded-lg bg-orange-500 px-6 py-2 font-medium text-white transition-colors hover:bg-orange-600"
-            >
-              {isPlaying ? 'Stop' : 'Play Animation'}
-            </button>
-
+          <div className="mt-3 flex flex-col gap-3 md:mt-4 md:flex-row md:items-center md:gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-400">Speed:</span>
+              <button
+                onClick={togglePlayback}
+                className="flex-1 rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-600 md:flex-none md:px-6 md:text-base"
+              >
+                {isPlaying ? 'Stop' : 'Play'}
+              </button>
+
               <select
                 value={playbackSpeed}
                 onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
-                className="rounded border border-gray-600 bg-gray-700 px-3 py-1 text-white"
+                className="rounded border border-gray-600 bg-gray-700 px-2 py-2 text-sm text-white md:px-3"
               >
                 <option value={0.25}>0.25x</option>
                 <option value={0.5}>0.5x</option>
@@ -235,41 +242,51 @@ export default function TrickShowcase({ onTrickSelect }: TrickShowcaseProps) {
                 setProgress(Number(e.target.value))
                 setIsPlaying(false)
               }}
-              className="flex-1 accent-orange-500"
+              className="w-full flex-1 accent-orange-500"
             />
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-6">
-          <h4 className="mb-3 font-semibold text-white">Trick Details</h4>
-          <p className="mb-4 text-gray-400">{selectedTrick.description}</p>
+        <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-3 md:p-6">
+          <h4 className="mb-2 text-sm font-semibold text-white md:mb-3 md:text-base">
+            Trick Details
+          </h4>
+          <p className="mb-3 text-sm text-gray-400 md:mb-4 md:text-base">
+            {selectedTrick.description}
+          </p>
 
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            <div className="rounded-lg bg-gray-900/50 p-3">
-              <div className="text-xs text-gray-500 uppercase">Base Score</div>
-              <div className="text-xl font-bold text-orange-400">{selectedTrick.baseScore}</div>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-4">
+            <div className="rounded-lg bg-gray-900/50 p-2 md:p-3">
+              <div className="text-xs text-gray-500 uppercase">Score</div>
+              <div className="text-lg font-bold text-orange-400 md:text-xl">
+                {selectedTrick.baseScore}
+              </div>
             </div>
-            <div className="rounded-lg bg-gray-900/50 p-3">
+            <div className="rounded-lg bg-gray-900/50 p-2 md:p-3">
               <div className="text-xs text-gray-500 uppercase">Duration</div>
-              <div className="text-xl font-bold text-cyan-400">
+              <div className="text-lg font-bold text-cyan-400 md:text-xl">
                 {(selectedTrick.duration * 1000).toFixed(0)}ms
               </div>
             </div>
-            <div className="rounded-lg bg-gray-900/50 p-3">
+            <div className="rounded-lg bg-gray-900/50 p-2 md:p-3">
               <div className="text-xs text-gray-500 uppercase">Rotation</div>
-              <div className="text-xl font-bold text-purple-400">
+              <div className="text-lg font-bold text-purple-400 md:text-xl">
                 {selectedTrick.rotationAmount}°
               </div>
             </div>
-            <div className="rounded-lg bg-gray-900/50 p-3">
+            <div className="rounded-lg bg-gray-900/50 p-2 md:p-3">
               <div className="text-xs text-gray-500 uppercase">Flips</div>
-              <div className="text-xl font-bold text-green-400">{selectedTrick.flipCount}</div>
+              <div className="text-lg font-bold text-green-400 md:text-xl">
+                {selectedTrick.flipCount}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-6">
-          <h4 className="mb-4 font-semibold text-white">Keyframe Timeline</h4>
+        <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-3 md:p-6">
+          <h4 className="mb-3 text-sm font-semibold text-white md:mb-4 md:text-base">
+            Keyframe Timeline
+          </h4>
 
           <div className="relative">
             <div className="relative h-2 rounded-full bg-gray-700">
@@ -282,7 +299,7 @@ export default function TrickShowcase({ onTrickSelect }: TrickShowcaseProps) {
                 <button
                   key={i}
                   type="button"
-                  className="absolute top-1/2 h-3 w-3 -translate-y-1/2 cursor-pointer rounded-full border-2 border-orange-500 bg-white transition-transform hover:scale-125"
+                  className="absolute top-1/2 h-4 w-4 -translate-y-1/2 cursor-pointer rounded-full border-2 border-orange-500 bg-white transition-transform hover:scale-125 md:h-3 md:w-3"
                   style={{ left: `${kf.time * 100}%`, transform: 'translate(-50%, -50%)' }}
                   onClick={() => {
                     setProgress(kf.time)
@@ -292,18 +309,18 @@ export default function TrickShowcase({ onTrickSelect }: TrickShowcaseProps) {
               ))}
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+            <div className="mt-4 grid grid-cols-2 gap-1.5 text-xs sm:grid-cols-3 md:mt-6 md:grid-cols-4 md:gap-2">
               {selectedTrick.keyframes.map((kf, i) => (
                 <div
                   key={i}
-                  className={`rounded border p-2 ${
+                  className={`rounded border p-1.5 md:p-2 ${
                     Math.abs(progress - kf.time) < 0.05
                       ? 'border-orange-500 bg-orange-500/20'
                       : 'border-gray-700 bg-gray-900/50'
                   }`}
                 >
                   <div className="text-gray-500">@{(kf.time * 100).toFixed(0)}%</div>
-                  <div className="text-gray-300">
+                  <div className="truncate text-gray-300">
                     R: ({kf.rotation.x}°, {kf.rotation.y}°, {kf.rotation.z}°)
                   </div>
                   <div className="text-gray-400">Y: {kf.translateY}px</div>

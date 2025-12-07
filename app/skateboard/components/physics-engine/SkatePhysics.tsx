@@ -67,6 +67,7 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
   })
 
   const [currentTrick, setCurrentTrick] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
   const trickProgressRef = useRef<number>(0)
   const airTimeRef = useRef<number>(0)
 
@@ -535,6 +536,42 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
   }, [physicsConfig.jumpForce, currentTrick])
 
   useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  const handleTouchControl = useCallback(
+    (action: 'left' | 'right' | 'jump' | 'trick', trickNum?: number) => {
+      if (action === 'left') {
+        controls.current.left = true
+        setTimeout(() => {
+          controls.current.left = false
+        }, 100)
+      } else if (action === 'right') {
+        controls.current.right = true
+        setTimeout(() => {
+          controls.current.right = false
+        }, 100)
+      } else if (action === 'jump') {
+        if (physicsState.current.isGrounded && !currentTrick) {
+          physicsState.current.velocity.y = -physicsConfig.jumpForce
+          physicsState.current.isGrounded = false
+        }
+      } else if (action === 'trick' && trickNum) {
+        if (!physicsState.current.isGrounded && !currentTrick) {
+          const tricks = ['ollie', 'kickflip', 'heelflip', '360-flip']
+          setCurrentTrick(tricks[trickNum - 1])
+        }
+      }
+    },
+    [currentTrick, physicsConfig.jumpForce]
+  )
+
+  useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -558,58 +595,114 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
   }, [animate])
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3 md:gap-4">
       <div className="relative overflow-hidden rounded-xl border border-gray-700">
-        <canvas ref={canvasRef} className="h-[350px] w-full bg-gray-900" />
+        <canvas ref={canvasRef} className="h-[250px] w-full bg-gray-900 md:h-[350px]" />
 
         {currentTrick && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="absolute top-4 left-1/2 -translate-x-1/2 rounded-lg bg-orange-500/80 px-4 py-2"
+            className="absolute top-2 left-1/2 -translate-x-1/2 rounded-lg bg-orange-500/80 px-3 py-1.5 md:top-4 md:px-4 md:py-2"
           >
-            <span className="text-lg font-bold text-white">
+            <span className="text-sm font-bold text-white md:text-lg">
               {getTrickById(currentTrick)?.displayName}
             </span>
           </motion.div>
         )}
 
-        <div className="absolute top-4 right-4 text-right">
-          <div className="text-2xl font-bold text-white">{metrics.score.toLocaleString()}</div>
+        <div className="absolute top-2 right-2 text-right md:top-4 md:right-4">
+          <div className="text-lg font-bold text-white md:text-2xl">
+            {metrics.score.toLocaleString()}
+          </div>
           {metrics.trickCombo > 0 && (
-            <div className="text-sm text-orange-400">x{metrics.trickCombo} combo</div>
+            <div className="text-xs text-orange-400 md:text-sm">x{metrics.trickCombo} combo</div>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
-        <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-3">
-          <div className="mb-1 text-gray-400">Move</div>
-          <div className="flex gap-2">
-            <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">A/D</kbd>
-            <span className="text-gray-500">or</span>
-            <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">←/→</kbd>
+      {isMobile && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between rounded-lg border border-gray-700 bg-gray-800/50 px-3 py-2">
+            <span className="text-sm text-gray-400">Speed</span>
+            <span className="font-mono text-lg text-cyan-400">{metrics.speed.toFixed(0)} px/s</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex gap-2">
+              <button
+                onTouchStart={() => {
+                  controls.current.left = true
+                }}
+                onTouchEnd={() => {
+                  controls.current.left = false
+                }}
+                className="flex-1 rounded-lg bg-gray-700 p-4 text-2xl active:bg-gray-600"
+              >
+                ←
+              </button>
+              <button
+                onTouchStart={() => {
+                  controls.current.right = true
+                }}
+                onTouchEnd={() => {
+                  controls.current.right = false
+                }}
+                className="flex-1 rounded-lg bg-gray-700 p-4 text-2xl active:bg-gray-600"
+              >
+                →
+              </button>
+            </div>
+            <button
+              onTouchStart={() => handleTouchControl('jump')}
+              className="rounded-lg bg-orange-500 p-4 text-lg font-bold text-white active:bg-orange-600"
+            >
+              JUMP
+            </button>
+            <div className="col-span-2 grid grid-cols-4 gap-2">
+              {[1, 2, 3, 4].map((num) => (
+                <button
+                  key={num}
+                  onTouchStart={() => handleTouchControl('trick', num)}
+                  className="rounded-lg bg-purple-600 p-3 text-sm font-bold text-white active:bg-purple-700"
+                >
+                  Trick {num}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-        <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-3">
-          <div className="mb-1 text-gray-400">Jump</div>
-          <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">Space</kbd>
-        </div>
-        <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-3">
-          <div className="mb-1 text-gray-400">Tricks (in air)</div>
-          <div className="flex gap-1">
-            <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">1</kbd>
-            <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">2</kbd>
-            <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">3</kbd>
-            <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">4</kbd>
+      )}
+
+      {!isMobile && (
+        <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
+          <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-3">
+            <div className="mb-1 text-gray-400">Move</div>
+            <div className="flex gap-2">
+              <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">A/D</kbd>
+              <span className="text-gray-500">or</span>
+              <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">←/→</kbd>
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-3">
+            <div className="mb-1 text-gray-400">Jump</div>
+            <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">Space</kbd>
+          </div>
+          <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-3">
+            <div className="mb-1 text-gray-400">Tricks (in air)</div>
+            <div className="flex gap-1">
+              <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">1</kbd>
+              <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">2</kbd>
+              <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">3</kbd>
+              <kbd className="rounded bg-gray-700 px-2 py-1 text-xs">4</kbd>
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-3">
+            <div className="mb-1 text-gray-400">Speed</div>
+            <div className="font-mono text-xl text-cyan-400">{metrics.speed.toFixed(0)} px/s</div>
           </div>
         </div>
-        <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-3">
-          <div className="mb-1 text-gray-400">Speed</div>
-          <div className="font-mono text-xl text-cyan-400">{metrics.speed.toFixed(0)} px/s</div>
-        </div>
-      </div>
+      )}
 
       <div className="rounded-xl border border-gray-700 bg-gray-800/30 p-4">
         <h3 className="mb-4 text-lg font-semibold text-white">Physics Configuration</h3>
