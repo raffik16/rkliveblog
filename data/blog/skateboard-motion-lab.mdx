@@ -1,0 +1,244 @@
+---
+title: 'Skateboard Motion Lab: Physics Simulation with Framer Motion and Canvas'
+date: '2025-12-07'
+tags: ['framer-motion', 'canvas', 'physics', 'animation', 'react', 'typescript', 'gsap']
+draft: false
+summary: 'A deep dive into building an interactive skateboard physics simulation featuring real-time physics, keyframe-based trick animations, particle effects, and live metrics visualization.'
+authors: ['default']
+layout: PostLayout
+---
+
+# Introduction
+
+Ever wanted to understand the physics behind skateboard tricks? I built a comprehensive motion lab that simulates realistic skateboard physics, complete with trick animations, particle effects, and real-time performance metrics.
+
+**[Try it live here](/skateboard)** - Use your keyboard to control the skateboard!
+
+## The Vision
+
+The Skateboard Motion Lab was created to explore advanced web animation techniques while demonstrating real-world physics concepts. Key features include:
+
+- **Physics Engine** with gravity, friction, and momentum simulation
+- **Trick System** with keyframe-based animations for kickflips, heelflips, and more
+- **Particle Effects** for sparks, dust, and impact visualization
+- **Metrics Dashboard** with real-time speedometers and performance tracking
+- **Interactive Controls** for adjusting physics parameters on the fly
+
+## Technical Stack
+
+The project leverages modern web technologies:
+
+- **Next.js 15** with App Router
+- **React 19** with TypeScript for type safety
+- **Framer Motion** for declarative animations and spring physics
+- **Canvas API** for high-performance particle rendering
+- **GSAP** for complex animation sequences
+- **Tailwind CSS** for responsive styling
+
+## Feature Breakdown
+
+### 1. Physics Engine: Real-Time Simulation
+
+The core of the skateboard simulation is a custom physics engine that calculates position, velocity, and acceleration 60 times per second.
+
+**Key Physics Concepts:**
+
+```typescript
+interface PhysicsState {
+  position: Vector2D
+  velocity: Vector2D
+  acceleration: Vector2D
+  rotation: Vector3D
+  angularVelocity: Vector3D
+  isGrounded: boolean
+}
+
+const DEFAULT_PHYSICS_CONFIG = {
+  gravity: 980,        // pixels per second squared
+  friction: 0.98,      // ground friction coefficient
+  airResistance: 0.995,
+  jumpForce: 450,
+  pushForce: 200,
+}
+```
+
+The physics loop handles:
+- **Gravity** pulling the board down when airborne
+- **Friction** slowing horizontal movement on the ground
+- **Air Resistance** for realistic velocity decay in the air
+- **Ground Collision** with bounce detection
+
+### 2. Trick System: Keyframe Animation
+
+Each skateboard trick is defined by a series of keyframes that control rotation, scale, and vertical offset:
+
+```typescript
+interface TrickKeyframe {
+  time: number      // 0-1 normalized progress
+  rotation: Vector3D
+  scale: Vector3D
+  translateY: number
+}
+
+const kickflip: TrickDefinition = {
+  name: 'Kickflip',
+  difficulty: 3,
+  baseScore: 300,
+  duration: 0.7,
+  keyframes: [
+    { time: 0, rotation: { x: 0, y: 0, z: 0 }, ... },
+    { time: 0.3, rotation: { x: 90, y: 0, z: 5 }, ... },
+    { time: 0.5, rotation: { x: 180, y: 0, z: 0 }, ... },
+    { time: 0.7, rotation: { x: 270, y: 0, z: -5 }, ... },
+    { time: 1, rotation: { x: 360, y: 0, z: 0 }, ... },
+  ],
+}
+```
+
+The system interpolates between keyframes using smooth easing:
+
+```typescript
+const easeT = t * t * (3 - 2 * t) // smoothstep function
+```
+
+Available tricks include:
+- **Ollie** - The foundation of all street tricks
+- **Kickflip** - Board flips 360° along its length
+- **Heelflip** - Opposite rotation of kickflip
+- **Pop Shove-it** - 180° horizontal rotation
+- **360 Flip (Tre Flip)** - Combined kickflip + 360 shove-it
+- **Varial Kickflip** - Kickflip + 180° shove-it
+- **Hardflip** - Frontside flip with vertical rotation
+- **Impossible** - Board wraps around back foot
+
+### 3. Particle Effects: Visual Feedback
+
+The particle system adds visual polish with multiple effect types:
+
+```typescript
+interface ParticleConfig {
+  type: 'spark' | 'dust' | 'trail' | 'impact'
+  count: number
+  lifetime: number
+  speed: number
+  gravity: number
+  spread: number  // emission angle in degrees
+  fadeOut: boolean
+}
+```
+
+**Effect Types:**
+
+| Effect | Trigger | Visual Style |
+|--------|---------|--------------|
+| Sparks | Grinding, fast landing | Orange glow with trails |
+| Dust | Moving on ground | Brown fade-out particles |
+| Impact | Landing from air | White burst pattern |
+| Trail | Board movement | Cyan motion blur |
+
+The particle playground allows real-time customization of all parameters, making it a great learning tool for understanding particle systems.
+
+### 4. Metrics Dashboard: Data Visualization
+
+Real-time metrics are displayed using custom gauge components built with Framer Motion:
+
+```typescript
+function Speedometer({ value, max, label, color }) {
+  const percentage = Math.min((value / max) * 100, 100)
+  const angle = (percentage / 100) * 180 - 90
+
+  return (
+    <motion.line
+      animate={{ rotate: angle }}
+      transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+    />
+  )
+}
+```
+
+The dashboard tracks:
+- **Current Speed** with animated speedometer
+- **Height** during jumps
+- **Rotation Degrees** for trick execution
+- **Score** with combo multiplier
+- **Air Time** cumulative tracking
+- **Live Data Stream** in terminal format
+
+## Animation Philosophy
+
+The project follows key animation principles:
+
+### Spring Physics Over Duration
+
+Instead of fixed durations, Framer Motion's spring physics create natural, responsive animations:
+
+```typescript
+const springRotateX = useSpring(boardRotateX, {
+  stiffness: 300,
+  damping: 30
+})
+```
+
+### Layered Motion
+
+Complex animations are composed from simpler motion values:
+
+```typescript
+const boardY = useMotionValue(0)
+const boardRotateX = useMotionValue(0)
+const boardRotateY = useMotionValue(0)
+const boardRotateZ = useMotionValue(0)
+```
+
+### Performance Optimization
+
+The Canvas API handles particle rendering to avoid React reconciliation overhead:
+
+```typescript
+const animate = (timestamp: number) => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  updateParticles(deltaTime)
+  drawParticles(ctx)
+  requestAnimationFrame(animate)
+}
+```
+
+## Controls
+
+| Key | Action |
+|-----|--------|
+| `A` / `←` | Move left |
+| `D` / `→` | Move right |
+| `Space` / `W` | Jump |
+| `1` | Ollie |
+| `2` | Kickflip |
+| `3` | Heelflip |
+| `4` | 360 Flip |
+
+## Lessons Learned
+
+Building this project reinforced several key concepts:
+
+1. **Physics simulation requires delta time** - Always multiply velocities by time elapsed for frame-rate independent animation
+2. **Keyframe interpolation** - Smoothstep provides natural easing between animation states
+3. **Canvas for particles** - When rendering hundreds of elements, Canvas outperforms DOM
+4. **Spring physics** - Feels more natural than eased animations for interactive elements
+5. **TypeScript for complex state** - Strong typing prevents physics bugs before runtime
+
+## Future Enhancements
+
+Potential additions to explore:
+
+- **Ramp and rail collision** for grinds and vert tricks
+- **Replay system** to save and share runs
+- **Sound effects** for tricks and landings
+- **Mobile touch controls**
+- **Multiplayer sessions** via WebSocket
+
+## Conclusion
+
+The Skateboard Motion Lab demonstrates that complex physics simulations are achievable in the browser using modern web technologies. By combining Framer Motion's declarative animations with Canvas-based particle rendering, we can create responsive, visually engaging experiences.
+
+The project is open for exploration - try adjusting the physics parameters, experiment with the particle playground, and see how different combinations create unique visual effects.
+
+**[Launch the Skateboard Motion Lab](/skateboard)**
