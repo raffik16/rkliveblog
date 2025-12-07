@@ -109,7 +109,7 @@ export default function SkateboardPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative whitespace-nowrap px-6 py-4 text-sm font-medium transition-colors ${
+                className={`relative px-6 py-4 whitespace-nowrap text-sm font-medium transition-colors ${
                   activeTab === tab.id ? 'text-orange-400' : 'text-gray-400 hover:text-gray-300'
                 }`}
               >
@@ -117,7 +117,7 @@ export default function SkateboardPage() {
                 {activeTab === tab.id && (
                   <motion.div
                     layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-orange-500 to-red-500"
+                    className="absolute right-0 bottom-0 left-0 h-0.5 bg-gradient-to-r from-orange-500 to-red-500"
                   />
                 )}
               </button>

@@ -78,7 +78,7 @@ function Speedometer({ value, max, label, unit, color }: SpeedometerProps) {
         />
         <circle cx="100" cy="100" r="8" fill={color} />
       </svg>
-      <div className="absolute bottom-0 left-0 right-0 text-center">
+      <div className="absolute right-0 bottom-0 left-0 text-center">
         <motion.div
           className="text-2xl font-bold text-white"
           key={Math.round(value)}
@@ -168,7 +168,7 @@ function StatCard({ label, value, color = '#ffffff' }: StatCardProps) {
     >
       <div className="flex items-center gap-3">
         <div>
-          <div className="text-xs uppercase tracking-wider text-gray-500">{label}</div>
+          <div className="text-xs tracking-wider text-gray-500 uppercase">{label}</div>
           <div className="text-xl font-bold" style={{ color }}>
             {typeof value === 'number' ? value.toLocaleString() : value}
           </div>
@@ -297,7 +297,7 @@ export default function MetricsDashboard({ metrics = DEFAULT_METRICS }: MetricsD
       <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <div className="mb-1 text-xs uppercase tracking-wider text-gray-500">Current Trick</div>
+            <div className="mb-1 text-xs tracking-wider text-gray-500 uppercase">Current Trick</div>
             <motion.div
               key={displayMetrics.currentTrick || 'none'}
               initial={{ opacity: 0, y: 10 }}
@@ -309,7 +309,7 @@ export default function MetricsDashboard({ metrics = DEFAULT_METRICS }: MetricsD
             </motion.div>
           </div>
           <div className="text-right">
-            <div className="mb-1 text-xs uppercase tracking-wider text-gray-500">Combo</div>
+            <div className="mb-1 text-xs tracking-wider text-gray-500 uppercase">Combo</div>
             <motion.div
               key={displayMetrics.trickCombo}
               initial={{ scale: 1.5 }}

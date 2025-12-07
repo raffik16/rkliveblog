@@ -114,7 +114,7 @@ export default function TrickShowcase({ onTrickSelect }: TrickShowcaseProps) {
 
         {Object.entries(TRICK_CATEGORIES).map(([category, trickIds]) => (
           <div key={category} className="space-y-2">
-            <h4 className="text-sm font-medium uppercase tracking-wider text-gray-400">
+            <h4 className="text-sm font-medium tracking-wider text-gray-400 uppercase">
               {category}
             </h4>
             {trickIds.map((trickId) => {
@@ -161,7 +161,7 @@ export default function TrickShowcase({ onTrickSelect }: TrickShowcaseProps) {
             className="relative h-64 overflow-hidden rounded-lg bg-gradient-to-b from-gray-900 to-gray-800"
             style={{ perspective: '1000px' }}
           >
-            <div className="absolute bottom-8 left-0 right-0 h-px bg-gray-600" />
+            <div className="absolute right-0 bottom-8 left-0 h-px bg-gray-600" />
 
             <motion.div
               className="absolute bottom-8 left-1/2"
@@ -178,16 +178,16 @@ export default function TrickShowcase({ onTrickSelect }: TrickShowcaseProps) {
             >
               <div className="relative h-6 w-32 rounded-lg bg-gradient-to-r from-orange-600 via-orange-500 to-orange-600 shadow-lg">
                 <div className="absolute inset-1 rounded bg-gray-800 opacity-30" />
-                <div className="absolute -bottom-2 left-4 h-2 w-6 rounded-sm bg-gray-400" />
-                <div className="absolute -bottom-2 right-4 h-2 w-6 rounded-sm bg-gray-400" />
-                <div className="absolute -bottom-4 left-3 h-3 w-3 rounded-full border-2 border-gray-600 bg-gray-700" />
-                <div className="absolute -bottom-4 left-8 h-3 w-3 rounded-full border-2 border-gray-600 bg-gray-700" />
-                <div className="absolute -bottom-4 right-3 h-3 w-3 rounded-full border-2 border-gray-600 bg-gray-700" />
-                <div className="absolute -bottom-4 right-8 h-3 w-3 rounded-full border-2 border-gray-600 bg-gray-700" />
+                <div className="absolute left-4 -bottom-2 h-2 w-6 rounded-sm bg-gray-400" />
+                <div className="absolute right-4 -bottom-2 h-2 w-6 rounded-sm bg-gray-400" />
+                <div className="absolute left-3 -bottom-4 h-3 w-3 rounded-full border-2 border-gray-600 bg-gray-700" />
+                <div className="absolute left-8 -bottom-4 h-3 w-3 rounded-full border-2 border-gray-600 bg-gray-700" />
+                <div className="absolute right-3 -bottom-4 h-3 w-3 rounded-full border-2 border-gray-600 bg-gray-700" />
+                <div className="absolute right-8 -bottom-4 h-3 w-3 rounded-full border-2 border-gray-600 bg-gray-700" />
               </div>
             </motion.div>
 
-            <div className="absolute left-4 right-4 top-4">
+            <div className="absolute top-4 right-4 left-4">
               <div className="h-1 overflow-hidden rounded-full bg-gray-700">
                 <motion.div
                   className="h-full rounded-full bg-orange-500"
@@ -196,7 +196,7 @@ export default function TrickShowcase({ onTrickSelect }: TrickShowcaseProps) {
               </div>
             </div>
 
-            <div className="absolute right-4 top-8 space-y-1 font-mono text-xs text-gray-400">
+            <div className="absolute top-8 right-4 space-y-1 font-mono text-xs text-gray-400">
               <div>X: {currentValues.rotateX.toFixed(1)}°</div>
               <div>Y: {currentValues.rotateY.toFixed(1)}°</div>
               <div>Z: {currentValues.rotateZ.toFixed(1)}°</div>
@@ -246,23 +246,23 @@ export default function TrickShowcase({ onTrickSelect }: TrickShowcaseProps) {
 
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div className="rounded-lg bg-gray-900/50 p-3">
-              <div className="text-xs uppercase text-gray-500">Base Score</div>
+              <div className="text-xs text-gray-500 uppercase">Base Score</div>
               <div className="text-xl font-bold text-orange-400">{selectedTrick.baseScore}</div>
             </div>
             <div className="rounded-lg bg-gray-900/50 p-3">
-              <div className="text-xs uppercase text-gray-500">Duration</div>
+              <div className="text-xs text-gray-500 uppercase">Duration</div>
               <div className="text-xl font-bold text-cyan-400">
                 {(selectedTrick.duration * 1000).toFixed(0)}ms
               </div>
             </div>
             <div className="rounded-lg bg-gray-900/50 p-3">
-              <div className="text-xs uppercase text-gray-500">Rotation</div>
+              <div className="text-xs text-gray-500 uppercase">Rotation</div>
               <div className="text-xl font-bold text-purple-400">
                 {selectedTrick.rotationAmount}°
               </div>
             </div>
             <div className="rounded-lg bg-gray-900/50 p-3">
-              <div className="text-xs uppercase text-gray-500">Flips</div>
+              <div className="text-xs text-gray-500 uppercase">Flips</div>
               <div className="text-xl font-bold text-green-400">{selectedTrick.flipCount}</div>
             </div>
           </div>

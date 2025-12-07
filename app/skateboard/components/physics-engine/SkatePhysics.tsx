@@ -574,7 +574,7 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="absolute left-1/2 top-4 -translate-x-1/2 rounded-lg bg-orange-500/80 px-4 py-2"
+            className="absolute top-4 left-1/2 -translate-x-1/2 rounded-lg bg-orange-500/80 px-4 py-2"
           >
             <span className="text-lg font-bold text-white">
               {getTrickById(currentTrick)?.displayName}
@@ -582,7 +582,7 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
           </motion.div>
         )}
 
-        <div className="absolute right-4 top-4 text-right">
+        <div className="absolute top-4 right-4 text-right">
           <div className="text-2xl font-bold text-white">{metrics.score.toLocaleString()}</div>
           {metrics.trickCombo > 0 && (
             <div className="text-sm text-orange-400">x{metrics.trickCombo} combo</div>

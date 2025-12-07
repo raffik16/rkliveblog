@@ -307,12 +307,12 @@ export default function ParticlePlayground() {
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
         />
-        <div className="absolute left-4 top-4 rounded-lg bg-black/50 px-3 py-2 backdrop-blur">
+        <div className="absolute top-4 left-4 rounded-lg bg-black/50 px-3 py-2 backdrop-blur">
           <div className="text-sm text-gray-400">
             Particles: <span className="font-mono text-white">{particleCount}</span>
           </div>
         </div>
-        <div className="absolute right-4 top-4 rounded-lg bg-black/50 px-3 py-2 text-sm text-gray-400 backdrop-blur">
+        <div className="absolute top-4 right-4 rounded-lg bg-black/50 px-3 py-2 text-sm text-gray-400 backdrop-blur">
           Click or drag to emit particles
         </div>
       </div>
