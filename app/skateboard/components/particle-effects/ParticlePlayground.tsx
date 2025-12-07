@@ -381,7 +381,9 @@ export default function ParticlePlayground() {
 
           <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-sm text-gray-400">Count: {customConfig.count}</label>
+              <label className="mb-1 block text-sm text-gray-400">
+                Count: {customConfig.count}
+              </label>
               <input
                 type="range"
                 min="1"
@@ -414,7 +416,9 @@ export default function ParticlePlayground() {
             </div>
 
             <div>
-              <label className="mb-1 block text-sm text-gray-400">Speed: {customConfig.speed}</label>
+              <label className="mb-1 block text-sm text-gray-400">
+                Speed: {customConfig.speed}
+              </label>
               <input
                 type="range"
                 min="10"

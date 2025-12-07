@@ -349,8 +349,9 @@ export default function MetricsDashboard({ metrics = DEFAULT_METRICS }: MetricsD
             <span className="text-gray-600">[{new Date().toISOString().slice(11, 23)}]</span>{' '}
             <span className="text-orange-400">SPD:</span> {displayMetrics.speed.toFixed(2)}{' '}
             <span className="text-cyan-400">HGT:</span> {displayMetrics.height.toFixed(2)}{' '}
-            <span className="text-purple-400">ROT:</span> {displayMetrics.rotationDegrees.toFixed(1)}
-            ° <span className="text-green-400">SCR:</span> {displayMetrics.score}
+            <span className="text-purple-400">ROT:</span>{' '}
+            {displayMetrics.rotationDegrees.toFixed(1)}°{' '}
+            <span className="text-green-400">SCR:</span> {displayMetrics.score}
           </div>
         </div>
       </div>

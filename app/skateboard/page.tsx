@@ -109,7 +109,7 @@ export default function SkateboardPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative px-6 py-4 whitespace-nowrap text-sm font-medium transition-colors ${
+                className={`relative px-6 py-4 text-sm font-medium whitespace-nowrap transition-colors ${
                   activeTab === tab.id ? 'text-orange-400' : 'text-gray-400 hover:text-gray-300'
                 }`}
               >

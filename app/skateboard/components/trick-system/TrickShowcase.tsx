@@ -178,10 +178,10 @@ export default function TrickShowcase({ onTrickSelect }: TrickShowcaseProps) {
             >
               <div className="relative h-6 w-32 rounded-lg bg-gradient-to-r from-orange-600 via-orange-500 to-orange-600 shadow-lg">
                 <div className="absolute inset-1 rounded bg-gray-800 opacity-30" />
-                <div className="absolute left-4 -bottom-2 h-2 w-6 rounded-sm bg-gray-400" />
+                <div className="absolute -bottom-2 left-4 h-2 w-6 rounded-sm bg-gray-400" />
                 <div className="absolute right-4 -bottom-2 h-2 w-6 rounded-sm bg-gray-400" />
-                <div className="absolute left-3 -bottom-4 h-3 w-3 rounded-full border-2 border-gray-600 bg-gray-700" />
-                <div className="absolute left-8 -bottom-4 h-3 w-3 rounded-full border-2 border-gray-600 bg-gray-700" />
+                <div className="absolute -bottom-4 left-3 h-3 w-3 rounded-full border-2 border-gray-600 bg-gray-700" />
+                <div className="absolute -bottom-4 left-8 h-3 w-3 rounded-full border-2 border-gray-600 bg-gray-700" />
                 <div className="absolute right-3 -bottom-4 h-3 w-3 rounded-full border-2 border-gray-600 bg-gray-700" />
                 <div className="absolute right-8 -bottom-4 h-3 w-3 rounded-full border-2 border-gray-600 bg-gray-700" />
               </div>

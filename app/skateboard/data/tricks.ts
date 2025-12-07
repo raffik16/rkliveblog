@@ -35,7 +35,8 @@ export const TRICKS: TrickDefinition[] = [
     rotationAmount: 360,
     flipCount: 1,
     duration: 0.7,
-    description: 'Flick the board with your front foot to make it flip 360 degrees along its length.',
+    description:
+      'Flick the board with your front foot to make it flip 360 degrees along its length.',
     keyframes: [
       { time: 0, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 }, translateY: 0 },
       {
@@ -76,7 +77,8 @@ export const TRICKS: TrickDefinition[] = [
     rotationAmount: -360,
     flipCount: 1,
     duration: 0.7,
-    description: 'Use your heel to flick the board, making it flip the opposite direction of a kickflip.',
+    description:
+      'Use your heel to flick the board, making it flip the opposite direction of a kickflip.',
     keyframes: [
       { time: 0, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 }, translateY: 0 },
       {
@@ -239,8 +241,7 @@ export const TRICKS: TrickDefinition[] = [
     rotationAmount: 180,
     flipCount: 1,
     duration: 0.8,
-    description:
-      'A frontside pop shove-it combined with a kickflip - the board flips vertically.',
+    description: 'A frontside pop shove-it combined with a kickflip - the board flips vertically.',
     keyframes: [
       { time: 0, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 }, translateY: 0 },
       {

@@ -467,14 +467,7 @@ export default function SkatePhysics({ showDebug = false, onMetricsUpdate }: Ska
 
       animationRef.current = requestAnimationFrame(animate)
     },
-    [
-      showDebug,
-      drawBackground,
-      updatePhysics,
-      updateParticles,
-      drawParticles,
-      drawSkateboard,
-    ]
+    [showDebug, drawBackground, updatePhysics, updateParticles, drawParticles, drawSkateboard]
   )
 
   useEffect(() => {
