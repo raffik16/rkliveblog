@@ -2936,28 +2936,28 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@next/bundle-analyzer@npm:15.5.7":
-  version: 15.5.7
-  resolution: "@next/bundle-analyzer@npm:15.5.7"
+"@next/bundle-analyzer@npm:15.5.9":
+  version: 15.5.9
+  resolution: "@next/bundle-analyzer@npm:15.5.9"
   dependencies:
     webpack-bundle-analyzer: "npm:4.10.1"
-  checksum: 10/be3e3ab15679762117756b39a01f32f29fac34a7fb514997928ca226a48ec84ccd31029ebcf1df5cae0e91a9e384e5bb8d8ebe522161bd1fb69484e0c9ba204b
+  checksum: 10/b1f216c8c78ede0fd702f8e0f35582da85155dc57ca91f3cc1f7e8d0cfa8053563eaf97caeaeb7bea669df598d2ea9c6fc6b8caaf1fb920d1be3e739ac08d686
   languageName: node
   linkType: hard
 
-"@next/env@npm:15.5.7":
-  version: 15.5.7
-  resolution: "@next/env@npm:15.5.7"
-  checksum: 10/11f971691018bd62a5bf253fc843fb2a6cf1431468f5c3a9d4d41753a6ff3e8bf7f539f46aba3f58f8bac59e681bf05fb5d771ac08d7dbd966a601257e1368bf
+"@next/env@npm:15.5.9":
+  version: 15.5.9
+  resolution: "@next/env@npm:15.5.9"
+  checksum: 10/962329701343c2617c85ae99ef35adfd9e8f7b58d9c0316f2f0857f82875a91ef3151ef0743c50964b0066aa3d1214c5193cf229f7757d7c9329f7fb95605a4a
   languageName: node
   linkType: hard
 
-"@next/eslint-plugin-next@npm:15.5.7":
-  version: 15.5.7
-  resolution: "@next/eslint-plugin-next@npm:15.5.7"
+"@next/eslint-plugin-next@npm:15.5.9":
+  version: 15.5.9
+  resolution: "@next/eslint-plugin-next@npm:15.5.9"
   dependencies:
     fast-glob: "npm:3.3.1"
-  checksum: 10/5b59860aeccc0d07a979c40e4405b410a9d7aa86a235d5dc0edbac8d2da35586f6f2fa3407cd3d80fd7e7d4f197c70291e9c6e71a64942d09b8fe82470e90ee0
+  checksum: 10/63ab34b65e4ffc707fefba8a5fc3b46b37bac6ed2a2d2a682bec72448998ee0d6390c3007dac9714ea1020380ba4cf2328d11496ec0adf55df141eb8fe267133
   languageName: node
   linkType: hard
 
@@ -6093,11 +6093,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-config-next@npm:15.5.7":
-  version: 15.5.7
-  resolution: "eslint-config-next@npm:15.5.7"
+"eslint-config-next@npm:15.5.9":
+  version: 15.5.9
+  resolution: "eslint-config-next@npm:15.5.9"
   dependencies:
-    "@next/eslint-plugin-next": "npm:15.5.7"
+    "@next/eslint-plugin-next": "npm:15.5.9"
     "@rushstack/eslint-patch": "npm:^1.10.3"
     "@typescript-eslint/eslint-plugin": "npm:^5.4.2 || ^6.0.0 || ^7.0.0 || ^8.0.0"
     "@typescript-eslint/parser": "npm:^5.4.2 || ^6.0.0 || ^7.0.0 || ^8.0.0"
@@ -6113,7 +6113,7 @@ __metadata:
   peerDependenciesMeta:
     typescript:
       optional: true
-  checksum: 10/fd1813c7ef4e33ec297b86dd0de75879e10514b12cb04a103e7a5b8c5f27d2ea0a91dd15e6d530006c9fe3e7e18f815e900bd6ba117c3b8fbe311c38c340d899
+  checksum: 10/c56015602d1d4c044e7486924a7bdfb72e04515aff22c97ec0f0c6ddeed8c3474001a9a4258d90c89d2627eae14d0d769382d3a47f65910c4360a2de0c9b9b8e
   languageName: node
   linkType: hard
 
@@ -9652,11 +9652,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"next@npm:15.5.7":
-  version: 15.5.7
-  resolution: "next@npm:15.5.7"
+"next@npm:15.5.9":
+  version: 15.5.9
+  resolution: "next@npm:15.5.9"
   dependencies:
-    "@next/env": "npm:15.5.7"
+    "@next/env": "npm:15.5.9"
     "@next/swc-darwin-arm64": "npm:15.5.7"
     "@next/swc-darwin-x64": "npm:15.5.7"
     "@next/swc-linux-arm64-gnu": "npm:15.5.7"
@@ -9707,7 +9707,7 @@ __metadata:
       optional: true
   bin:
     next: dist/bin/next
-  checksum: 10/bfac0cbac41b36227ec91d3a0727561f73dfc35d6a78eafd0200528ef95fa2e9d2dba5a8c8922864b4f4e4321ae6a07c6cf8f5766ac3192ad03e68516c3a458a
+  checksum: 10/ac27b82de08c9720e8e99cd64102af5e30306a8c861630d50da347a02c288cc441273ada64875c47e7a4d5991ff69cc92b23e906ce3271f9835a7911a0f060cc
   languageName: node
   linkType: hard
 
@@ -12004,7 +12004,7 @@ __metadata:
     "@eslint/eslintrc": "npm:^3.2.0"
     "@eslint/js": "npm:^9.16.0"
     "@headlessui/react": "npm:2.2.0"
-    "@next/bundle-analyzer": "npm:15.5.7"
+    "@next/bundle-analyzer": "npm:15.5.9"
     "@svgr/webpack": "npm:^8.0.1"
     "@tailwindcss/forms": "npm:^0.5.9"
     "@tailwindcss/postcss": "npm:^4.0.5"
@@ -12018,7 +12018,7 @@ __metadata:
     cross-env: "npm:^7.0.3"
     esbuild: "npm:0.25.2"
     eslint: "npm:^9.14.0"
-    eslint-config-next: "npm:15.5.7"
+    eslint-config-next: "npm:15.5.9"
     eslint-config-prettier: "npm:^9.1.0"
     eslint-plugin-prettier: "npm:^5.2.0"
     framer-motion: "npm:^12.23.24"
@@ -12030,7 +12030,7 @@ __metadata:
     husky: "npm:^9.0.0"
     image-size: "npm:2.0.1"
     lint-staged: "npm:^13.0.0"
-    next: "npm:15.5.7"
+    next: "npm:15.5.9"
     next-contentlayer2: "npm:0.5.5"
     next-themes: "npm:^0.4.6"
     pliny: "npm:0.4.1"
