@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { gsap } from 'gsap'
 import type { PredictionMarket } from '../types'
@@ -54,7 +54,52 @@ export default function PredictionMarkets() {
   // Generate chart history when market changes
   useEffect(() => {
     setChartHistory(generateMarketHistory(selectedMarket, 30))
-  }, [selectedMarket.id])
+  }, [selectedMarket])
+
+  const drawGauge = useCallback(
+    (ctx: CanvasRenderingContext2D, width: number, height: number, probability: number) => {
+      ctx.clearRect(0, 0, width, height)
+
+      const centerX = width / 2
+      const centerY = height * 0.7
+      const radius = Math.min(width, height) * 0.4
+      const lineWidth = 20
+
+      // Background arc
+      ctx.beginPath()
+      ctx.arc(centerX, centerY, radius, Math.PI, 2 * Math.PI)
+      ctx.strokeStyle = 'rgba(100, 116, 139, 0.2)'
+      ctx.lineWidth = lineWidth
+      ctx.lineCap = 'round'
+      ctx.stroke()
+
+      // Probability arc
+      const gradient = ctx.createLinearGradient(0, 0, width, 0)
+      gradient.addColorStop(0, '#ef4444')
+      gradient.addColorStop(0.5, '#eab308')
+      gradient.addColorStop(1, '#22c55e')
+
+      ctx.beginPath()
+      ctx.arc(centerX, centerY, radius, Math.PI, Math.PI + probability * Math.PI)
+      ctx.strokeStyle = gradient
+      ctx.lineWidth = lineWidth
+      ctx.lineCap = 'round'
+      ctx.stroke()
+
+      // Probability text
+      ctx.fillStyle = '#ffffff'
+      ctx.font = 'bold 48px system-ui'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(`${(probability * 100).toFixed(1)}%`, centerX, centerY - 20)
+
+      // Label
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.8)'
+      ctx.font = '14px system-ui'
+      ctx.fillText('PROBABILITY', centerX, centerY + 30)
+    },
+    []
+  )
 
   // Draw probability gauge
   useEffect(() => {
@@ -73,54 +118,7 @@ export default function PredictionMarkets() {
         drawGauge(ctx, canvas.width, canvas.height, animationRef.current.probability)
       },
     })
-  }, [selectedMarket.probability])
-
-  const drawGauge = (
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number,
-    probability: number
-  ) => {
-    ctx.clearRect(0, 0, width, height)
-
-    const centerX = width / 2
-    const centerY = height * 0.7
-    const radius = Math.min(width, height) * 0.4
-    const lineWidth = 20
-
-    // Background arc
-    ctx.beginPath()
-    ctx.arc(centerX, centerY, radius, Math.PI, 2 * Math.PI)
-    ctx.strokeStyle = 'rgba(100, 116, 139, 0.2)'
-    ctx.lineWidth = lineWidth
-    ctx.lineCap = 'round'
-    ctx.stroke()
-
-    // Probability arc
-    const gradient = ctx.createLinearGradient(0, 0, width, 0)
-    gradient.addColorStop(0, '#ef4444')
-    gradient.addColorStop(0.5, '#eab308')
-    gradient.addColorStop(1, '#22c55e')
-
-    ctx.beginPath()
-    ctx.arc(centerX, centerY, radius, Math.PI, Math.PI + probability * Math.PI)
-    ctx.strokeStyle = gradient
-    ctx.lineWidth = lineWidth
-    ctx.lineCap = 'round'
-    ctx.stroke()
-
-    // Probability text
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 48px system-ui'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(`${(probability * 100).toFixed(1)}%`, centerX, centerY - 20)
-
-    // Label
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.8)'
-    ctx.font = '14px system-ui'
-    ctx.fillText('PROBABILITY', centerX, centerY + 30)
-  }
+  }, [selectedMarket.probability, drawGauge])
 
   // Draw time series chart
   useEffect(() => {
@@ -201,9 +199,7 @@ export default function PredictionMarkets() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-white">Prediction Markets</h2>
-          <p className="text-slate-400">
-            Real-time odds from collective intelligence markets
-          </p>
+          <p className="text-slate-400">Real-time odds from collective intelligence markets</p>
         </div>
         <div className="flex items-center gap-2 rounded-lg bg-slate-800/50 px-4 py-2">
           <span className="text-sm text-slate-400">Updating every</span>
@@ -325,7 +321,7 @@ export default function PredictionMarkets() {
         transition={{ delay: 0.5 }}
       >
         <div className="flex items-start gap-4">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-purple-500/20">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/20">
             <span className="text-xl">💡</span>
           </div>
           <div>

@@ -263,9 +263,7 @@ export default function WildcardLab() {
 
                   {/* Sample Insight */}
                   <div className={`mt-3 rounded-lg ${colors.bg} p-2`}>
-                    <p className={`text-xs ${colors.text}`}>
-                      💡 {dataset.sampleInsight}
-                    </p>
+                    <p className={`text-xs ${colors.text}`}>💡 {dataset.sampleInsight}</p>
                   </div>
                 </div>
               </motion.button>
@@ -290,9 +288,7 @@ export default function WildcardLab() {
                   <h3 className="text-lg font-semibold text-white">
                     Explore {selectedDataset.title}
                   </h3>
-                  <p className="text-sm text-slate-400">
-                    Ask anything about this dataset
-                  </p>
+                  <p className="text-sm text-slate-400">Ask anything about this dataset</p>
                 </div>
               </div>
 
@@ -304,7 +300,7 @@ export default function WildcardLab() {
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && runAnalysis()}
                   placeholder="e.g., What's the correlation between price and location?"
-                  className="flex-1 rounded-lg border border-slate-600 bg-slate-800/50 px-4 py-3 text-white placeholder:text-slate-500 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="flex-1 rounded-lg border border-slate-600 bg-slate-800/50 px-4 py-3 text-white ring-1 focus:border-purple-500 focus:ring-purple-500 focus:outline-none placeholder:text-slate-500"
                 />
                 <motion.button
                   onClick={runAnalysis}
@@ -361,7 +357,7 @@ export default function WildcardLab() {
                     className="mt-4 rounded-lg border border-green-500/30 bg-green-500/10 p-4"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-green-500/20">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-green-500/20">
                         <span>🤖</span>
                       </div>
                       <div>
@@ -451,12 +447,12 @@ export default function WildcardLab() {
         transition={{ delay: 0.3 }}
       >
         <motion.div
-          className="absolute left-1/4 top-1/2 h-32 w-32 rounded-full bg-orange-500/20 blur-3xl"
+          className="absolute top-1/2 left-1/4 h-32 w-32 rounded-full bg-orange-500/20 blur-3xl"
           animate={{ x: [0, 50, 0], y: [0, -30, 0] }}
           transition={{ duration: 5, repeat: Infinity }}
         />
         <motion.div
-          className="absolute right-1/4 top-1/2 h-32 w-32 rounded-full bg-yellow-500/20 blur-3xl"
+          className="absolute top-1/2 right-1/4 h-32 w-32 rounded-full bg-yellow-500/20 blur-3xl"
           animate={{ x: [0, -50, 0], y: [0, 30, 0] }}
           transition={{ duration: 5, repeat: Infinity, delay: 0.5 }}
         />
@@ -465,7 +461,7 @@ export default function WildcardLab() {
           <span className="text-5xl">🃏</span>
           <h3 className="mt-4 text-2xl font-bold text-white">Your Rules. Your Data. Your Story.</h3>
           <p className="mx-auto mt-2 max-w-xl text-slate-300">
-            The best projects come from obsessions we didn't know we had. Find a dataset that
+            The best projects come from obsessions we didn&apos;t know we had. Find a dataset that
             fascinates you and build something that surprises everyone—including yourself.
           </p>
           <motion.a

@@ -32,10 +32,7 @@ export default function SlangEvolution() {
       setTerms((prev) =>
         prev.map((term) => ({
           ...term,
-          currentPopularity: Math.max(
-            0,
-            term.currentPopularity + (Math.random() - 0.5) * 3
-          ),
+          currentPopularity: Math.max(0, term.currentPopularity + (Math.random() - 0.5) * 3),
         }))
       )
     }, 2000)
@@ -115,9 +112,7 @@ export default function SlangEvolution() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-white">Slang Evolution</h2>
-          <p className="text-slate-400">
-            Track the rise and fall of internet vernacular
-          </p>
+          <p className="text-slate-400">Track the rise and fall of internet vernacular</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-400">Sort by:</span>
@@ -144,7 +139,7 @@ export default function SlangEvolution() {
         <h3 className="mb-4 text-lg font-semibold text-white">Historical Timeline</h3>
         <div className="relative">
           {/* Timeline line */}
-          <div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 bg-gradient-to-r from-slate-700 via-cyan-500/50 to-slate-700" />
+          <div className="absolute top-1/2 right-0 left-0 h-1 -translate-y-1/2 bg-gradient-to-r from-slate-700 via-cyan-500/50 to-slate-700" />
 
           {/* Year markers */}
           <div className="relative flex justify-between">
@@ -214,7 +209,7 @@ export default function SlangEvolution() {
               onClick={() => setSelectedTerm(term)}
               className={`cursor-pointer rounded-xl border p-5 transition-all ${
                 selectedTerm?.term === term.term
-                  ? `${status.ring} ring-2 border-transparent ${status.bg}`
+                  ? `border-transparent ring-2 ${status.ring} ${status.bg}`
                   : 'border-slate-700/50 bg-slate-800/30 hover:border-slate-600/50'
               }`}
               whileHover={{ scale: 1.02, y: -2 }}
@@ -223,10 +218,12 @@ export default function SlangEvolution() {
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-xl font-bold text-white">"{term.term}"</h3>
+                  <h3 className="text-xl font-bold text-white">&quot;{term.term}&quot;</h3>
                   <p className="mt-1 text-sm text-slate-400">{term.definition}</p>
                 </div>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${status.bg} ${status.text}`}>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${status.bg} ${status.text}`}
+                >
                   {term.status}
                 </span>
               </div>
@@ -235,7 +232,9 @@ export default function SlangEvolution() {
               <div className="mt-4">
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-500">Popularity</span>
-                  <span className="font-mono text-cyan-400">{term.currentPopularity.toFixed(0)}%</span>
+                  <span className="font-mono text-cyan-400">
+                    {term.currentPopularity.toFixed(0)}%
+                  </span>
                 </div>
                 <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-700">
                   <motion.div
@@ -282,7 +281,9 @@ export default function SlangEvolution() {
             <div className="rounded-xl border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 p-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-2xl font-bold text-white">"{selectedTerm.term}"</h3>
+                  <h3 className="text-2xl font-bold text-white">
+                    &quot;{selectedTerm.term}&quot;
+                  </h3>
                   <p className="mt-1 text-slate-400">{selectedTerm.definition}</p>
                 </div>
                 <button
@@ -290,7 +291,12 @@ export default function SlangEvolution() {
                   className="rounded-lg p-2 text-slate-400 hover:bg-slate-700 hover:text-white"
                 >
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -308,7 +314,7 @@ export default function SlangEvolution() {
                 </div>
                 <div className="rounded-lg bg-slate-800/50 p-4">
                   <div className="text-xs text-slate-500">Category</div>
-                  <div className="mt-1 capitalize text-white">{selectedTerm.category}</div>
+                  <div className="mt-1 text-white capitalize">{selectedTerm.category}</div>
                 </div>
                 <div className="rounded-lg bg-slate-800/50 p-4">
                   <div className="text-xs text-slate-500">Adopted By</div>
@@ -332,7 +338,7 @@ export default function SlangEvolution() {
                   <span className="font-medium text-yellow-400">Prediction</span>
                 </div>
                 <p className="mt-2 text-sm text-slate-300">
-                  Based on current trajectory, "{selectedTerm.term}" will likely{' '}
+                  Based on current trajectory, &quot;{selectedTerm.term}&quot; will likely{' '}
                   {selectedTerm.status === 'rising'
                     ? 'reach peak usage within 6-8 months'
                     : selectedTerm.status === 'peak'
@@ -356,7 +362,7 @@ export default function SlangEvolution() {
         {Object.entries(generationColors).map(([gen, color]) => (
           <div key={gen} className="flex items-center gap-2">
             <div className={`h-3 w-3 rounded-full ${color}`} />
-            <span className="text-sm capitalize text-slate-300">{gen}</span>
+            <span className="text-sm text-slate-300 capitalize">{gen}</span>
           </div>
         ))}
       </div>

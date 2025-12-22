@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { gsap } from 'gsap'
 import type { Team } from '../types'
 import { worldCupTeams, simulateMatch } from '../data/mockData'
 
 export default function WorldCup2026() {
-  const [teams, setTeams] = useState<Team[]>(worldCupTeams)
+  const [teams] = useState<Team[]>(worldCupTeams)
   const [selectedTeams, setSelectedTeams] = useState<[Team | null, Team | null]>([null, null])
   const [matchResult, setMatchResult] = useState<{
     winner: Team | null
@@ -17,7 +16,6 @@ export default function WorldCup2026() {
   const [isSimulating, setIsSimulating] = useState(false)
   const [tournamentWinner, setTournamentWinner] = useState<Team | null>(null)
   const [simulationLog, setSimulationLog] = useState<string[]>([])
-  const strengthRef = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
   const sortedTeams = [...teams].sort((a, b) => b.strength - a.strength)
 
@@ -55,7 +53,6 @@ export default function WorldCup2026() {
     setSimulationLog([])
     setTournamentWinner(null)
 
-    const remainingTeams = [...teams]
     const log: string[] = []
 
     const simulateRound = (round: string, teamsInRound: Team[]): Team[] => {
@@ -80,7 +77,7 @@ export default function WorldCup2026() {
     }
 
     // Simulate tournament with delays
-    let currentTeams = remainingTeams.slice(0, 16) // Top 16 for demo
+    let currentTeams = teams.slice(0, 16) // Top 16 for demo
     const rounds = ['Round of 16', 'Quarter-Finals', 'Semi-Finals', 'Final']
     let roundIndex = 0
 
@@ -119,9 +116,7 @@ export default function WorldCup2026() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-white">FIFA World Cup 2026</h2>
-          <p className="text-slate-400">
-            48-team format predictions for USA/Mexico/Canada
-          </p>
+          <p className="text-slate-400">48-team format predictions for USA/Mexico/Canada</p>
         </div>
         <motion.button
           onClick={runTournament}
@@ -200,7 +195,7 @@ export default function WorldCup2026() {
                   transition={{ delay: index * 0.03 }}
                 >
                   {isSelected && (
-                    <div className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-xs font-bold text-white">
+                    <div className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-xs font-bold text-white">
                       {selectionIndex + 1}
                     </div>
                   )}
@@ -209,9 +204,7 @@ export default function WorldCup2026() {
                     <span className="text-3xl">{team.flag}</span>
                     <div className="flex-1">
                       <div className="font-medium text-white">{team.name}</div>
-                      <div className="text-xs text-slate-500">
-                        FIFA Rank: #{team.fifaRanking}
-                      </div>
+                      <div className="text-xs text-slate-500">FIFA Rank: #{team.fifaRanking}</div>
                     </div>
                   </div>
 
@@ -332,9 +325,7 @@ export default function WorldCup2026() {
                 exit={{ opacity: 0, y: -20 }}
                 className="rounded-xl border border-green-500/30 bg-green-500/10 p-6"
               >
-                <h4 className="mb-4 text-center text-lg font-semibold text-white">
-                  Match Result
-                </h4>
+                <h4 className="mb-4 text-center text-lg font-semibold text-white">Match Result</h4>
 
                 <div className="flex items-center justify-center gap-6 text-center">
                   <div
@@ -390,9 +381,7 @@ export default function WorldCup2026() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     className={`${
-                      log.startsWith('---')
-                        ? 'mt-2 font-bold text-green-400'
-                        : 'text-slate-300'
+                      log.startsWith('---') ? 'mt-2 font-bold text-green-400' : 'text-slate-300'
                     }`}
                   >
                     {log}
@@ -416,10 +405,7 @@ export default function WorldCup2026() {
               </div>
               <div className="mt-3 space-y-1">
                 {team.starPlayers.map((player) => (
-                  <div
-                    key={player}
-                    className="flex items-center gap-2 text-sm text-slate-400"
-                  >
+                  <div key={player} className="flex items-center gap-2 text-sm text-slate-400">
                     <span className="text-yellow-400">⭐</span>
                     {player}
                   </div>
@@ -438,7 +424,7 @@ export default function WorldCup2026() {
         transition={{ delay: 0.5 }}
       >
         <div className="flex items-start gap-4">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-green-500/20">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-500/20">
             <span className="text-xl">📊</span>
           </div>
           <div>
@@ -446,8 +432,8 @@ export default function WorldCup2026() {
             <p className="mt-1 text-sm text-slate-300">
               The 48-team format introduces 16 additional matches in the group stage alone.
               Historical data suggests underdogs perform 23% better in expanded tournaments due to
-              reduced knockout pressure. Consider weighting recent form over historical rankings
-              for more accurate predictions.
+              reduced knockout pressure. Consider weighting recent form over historical rankings for
+              more accurate predictions.
             </p>
           </div>
         </div>

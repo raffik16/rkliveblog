@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
 import type { TabType, DashboardMetrics } from './types'
 import PredictionMarkets from './components/PredictionMarkets'
 import SlangEvolution from './components/SlangEvolution'
@@ -9,10 +10,30 @@ import WorldCup2026 from './components/WorldCup2026'
 import WildcardLab from './components/WildcardLab'
 
 const tabs: { id: TabType; label: string; icon: string; color: string }[] = [
-  { id: 'predictions', label: 'Prediction Markets', icon: '🎰', color: 'from-purple-500 to-pink-500' },
-  { id: 'slang', label: 'Slang Evolution', icon: '🗣️', color: 'from-cyan-500 to-blue-500' },
-  { id: 'worldcup', label: 'World Cup 2026', icon: '⚽', color: 'from-green-500 to-emerald-500' },
-  { id: 'wildcard', label: 'Wildcard Lab', icon: '🃏', color: 'from-orange-500 to-yellow-500' },
+  {
+    id: 'predictions',
+    label: 'Prediction Markets',
+    icon: '🎰',
+    color: 'from-purple-500 to-pink-500',
+  },
+  {
+    id: 'slang',
+    label: 'Slang Evolution',
+    icon: '🗣️',
+    color: 'from-cyan-500 to-blue-500',
+  },
+  {
+    id: 'worldcup',
+    label: 'World Cup 2026',
+    icon: '⚽',
+    color: 'from-green-500 to-emerald-500',
+  },
+  {
+    id: 'wildcard',
+    label: 'Wildcard Lab',
+    icon: '🃏',
+    color: 'from-orange-500 to-yellow-500',
+  },
 ]
 
 export default function HexChallengePage() {
@@ -105,8 +126,8 @@ export default function HexChallengePage() {
       {/* Animated Background Grid */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.03)_1px,transparent_1px)] bg-[size:64px_64px]" />
-        <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-purple-500/10 blur-3xl" />
-        <div className="absolute right-1/4 top-3/4 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
+        <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-purple-500/10 blur-3xl" />
+        <div className="absolute top-3/4 right-1/4 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
       </div>
 
       {/* Header */}
@@ -198,10 +219,8 @@ export default function HexChallengePage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`group relative flex items-center gap-2 whitespace-nowrap px-6 py-4 text-sm font-medium transition-all ${
-                  activeTab === tab.id
-                    ? 'text-white'
-                    : 'text-slate-400 hover:text-slate-200'
+                className={`group relative flex items-center gap-2 px-6 py-4 text-sm font-medium whitespace-nowrap transition-all ${
+                  activeTab === tab.id ? 'text-white' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <span className="text-lg">{tab.icon}</span>
@@ -243,12 +262,12 @@ export default function HexChallengePage() {
               Built with Hex — The unified platform for data impact
             </p>
             <div className="flex items-center gap-4">
-              <a
+              <Link
                 href="/blog/hex-data-insights-challenge"
                 className="text-sm text-purple-400 hover:text-purple-300"
               >
                 Read the Blog Post →
-              </a>
+              </Link>
               <a
                 href="https://hex.tech"
                 target="_blank"

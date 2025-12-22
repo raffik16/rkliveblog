@@ -1,10 +1,4 @@
-import type {
-  PredictionMarket,
-  SlangTerm,
-  Team,
-  DatasetCard,
-  SlangTimelinePoint,
-} from '../types'
+import type { PredictionMarket, SlangTerm, Team, DatasetCard, SlangTimelinePoint } from '../types'
 
 export const predictionMarkets: PredictionMarket[] = [
   {
@@ -155,7 +149,7 @@ export const slangTerms: SlangTerm[] = [
   },
   {
     term: 'Era',
-    definition: 'A phase or period in one\'s life',
+    definition: "A phase or period in one's life",
     origin: 'Taylor Swift fandom',
     peakYear: 2023,
     currentPopularity: 75,
@@ -425,14 +419,12 @@ export function simulateMatch(
   teamA: Team,
   teamB: Team
 ): { winner: Team | null; scoreA: number; scoreB: number } {
-  const totalStrength = teamA.strength + teamB.strength
   const teamAAdvantage = (teamA.strength * teamA.form) / 100
   const teamBAdvantage = (teamB.strength * teamB.form) / 100
 
   const teamAProb = teamAAdvantage / (teamAAdvantage + teamBAdvantage)
 
   // Generate score based on Poisson-like distribution
-  const avgGoals = 2.5
   const scoreA = Math.floor(Math.random() * 4 * teamAProb + Math.random())
   const scoreB = Math.floor(Math.random() * 4 * (1 - teamAProb) + Math.random())
 
