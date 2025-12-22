@@ -402,7 +402,7 @@ export function generateMarketHistory(
   market: PredictionMarket,
   points: number = 30
 ): { timestamp: Date; probability: number }[] {
-  const history = []
+  const history: { timestamp: Date; probability: number }[] = []
   const now = new Date()
   let prob = market.probability
 
