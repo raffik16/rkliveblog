@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import type { Station as StationType, GameItem } from '../../types'
 import { STATION_COLORS } from '../../data/stations'
 import Item from '../item/Item'
@@ -11,6 +12,9 @@ interface StationProps {
   onProcess: (stationId: string) => void
   hasHeldItem: boolean
   heldItem: GameItem | null
+  onDragStart?: (item: GameItem, stationId: string, itemIndex: number) => void
+  onDragEnd?: () => void
+  onDragDrop?: (stationId: string) => void
 }
 
 export default function Station({
@@ -20,8 +24,12 @@ export default function Station({
   onProcess,
   hasHeldItem,
   heldItem,
+  onDragStart,
+  onDragEnd,
+  onDragDrop,
 }: StationProps) {
   const colors = STATION_COLORS[station.type]
+  const [isDragOver, setIsDragOver] = useState(false)
 
   // Check if station can accept held item
   const canAcceptItem = heldItem
@@ -29,6 +37,16 @@ export default function Station({
       station.inputStates.includes(heldItem.state) &&
       station.items.length < station.capacity
     : false
+
+  // Check if a dragged item can be accepted (for visual feedback)
+  const canAcceptDrag = (dragItem: GameItem | null) => {
+    if (!dragItem) return false
+    return (
+      station.acceptedCategories.includes(dragItem.category) &&
+      station.inputStates.includes(dragItem.state) &&
+      station.items.length < station.capacity
+    )
+  }
 
   const handleClick = () => {
     if (hasHeldItem && canAcceptItem) {
@@ -52,13 +70,47 @@ export default function Station({
     }
   }
 
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    if (onDragDrop && canAcceptItem) {
+      onDragDrop(station.id)
+    }
+  }
+
+  // Touch drop handler for mobile
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (hasHeldItem && canAcceptItem) {
+      e.preventDefault()
+      onDropItem(station.id)
+    }
+  }
+
+  const showDropIndicator = (isDragOver && canAcceptItem) || (hasHeldItem && canAcceptItem)
+
   return (
     <div
       onClick={handleClick}
       onKeyDown={handleKeyDown}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      onTouchEnd={hasHeldItem ? handleTouchEnd : undefined}
       role="button"
       tabIndex={0}
-      className={`relative h-full min-h-[140px] w-full rounded-xl border-2 ${colors.border} ${colors.bg} flex flex-col p-3 ${hasHeldItem && canAcceptItem ? 'ring-opacity-75 ring-2 ring-green-400' : ''} ${hasHeldItem && !canAcceptItem ? 'opacity-50' : ''} ${!hasHeldItem && station.items.length > 0 ? 'cursor-pointer hover:brightness-110' : ''} ${hasHeldItem && canAcceptItem ? 'cursor-pointer hover:brightness-110' : ''} backdrop-blur-sm transition-all duration-200`}
+      className={`relative h-full min-h-[140px] w-full rounded-xl border-2 ${colors.border} ${colors.bg} flex flex-col p-3 ${showDropIndicator ? 'ring-opacity-75 scale-105 ring-2 ring-green-400' : ''} ${hasHeldItem && !canAcceptItem ? 'opacity-50' : ''} ${!hasHeldItem && station.items.length > 0 ? 'cursor-pointer hover:brightness-110' : ''} ${showDropIndicator ? 'cursor-pointer border-green-400 hover:brightness-110' : ''} backdrop-blur-sm transition-all duration-200`}
     >
       {/* Station Header */}
       <div className="mb-2 flex items-center justify-between">
@@ -92,6 +144,13 @@ export default function Station({
             item={item}
             size="sm"
             showState={false}
+            isDraggable={!hasHeldItem && !station.isProcessing}
+            onDragStart={(draggedItem) => {
+              if (onDragStart) {
+                onDragStart(draggedItem, station.id, index)
+              }
+            }}
+            onDragEnd={onDragEnd}
             onClick={() => {
               if (!hasHeldItem && !station.isProcessing) {
                 onPickUpItem(station.id, index)

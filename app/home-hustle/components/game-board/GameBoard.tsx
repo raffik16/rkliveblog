@@ -22,6 +22,8 @@ interface GameBoardProps {
   onCompleteOrder: (orderId: string) => void
   onPause: () => void
   onSpawnItems: () => void
+  onDragStart?: (item: GameItem, stationId: string, itemIndex: number) => void
+  onDragEnd?: () => void
 }
 
 export default function GameBoard({
@@ -39,6 +41,8 @@ export default function GameBoard({
   onCompleteOrder,
   onPause,
   onSpawnItems,
+  onDragStart,
+  onDragEnd,
 }: GameBoardProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 p-4">
@@ -92,19 +96,21 @@ export default function GameBoard({
                 onProcess={onProcessStation}
                 hasHeldItem={heldItem !== null}
                 heldItem={heldItem}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
+                onDragDrop={onDropItem}
               />
             ))}
           </div>
 
-          {/* Instructions */}
+          {/* Instructions - Mobile optimized */}
           <div className="mt-4 rounded-xl border border-gray-700 bg-gray-800/50 p-4">
             <h3 className="mb-2 text-sm font-bold text-gray-300">How to Play</h3>
             <ul className="space-y-1 text-xs text-gray-400">
-              <li>1. Click a station to pick up an item</li>
-              <li>2. Click another station to drop the item</li>
-              <li>3. Click "Start" on stations to process items</li>
-              <li>4. Complete orders before time runs out!</li>
-              <li>5. Chain completions for combo bonuses!</li>
+              <li>📱 Tap or drag items between stations</li>
+              <li>🌀 Tap "Start" to process items</li>
+              <li>📋 Complete orders before time runs out!</li>
+              <li>⚡ Chain completions for combo bonuses!</li>
             </ul>
           </div>
         </div>

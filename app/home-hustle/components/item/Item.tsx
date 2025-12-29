@@ -6,9 +6,12 @@ import { COLOR_BORDER_CLASSES, STATE_LABELS, STATE_COLORS } from '../../data/ite
 interface ItemProps {
   item: GameItem
   onClick?: () => void
+  onDragStart?: (item: GameItem) => void
+  onDragEnd?: () => void
   size?: 'sm' | 'md' | 'lg'
   showState?: boolean
   isHeld?: boolean
+  isDraggable?: boolean
   className?: string
 }
 
@@ -21,9 +24,12 @@ const sizeClasses = {
 export default function Item({
   item,
   onClick,
+  onDragStart,
+  onDragEnd,
   size = 'md',
   showState = true,
   isHeld = false,
+  isDraggable = false,
   className = '',
 }: ItemProps) {
   const borderColor = COLOR_BORDER_CLASSES[item.color]
@@ -35,13 +41,34 @@ export default function Item({
     }
   }
 
+  const handleDragStart = (e: React.DragEvent) => {
+    if (!isDraggable) return
+    e.dataTransfer.setData('application/json', JSON.stringify(item))
+    e.dataTransfer.effectAllowed = 'move'
+    onDragStart?.(item)
+  }
+
+  const handleDragEnd = () => {
+    onDragEnd?.()
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isDraggable || !onDragStart) return
+    // For mobile: trigger pick up on touch
+    onDragStart(item)
+  }
+
   return (
     <div
       onClick={onClick}
       onKeyDown={onClick ? handleKeyDown : undefined}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
-      className={` ${sizeClasses[size]} flex flex-col items-center justify-center rounded-lg border-2 ${borderColor} bg-gray-800/80 backdrop-blur-sm ${onClick ? 'cursor-pointer hover:scale-110 hover:bg-gray-700/80' : ''} ${isHeld ? 'animate-bounce ring-2 ring-yellow-400' : ''} transition-all duration-150 ${className} `}
+      draggable={isDraggable}
+      onDragStart={isDraggable ? handleDragStart : undefined}
+      onDragEnd={isDraggable ? handleDragEnd : undefined}
+      onTouchStart={isDraggable ? handleTouchStart : undefined}
+      className={` ${sizeClasses[size]} flex flex-col items-center justify-center rounded-lg border-2 ${borderColor} bg-gray-800/80 backdrop-blur-sm ${onClick || isDraggable ? 'cursor-pointer hover:scale-110 hover:bg-gray-700/80' : ''} ${isHeld ? 'animate-bounce ring-2 ring-yellow-400' : ''} ${isDraggable ? 'cursor-grab touch-none active:cursor-grabbing' : ''} transition-all duration-150 ${className} `}
     >
       <span className="select-none">{item.emoji}</span>
       {showState && size !== 'sm' && (

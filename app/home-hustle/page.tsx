@@ -53,6 +53,19 @@ export default function HomeHustlePage() {
     }
   }, [gameState.currentLevel, startGame])
 
+  // Drag handlers - pick up item when drag starts
+  const handleDragStart = useCallback(
+    (_item: unknown, stationId: string, itemIndex: number) => {
+      pickUpItem(stationId, itemIndex)
+    },
+    [pickUpItem]
+  )
+
+  const handleDragEnd = useCallback(() => {
+    // Item is dropped back if not placed in valid station
+    // The heldItem state handles this already
+  }, [])
+
   // Render based on game phase
   if (gameState.phase === 'menu') {
     return <MainMenu onStartGame={handleStartGame} highScores={highScores} />
@@ -76,6 +89,8 @@ export default function HomeHustlePage() {
           onCompleteOrder={completeOrder}
           onPause={pauseGame}
           onSpawnItems={spawnNewItems}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
         />
         <PauseMenu onResume={resumeGame} onRestart={restartLevel} onMenu={handleGoToMenu} />
       </>
@@ -115,6 +130,8 @@ export default function HomeHustlePage() {
         onCompleteOrder={completeOrder}
         onPause={pauseGame}
         onSpawnItems={spawnNewItems}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
       />
     )
   }
