@@ -4,17 +4,14 @@
   "gsap": 1,
   "nextjs": 1,
   "react": 1,
-  "animation": 1,
+  "animation": 2,
   "simulation": 1,
   "claude-code": 1,
   "blogging": 1,
   "workflow": 1,
   "ai": 1,
-  "next-js": 2,
-  "math": 1,
-  "ols": 1,
-  "github": 1,
-  "guide": 1,
-  "multi-author": 1,
-  "feature": 1
+  "interactive": 1,
+  "history": 1,
+  "design": 1,
+  "clocks": 1
 }
