@@ -59,9 +59,7 @@ export default function HeroIntrosPage() {
             >
               ← Back to Article
             </Link>
-            <h1 className="mt-1 text-xl font-bold text-white md:text-2xl">
-              Hero Intro Animations
-            </h1>
+            <h1 className="mt-1 text-xl font-bold text-white md:text-2xl">Hero Intro Animations</h1>
             <p className="text-sm text-gray-400">12 cinematic reveals through history</p>
           </div>
 
@@ -70,9 +68,7 @@ export default function HeroIntrosPage() {
             <button
               onClick={() => setViewMode('grid')}
               className={`rounded-full px-4 py-2 text-sm transition-all ${
-                viewMode === 'grid'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-400 hover:text-white'
+                viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'
               }`}
             >
               Grid
@@ -113,18 +109,16 @@ export default function HeroIntrosPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-80 transition-opacity group-hover:opacity-100" />
 
                 {/* Info */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 text-left">
+                <div className="absolute right-0 bottom-0 left-0 p-4 text-left">
                   <div className="mb-1 text-xs font-medium text-indigo-400">
                     {intro.era} • {intro.year}
                   </div>
                   <h3 className="text-lg font-bold text-white">{intro.name}</h3>
-                  <p className="mt-1 line-clamp-2 text-xs text-gray-300">
-                    {intro.description}
-                  </p>
+                  <p className="mt-1 line-clamp-2 text-xs text-gray-300">{intro.description}</p>
                 </div>
 
                 {/* Play indicator */}
-                <div className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100">
+                <div className="absolute top-3 right-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100">
                   <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
                   </svg>
@@ -136,7 +130,7 @@ export default function HeroIntrosPage() {
           /* Timeline View */
           <div className="relative">
             {/* Timeline line */}
-            <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-indigo-500 via-purple-500 to-pink-500 md:left-1/2" />
+            <div className="absolute top-0 bottom-0 left-8 w-0.5 bg-gradient-to-b from-indigo-500 via-purple-500 to-pink-500 md:left-1/2" />
 
             {heroIntros.map((intro, index) => (
               <motion.div
@@ -177,7 +171,7 @@ export default function HeroIntrosPage() {
                       <h3 className="text-xl font-bold text-white">{intro.name}</h3>
                       <p className="mb-2 text-sm text-gray-400">{intro.era}</p>
                       <p className="text-sm text-gray-300">{intro.description}</p>
-                      <p className="mt-2 text-xs italic text-gray-500">
+                      <p className="mt-2 text-xs text-gray-500 italic">
                         Inspired by: {intro.inspiration}
                       </p>
                     </div>
@@ -202,7 +196,7 @@ export default function HeroIntrosPage() {
             {/* Close button */}
             <button
               onClick={() => setSelectedIntro(null)}
-              className="absolute right-4 top-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+              className="absolute top-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
             >
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -215,7 +209,7 @@ export default function HeroIntrosPage() {
             </button>
 
             {/* Info panel */}
-            <div className="absolute left-4 top-4 z-50 max-w-sm rounded-xl bg-black/60 p-4 backdrop-blur-sm">
+            <div className="absolute top-4 left-4 z-50 max-w-sm rounded-xl bg-black/60 p-4 backdrop-blur-sm">
               <div className="text-sm text-indigo-400">
                 {selectedIntro.era} • {selectedIntro.year}
               </div>
@@ -229,7 +223,7 @@ export default function HeroIntrosPage() {
                 e.stopPropagation()
                 navigate('prev')
               }}
-              className="absolute left-4 top-1/2 z-50 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+              className="absolute top-1/2 left-4 z-50 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
             >
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -245,7 +239,7 @@ export default function HeroIntrosPage() {
                 e.stopPropagation()
                 navigate('next')
               }}
-              className="absolute right-4 top-1/2 z-50 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+              className="absolute top-1/2 right-4 z-50 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
             >
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -267,9 +261,7 @@ export default function HeroIntrosPage() {
                     setSelectedIntro(intro)
                   }}
                   className={`h-2 w-2 rounded-full transition-all ${
-                    intro.id === selectedIntro.id
-                      ? 'w-6 bg-white'
-                      : 'bg-white/40 hover:bg-white/60'
+                    intro.id === selectedIntro.id ? 'w-6 bg-white' : 'bg-white/40 hover:bg-white/60'
                   }`}
                 />
               ))}

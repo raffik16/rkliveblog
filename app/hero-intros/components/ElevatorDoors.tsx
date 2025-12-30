@@ -110,7 +110,8 @@ export default function ElevatorDoors({ isFullscreen, isPlaying }: HeroIntroProp
         <div
           className="absolute -inset-4 rounded-lg"
           style={{
-            background: 'linear-gradient(135deg, #b8860b 0%, #daa520 30%, #ffd700 50%, #daa520 70%, #b8860b 100%)',
+            background:
+              'linear-gradient(135deg, #b8860b 0%, #daa520 30%, #ffd700 50%, #daa520 70%, #b8860b 100%)',
             boxShadow: '0 0 30px rgba(184,134,11,0.3)',
           }}
         />
@@ -118,7 +119,7 @@ export default function ElevatorDoors({ isFullscreen, isPlaying }: HeroIntroProp
         {/* Inner frame */}
         <div className="absolute inset-0 overflow-hidden rounded bg-gray-900">
           {/* Floor indicator above doors */}
-          <div className="absolute -top-0 left-0 right-0 flex h-10 items-center justify-center bg-gradient-to-b from-gray-800 to-gray-900">
+          <div className="absolute -top-0 right-0 left-0 flex h-10 items-center justify-center bg-gradient-to-b from-gray-800 to-gray-900">
             <div className="flex items-center gap-2">
               <motion.span
                 className="font-mono text-lg text-red-500"
@@ -141,10 +142,11 @@ export default function ElevatorDoors({ isFullscreen, isPlaying }: HeroIntroProp
 
           {/* Left door */}
           <motion.div
-            className="absolute bottom-0 left-0 top-10"
+            className="absolute top-10 bottom-0 left-0"
             style={{
               width: '50%',
-              background: 'linear-gradient(90deg, #a1a1aa 0%, #d4d4d8 20%, #a1a1aa 40%, #d4d4d8 60%, #a1a1aa 80%, #d4d4d8 100%)',
+              background:
+                'linear-gradient(90deg, #a1a1aa 0%, #d4d4d8 20%, #a1a1aa 40%, #d4d4d8 60%, #a1a1aa 80%, #d4d4d8 100%)',
             }}
             initial={{ x: 0 }}
             animate={{ x: '-95%' }}
@@ -158,17 +160,19 @@ export default function ElevatorDoors({ isFullscreen, isPlaying }: HeroIntroProp
             <div
               className="absolute inset-0 opacity-20"
               style={{
-                background: 'linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.5) 50%, transparent 60%)',
+                background:
+                  'linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.5) 50%, transparent 60%)',
               }}
             />
           </motion.div>
 
           {/* Right door */}
           <motion.div
-            className="absolute bottom-0 right-0 top-10"
+            className="absolute top-10 right-0 bottom-0"
             style={{
               width: '50%',
-              background: 'linear-gradient(90deg, #d4d4d8 0%, #a1a1aa 20%, #d4d4d8 40%, #a1a1aa 60%, #d4d4d8 80%, #a1a1aa 100%)',
+              background:
+                'linear-gradient(90deg, #d4d4d8 0%, #a1a1aa 20%, #d4d4d8 40%, #a1a1aa 60%, #d4d4d8 80%, #a1a1aa 100%)',
             }}
             initial={{ x: 0 }}
             animate={{ x: '95%' }}
@@ -182,13 +186,14 @@ export default function ElevatorDoors({ isFullscreen, isPlaying }: HeroIntroProp
             <div
               className="absolute inset-0 opacity-20"
               style={{
-                background: 'linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.5) 50%, transparent 60%)',
+                background:
+                  'linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.5) 50%, transparent 60%)',
               }}
             />
           </motion.div>
 
           {/* Center gap/seam */}
-          <div className="absolute left-1/2 top-10 bottom-0 w-px -translate-x-1/2 bg-gray-600" />
+          <div className="absolute top-10 bottom-0 left-1/2 w-px -translate-x-1/2 bg-gray-600" />
         </div>
       </div>
 
@@ -205,7 +210,7 @@ export default function ElevatorDoors({ isFullscreen, isPlaying }: HeroIntroProp
 
       {/* Replay button */}
       <motion.button
-        className="absolute bottom-4 right-4 z-20 rounded-full bg-amber-800/80 px-4 py-2 text-sm text-amber-100 backdrop-blur-sm transition-colors hover:bg-amber-700"
+        className="absolute right-4 bottom-4 z-20 rounded-full bg-amber-800/80 px-4 py-2 text-sm text-amber-100 backdrop-blur-sm transition-colors hover:bg-amber-700"
         onClick={() => setAnimationKey((k) => k + 1)}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

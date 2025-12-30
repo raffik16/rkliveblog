@@ -66,14 +66,14 @@ export default function CurtainRise({ isFullscreen, isPlaying }: HeroIntroProps)
         transition={{ delay: 1.8, duration: 1 }}
       >
         <div
-          className="absolute left-1/4 top-0 h-full w-1/3 opacity-20"
+          className="absolute top-0 left-1/4 h-full w-1/3 opacity-20"
           style={{
             background: 'linear-gradient(180deg, rgba(255,215,0,0.4) 0%, transparent 70%)',
             transform: 'rotate(-15deg)',
           }}
         />
         <div
-          className="absolute right-1/4 top-0 h-full w-1/3 opacity-20"
+          className="absolute top-0 right-1/4 h-full w-1/3 opacity-20"
           style={{
             background: 'linear-gradient(180deg, rgba(255,215,0,0.4) 0%, transparent 70%)',
             transform: 'rotate(15deg)',
@@ -134,14 +134,15 @@ export default function CurtainRise({ isFullscreen, isPlaying }: HeroIntroProps)
 
           {/* Gold trim at bottom */}
           <div
-            className="absolute bottom-0 left-0 right-0 h-16"
+            className="absolute right-0 bottom-0 left-0 h-16"
             style={{
-              background: 'linear-gradient(180deg, transparent 0%, rgba(218,165,32,0.6) 50%, #B8860B 100%)',
+              background:
+                'linear-gradient(180deg, transparent 0%, rgba(218,165,32,0.6) 50%, #B8860B 100%)',
             }}
           />
 
           {/* Tassel decorations */}
-          <div className="absolute bottom-0 left-0 right-0 flex justify-around px-8">
+          <div className="absolute right-0 bottom-0 left-0 flex justify-around px-8">
             {[0, 1, 2, 3, 4].map((i) => (
               <div key={i} className="flex flex-col items-center">
                 <div className="h-8 w-1 rounded-full bg-yellow-600" />
@@ -152,12 +153,12 @@ export default function CurtainRise({ isFullscreen, isPlaying }: HeroIntroProps)
         </div>
 
         {/* Curtain rod */}
-        <div className="absolute -top-2 left-0 right-0 h-6 bg-gradient-to-b from-yellow-700 via-yellow-500 to-yellow-700 shadow-lg" />
+        <div className="absolute -top-2 right-0 left-0 h-6 bg-gradient-to-b from-yellow-700 via-yellow-500 to-yellow-700 shadow-lg" />
       </motion.div>
 
       {/* Replay button */}
       <motion.button
-        className="absolute bottom-4 right-4 z-20 rounded-full bg-amber-900/80 px-4 py-2 text-sm text-amber-100 backdrop-blur-sm transition-colors hover:bg-amber-800"
+        className="absolute right-4 bottom-4 z-20 rounded-full bg-amber-900/80 px-4 py-2 text-sm text-amber-100 backdrop-blur-sm transition-colors hover:bg-amber-800"
         onClick={() => setAnimationKey((k) => k + 1)}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

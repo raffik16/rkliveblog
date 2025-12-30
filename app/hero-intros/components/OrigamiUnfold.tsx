@@ -164,7 +164,7 @@ export default function OrigamiUnfold({ isFullscreen, isPlaying }: HeroIntroProp
 
         {/* Central crane shape */}
         <motion.div
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
           initial={{ scale: 1, rotateY: 0, opacity: 1 }}
           animate={{ scale: 0, rotateY: 360, opacity: 0 }}
           transition={{ duration: 1, ease: [0.4, 0, 0.2, 1], delay: 2 }}
@@ -213,7 +213,7 @@ export default function OrigamiUnfold({ isFullscreen, isPlaying }: HeroIntroProp
 
       {/* Replay button */}
       <motion.button
-        className="absolute bottom-4 right-4 z-20 rounded-full bg-rose-600/80 px-4 py-2 text-sm text-rose-100 backdrop-blur-sm transition-colors hover:bg-rose-500"
+        className="absolute right-4 bottom-4 z-20 rounded-full bg-rose-600/80 px-4 py-2 text-sm text-rose-100 backdrop-blur-sm transition-colors hover:bg-rose-500"
         onClick={() => setAnimationKey((k) => k + 1)}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

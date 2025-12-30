@@ -43,7 +43,7 @@ export default function SunriseDawn({ isFullscreen, isPlaying }: HeroIntroProps)
       ))}
 
       {/* Mountains silhouette */}
-      <div className="absolute bottom-0 left-0 right-0 h-1/3">
+      <div className="absolute right-0 bottom-0 left-0 h-1/3">
         <svg viewBox="0 0 400 150" className="h-full w-full" preserveAspectRatio="xMidYMax slice">
           <motion.path
             d="M0,150 L0,100 L40,80 L80,95 L120,60 L160,85 L200,40 L240,70 L280,55 L320,80 L360,65 L400,90 L400,150 Z"
@@ -69,7 +69,7 @@ export default function SunriseDawn({ isFullscreen, isPlaying }: HeroIntroProps)
       >
         {/* Sun glow */}
         <motion.div
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
           style={{
             width: isFullscreen ? 300 : 180,
             height: isFullscreen ? 300 : 180,
@@ -81,7 +81,8 @@ export default function SunriseDawn({ isFullscreen, isPlaying }: HeroIntroProps)
           <div
             className="h-full w-full rounded-full"
             style={{
-              background: 'radial-gradient(circle, rgba(251,191,36,0.6) 0%, rgba(251,146,60,0.3) 40%, transparent 70%)',
+              background:
+                'radial-gradient(circle, rgba(251,191,36,0.6) 0%, rgba(251,146,60,0.3) 40%, transparent 70%)',
             }}
           />
         </motion.div>
@@ -104,7 +105,7 @@ export default function SunriseDawn({ isFullscreen, isPlaying }: HeroIntroProps)
         {Array.from({ length: 12 }).map((_, i) => (
           <motion.div
             key={i}
-            className="absolute left-1/2 top-1/2 origin-bottom"
+            className="absolute top-1/2 left-1/2 origin-bottom"
             style={{
               width: 4,
               height: isFullscreen ? 200 : 120,
@@ -201,7 +202,7 @@ export default function SunriseDawn({ isFullscreen, isPlaying }: HeroIntroProps)
 
       {/* Replay button */}
       <motion.button
-        className="absolute bottom-4 right-4 z-20 rounded-full bg-orange-700/80 px-4 py-2 text-sm text-orange-100 backdrop-blur-sm transition-colors hover:bg-orange-600"
+        className="absolute right-4 bottom-4 z-20 rounded-full bg-orange-700/80 px-4 py-2 text-sm text-orange-100 backdrop-blur-sm transition-colors hover:bg-orange-600"
         onClick={() => setAnimationKey((k) => k + 1)}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

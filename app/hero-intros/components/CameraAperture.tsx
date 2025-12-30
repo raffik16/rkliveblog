@@ -45,13 +45,13 @@ export default function CameraAperture({ isFullscreen, isPlaying }: HeroIntroPro
           transition={{ delay: 2, duration: 0.5 }}
         >
           <div
-            className="absolute left-1/3 top-1/3 h-32 w-32 rounded-full opacity-40"
+            className="absolute top-1/3 left-1/3 h-32 w-32 rounded-full opacity-40"
             style={{
               background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%)',
             }}
           />
           <div
-            className="absolute right-1/4 top-1/2 h-16 w-16 rounded-full opacity-30"
+            className="absolute top-1/2 right-1/4 h-16 w-16 rounded-full opacity-30"
             style={{
               background: 'radial-gradient(circle, rgba(255,200,100,0.8) 0%, transparent 70%)',
             }}
@@ -195,7 +195,7 @@ export default function CameraAperture({ isFullscreen, isPlaying }: HeroIntroPro
 
       {/* Replay button */}
       <motion.button
-        className="absolute bottom-4 right-4 z-30 rounded-full bg-gray-700/80 px-4 py-2 text-sm text-gray-100 backdrop-blur-sm transition-colors hover:bg-gray-600"
+        className="absolute right-4 bottom-4 z-30 rounded-full bg-gray-700/80 px-4 py-2 text-sm text-gray-100 backdrop-blur-sm transition-colors hover:bg-gray-600"
         onClick={() => setAnimationKey((k) => k + 1)}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

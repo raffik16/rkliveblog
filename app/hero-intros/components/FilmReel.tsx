@@ -127,7 +127,8 @@ export default function FilmReel({ isFullscreen, isPlaying }: HeroIntroProps) {
             style={{
               width: '200%',
               height: '200%',
-              background: 'conic-gradient(from 180deg at 50% 0%, transparent 70deg, rgba(255,255,255,0.1) 85deg, rgba(255,255,255,0.3) 90deg, rgba(255,255,255,0.1) 95deg, transparent 110deg)',
+              background:
+                'conic-gradient(from 180deg at 50% 0%, transparent 70deg, rgba(255,255,255,0.1) 85deg, rgba(255,255,255,0.3) 90deg, rgba(255,255,255,0.1) 95deg, transparent 110deg)',
             }}
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -204,7 +205,7 @@ export default function FilmReel({ isFullscreen, isPlaying }: HeroIntroProps) {
       )}
 
       {/* Film sprocket holes (sides) */}
-      <div className="absolute left-0 top-0 bottom-0 z-40 flex w-8 flex-col justify-around bg-black py-2">
+      <div className="absolute top-0 bottom-0 left-0 z-40 flex w-8 flex-col justify-around bg-black py-2">
         {Array.from({ length: 15 }).map((_, i) => (
           <motion.div
             key={i}
@@ -214,7 +215,7 @@ export default function FilmReel({ isFullscreen, isPlaying }: HeroIntroProps) {
           />
         ))}
       </div>
-      <div className="absolute right-0 top-0 bottom-0 z-40 flex w-8 flex-col justify-around bg-black py-2">
+      <div className="absolute top-0 right-0 bottom-0 z-40 flex w-8 flex-col justify-around bg-black py-2">
         {Array.from({ length: 15 }).map((_, i) => (
           <motion.div
             key={i}
@@ -227,7 +228,7 @@ export default function FilmReel({ isFullscreen, isPlaying }: HeroIntroProps) {
 
       {/* Replay button */}
       <motion.button
-        className="absolute bottom-4 right-12 z-50 rounded-full bg-gray-800/80 px-4 py-2 text-sm text-gray-100 backdrop-blur-sm transition-colors hover:bg-gray-700"
+        className="absolute right-12 bottom-4 z-50 rounded-full bg-gray-800/80 px-4 py-2 text-sm text-gray-100 backdrop-blur-sm transition-colors hover:bg-gray-700"
         onClick={() => setAnimationKey((k) => k + 1)}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

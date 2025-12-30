@@ -110,7 +110,7 @@ export default function BookOpening({ isFullscreen, isPlaying }: HeroIntroProps)
           transition={{ duration: 2, ease: [0.4, 0, 0.2, 1], delay: 0.3 }}
         >
           {/* Book spine texture */}
-          <div className="absolute left-0 top-0 h-full w-6 bg-gradient-to-r from-amber-950 via-amber-900 to-amber-800" />
+          <div className="absolute top-0 left-0 h-full w-6 bg-gradient-to-r from-amber-950 via-amber-900 to-amber-800" />
 
           {/* Gold decorations */}
           <div className="absolute inset-6 rounded border-2 border-amber-500/60">
@@ -147,7 +147,7 @@ export default function BookOpening({ isFullscreen, isPlaying }: HeroIntroProps)
 
         {/* Right cover */}
         <motion.div
-          className="absolute left-0 top-0 overflow-hidden rounded-r-md shadow-2xl"
+          className="absolute top-0 left-0 overflow-hidden rounded-r-md shadow-2xl"
           style={{
             width: isFullscreen ? '300px' : '180px',
             height: isFullscreen ? '400px' : '240px',
@@ -160,7 +160,7 @@ export default function BookOpening({ isFullscreen, isPlaying }: HeroIntroProps)
           transition={{ duration: 2, ease: [0.4, 0, 0.2, 1], delay: 0.5 }}
         >
           {/* Spine */}
-          <div className="absolute right-0 top-0 h-full w-6 bg-gradient-to-l from-amber-950 via-amber-900 to-amber-800" />
+          <div className="absolute top-0 right-0 h-full w-6 bg-gradient-to-l from-amber-950 via-amber-900 to-amber-800" />
 
           {/* Gold border */}
           <div className="absolute inset-6 rounded border-2 border-amber-500/60">
@@ -192,7 +192,7 @@ export default function BookOpening({ isFullscreen, isPlaying }: HeroIntroProps)
 
       {/* Replay button */}
       <motion.button
-        className="absolute bottom-4 right-4 z-20 rounded-full bg-amber-800/80 px-4 py-2 text-sm text-amber-100 backdrop-blur-sm transition-colors hover:bg-amber-700"
+        className="absolute right-4 bottom-4 z-20 rounded-full bg-amber-800/80 px-4 py-2 text-sm text-amber-100 backdrop-blur-sm transition-colors hover:bg-amber-700"
         onClick={() => setAnimationKey((k) => k + 1)}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

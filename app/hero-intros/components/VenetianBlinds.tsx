@@ -22,7 +22,7 @@ export default function VenetianBlinds({ isFullscreen, isPlaying }: HeroIntroPro
       <div className="absolute inset-0 bg-gradient-to-b from-sky-300 via-sky-200 to-amber-100">
         {/* Sun */}
         <motion.div
-          className="absolute right-1/4 top-1/4"
+          className="absolute top-1/4 right-1/4"
           initial={{ opacity: 0, scale: 0.5 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 1.5, duration: 1 }}
@@ -32,7 +32,7 @@ export default function VenetianBlinds({ isFullscreen, isPlaying }: HeroIntroPro
           {Array.from({ length: 12 }).map((_, i) => (
             <motion.div
               key={i}
-              className="absolute left-1/2 top-1/2 h-32 w-1 origin-bottom bg-gradient-to-t from-yellow-300/40 to-transparent"
+              className="absolute top-1/2 left-1/2 h-32 w-1 origin-bottom bg-gradient-to-t from-yellow-300/40 to-transparent"
               style={{
                 transform: `translate(-50%, -100%) rotate(${i * 30}deg)`,
               }}
@@ -79,7 +79,7 @@ export default function VenetianBlinds({ isFullscreen, isPlaying }: HeroIntroPro
         </motion.div>
 
         {/* City silhouette */}
-        <div className="absolute bottom-0 left-0 right-0 h-1/4">
+        <div className="absolute right-0 bottom-0 left-0 h-1/4">
           <svg viewBox="0 0 400 100" className="h-full w-full" preserveAspectRatio="xMidYMax slice">
             <path
               d="M0,100 L0,60 L20,60 L20,40 L35,40 L35,50 L50,50 L50,30 L70,30 L70,50 L90,50 L90,45 L110,45 L110,55 L130,55 L130,25 L145,25 L145,15 L155,15 L155,25 L170,25 L170,55 L190,55 L190,35 L220,35 L220,45 L240,45 L240,20 L260,20 L260,45 L280,45 L280,50 L310,50 L310,40 L340,40 L340,55 L360,55 L360,45 L380,45 L380,60 L400,60 L400,100 Z"
@@ -90,13 +90,16 @@ export default function VenetianBlinds({ isFullscreen, isPlaying }: HeroIntroPro
       </div>
 
       {/* Window frame */}
-      <div className="absolute inset-4 border-8 border-stone-200 shadow-inner" style={{ boxShadow: 'inset 0 0 20px rgba(0,0,0,0.1)' }}>
+      <div
+        className="absolute inset-4 border-8 border-stone-200 shadow-inner"
+        style={{ boxShadow: 'inset 0 0 20px rgba(0,0,0,0.1)' }}
+      >
         {/* Venetian blinds */}
         <div key={animationKey} className="relative h-full w-full overflow-hidden">
           {slats.map((i) => (
             <motion.div
               key={i}
-              className="absolute left-0 right-0 origin-top"
+              className="absolute right-0 left-0 origin-top"
               style={{
                 top: `${(i / slatsCount) * 100}%`,
                 height: `${(1 / slatsCount) * 100 + 1}%`,
@@ -131,7 +134,7 @@ export default function VenetianBlinds({ isFullscreen, isPlaying }: HeroIntroPro
 
           {/* Pull cord */}
           <motion.div
-            className="absolute right-4 top-0 flex flex-col items-center"
+            className="absolute top-0 right-4 flex flex-col items-center"
             initial={{ y: 0 }}
             animate={{ y: 30 }}
             transition={{ duration: 0.8, delay: 0.2 }}
@@ -143,7 +146,7 @@ export default function VenetianBlinds({ isFullscreen, isPlaying }: HeroIntroPro
       </div>
 
       {/* Window sill */}
-      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-b from-stone-100 to-stone-200" />
+      <div className="absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-b from-stone-100 to-stone-200" />
 
       {/* Light beams through blinds */}
       <motion.div
@@ -155,11 +158,12 @@ export default function VenetianBlinds({ isFullscreen, isPlaying }: HeroIntroPro
         {Array.from({ length: slatsCount - 1 }).map((_, i) => (
           <div
             key={i}
-            className="absolute left-0 right-0"
+            className="absolute right-0 left-0"
             style={{
               top: `${((i + 0.5) / slatsCount) * 100}%`,
               height: '3px',
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,200,0.8) 50%, transparent 100%)',
+              background:
+                'linear-gradient(90deg, transparent 0%, rgba(255,255,200,0.8) 50%, transparent 100%)',
               filter: 'blur(2px)',
             }}
           />
@@ -168,7 +172,7 @@ export default function VenetianBlinds({ isFullscreen, isPlaying }: HeroIntroPro
 
       {/* Replay button */}
       <motion.button
-        className="absolute bottom-4 right-4 z-20 rounded-full bg-sky-800/80 px-4 py-2 text-sm text-sky-100 backdrop-blur-sm transition-colors hover:bg-sky-700"
+        className="absolute right-4 bottom-4 z-20 rounded-full bg-sky-800/80 px-4 py-2 text-sm text-sky-100 backdrop-blur-sm transition-colors hover:bg-sky-700"
         onClick={() => setAnimationKey((k) => k + 1)}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

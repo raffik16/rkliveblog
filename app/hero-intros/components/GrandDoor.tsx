@@ -43,7 +43,7 @@ export default function GrandDoor({ isFullscreen, isPlaying }: HeroIntroProps) {
           {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
-              className="absolute left-1/2 top-0 h-full origin-top"
+              className="absolute top-0 left-1/2 h-full origin-top"
               style={{
                 width: '150px',
                 background: 'linear-gradient(180deg, rgba(255,255,200,0.3) 0%, transparent 100%)',
@@ -150,7 +150,7 @@ export default function GrandDoor({ isFullscreen, isPlaying }: HeroIntroProps) {
 
           {/* Door handle */}
           <div
-            className="absolute right-4 top-1/2 h-16 w-4 -translate-y-1/2 rounded-full"
+            className="absolute top-1/2 right-4 h-16 w-4 -translate-y-1/2 rounded-full"
             style={{
               background: 'linear-gradient(90deg, #b8860b 0%, #daa520 50%, #b8860b 100%)',
               boxShadow: '2px 2px 6px rgba(0,0,0,0.5)',
@@ -197,7 +197,7 @@ export default function GrandDoor({ isFullscreen, isPlaying }: HeroIntroProps) {
 
           {/* Door handle */}
           <div
-            className="absolute left-4 top-1/2 h-16 w-4 -translate-y-1/2 rounded-full"
+            className="absolute top-1/2 left-4 h-16 w-4 -translate-y-1/2 rounded-full"
             style={{
               background: 'linear-gradient(90deg, #b8860b 0%, #daa520 50%, #b8860b 100%)',
               boxShadow: '-2px 2px 6px rgba(0,0,0,0.5)',
@@ -208,7 +208,7 @@ export default function GrandDoor({ isFullscreen, isPlaying }: HeroIntroProps) {
 
       {/* Replay button */}
       <motion.button
-        className="absolute bottom-4 right-4 z-20 rounded-full bg-stone-700/80 px-4 py-2 text-sm text-stone-100 backdrop-blur-sm transition-colors hover:bg-stone-600"
+        className="absolute right-4 bottom-4 z-20 rounded-full bg-stone-700/80 px-4 py-2 text-sm text-stone-100 backdrop-blur-sm transition-colors hover:bg-stone-600"
         onClick={() => setAnimationKey((k) => k + 1)}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

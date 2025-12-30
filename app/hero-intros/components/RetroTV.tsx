@@ -153,7 +153,8 @@ export default function RetroTV({ isFullscreen, isPlaying }: HeroIntroProps) {
                 <div
                   className="pointer-events-none absolute inset-0 opacity-20"
                   style={{
-                    backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)',
+                    backgroundImage:
+                      'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)',
                   }}
                 />
 
@@ -191,7 +192,7 @@ export default function RetroTV({ isFullscreen, isPlaying }: HeroIntroProps) {
 
         {/* Control panel */}
         <div
-          className="absolute right-4 top-1/4 bottom-1/4 flex w-16 flex-col items-center justify-around rounded-lg py-4"
+          className="absolute top-1/4 right-4 bottom-1/4 flex w-16 flex-col items-center justify-around rounded-lg py-4"
           style={{
             background: 'linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%)',
           }}
@@ -231,7 +232,7 @@ export default function RetroTV({ isFullscreen, isPlaying }: HeroIntroProps) {
 
         {/* Speaker grille */}
         <div
-          className="absolute bottom-3 left-1/4 right-1/3 h-8 rounded"
+          className="absolute right-1/3 bottom-3 left-1/4 h-8 rounded"
           style={{
             background: 'linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%)',
           }}
@@ -269,7 +270,7 @@ export default function RetroTV({ isFullscreen, isPlaying }: HeroIntroProps) {
 
       {/* Replay button */}
       <motion.button
-        className="absolute bottom-4 right-4 z-20 rounded-full bg-amber-800/80 px-4 py-2 text-sm text-amber-100 backdrop-blur-sm transition-colors hover:bg-amber-700"
+        className="absolute right-4 bottom-4 z-20 rounded-full bg-amber-800/80 px-4 py-2 text-sm text-amber-100 backdrop-blur-sm transition-colors hover:bg-amber-700"
         onClick={() => setAnimationKey((k) => k + 1)}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

@@ -76,13 +76,14 @@ export default function VaultDoor({ isFullscreen, isPlaying }: HeroIntroProps) {
         <div
           className="absolute inset-0"
           style={{
-            background: 'radial-gradient(circle at center, rgba(251,191,36,0.3) 0%, rgba(0,0,0,0.9) 70%)',
+            background:
+              'radial-gradient(circle at center, rgba(251,191,36,0.3) 0%, rgba(0,0,0,0.9) 70%)',
           }}
         />
 
         {/* Treasure pile silhouette */}
         <motion.div
-          className="absolute bottom-0 left-1/4 right-1/4 h-1/3"
+          className="absolute right-1/4 bottom-0 left-1/4 h-1/3"
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: phase === 'open' ? 1 : 0, y: phase === 'open' ? 0 : 50 }}
           transition={{ delay: 0.3 }}
@@ -187,7 +188,8 @@ export default function VaultDoor({ isFullscreen, isPlaying }: HeroIntroProps) {
                   top: `${y}%`,
                   transform: 'translate(-50%, -50%)',
                   background: 'linear-gradient(145deg, #666 0%, #333 100%)',
-                  boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.2), inset -1px -1px 2px rgba(0,0,0,0.5)',
+                  boxShadow:
+                    'inset 1px 1px 2px rgba(255,255,255,0.2), inset -1px -1px 2px rgba(0,0,0,0.5)',
                 }}
               />
             )
@@ -195,7 +197,7 @@ export default function VaultDoor({ isFullscreen, isPlaying }: HeroIntroProps) {
 
           {/* Inner ring */}
           <div
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
             style={{
               width: '70%',
               height: '70%',
@@ -206,7 +208,7 @@ export default function VaultDoor({ isFullscreen, isPlaying }: HeroIntroProps) {
 
           {/* Combination dial */}
           <motion.div
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
             style={{
               width: '40%',
               height: '40%',
@@ -235,14 +237,14 @@ export default function VaultDoor({ isFullscreen, isPlaying }: HeroIntroProps) {
 
             {/* Dial indicator */}
             <div
-              className="absolute left-1/2 top-2 h-3 w-1 -translate-x-1/2 rounded-full bg-red-500"
+              className="absolute top-2 left-1/2 h-3 w-1 -translate-x-1/2 rounded-full bg-red-500"
               style={{ boxShadow: '0 0 5px rgba(239,68,68,0.8)' }}
             />
           </motion.div>
 
           {/* Handle wheel */}
           <motion.div
-            className="absolute right-[15%] top-1/2 -translate-y-1/2"
+            className="absolute top-1/2 right-[15%] -translate-y-1/2"
             style={{
               width: '20%',
               height: '20%',
@@ -256,13 +258,13 @@ export default function VaultDoor({ isFullscreen, isPlaying }: HeroIntroProps) {
             {[0, 60, 120].map((angle) => (
               <div
                 key={angle}
-                className="absolute left-1/2 top-1/2 h-1 w-full origin-left -translate-y-1/2 rounded-full bg-gradient-to-r from-gray-500 to-gray-400"
+                className="absolute top-1/2 left-1/2 h-1 w-full origin-left -translate-y-1/2 rounded-full bg-gradient-to-r from-gray-500 to-gray-400"
                 style={{ transform: `translateY(-50%) rotate(${angle}deg)` }}
               />
             ))}
             {/* Center hub */}
             <div
-              className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full"
+              className="absolute top-1/2 left-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full"
               style={{
                 background: 'linear-gradient(145deg, #666 0%, #333 100%)',
               }}
@@ -306,14 +308,20 @@ export default function VaultDoor({ isFullscreen, isPlaying }: HeroIntroProps) {
           }}
           style={{ boxShadow: '0 0 10px currentColor' }}
         />
-        <span className="font-mono text-sm uppercase text-gray-400">
-          {phase === 'open' ? 'OPEN' : phase === 'unlocking' ? 'UNLOCKING...' : phase === 'opening' ? 'OPENING...' : 'LOCKED'}
+        <span className="font-mono text-sm text-gray-400 uppercase">
+          {phase === 'open'
+            ? 'OPEN'
+            : phase === 'unlocking'
+              ? 'UNLOCKING...'
+              : phase === 'opening'
+                ? 'OPENING...'
+                : 'LOCKED'}
         </span>
       </motion.div>
 
       {/* Replay button */}
       <motion.button
-        className="absolute bottom-4 right-4 z-20 rounded-full bg-gray-700/80 px-4 py-2 text-sm text-gray-100 backdrop-blur-sm transition-colors hover:bg-gray-600"
+        className="absolute right-4 bottom-4 z-20 rounded-full bg-gray-700/80 px-4 py-2 text-sm text-gray-100 backdrop-blur-sm transition-colors hover:bg-gray-600"
         onClick={() => setAnimationKey((k) => k + 1)}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

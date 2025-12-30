@@ -97,7 +97,7 @@ export default function EnvelopeUnsealing({ isFullscreen, isPlaying }: HeroIntro
         >
           {/* Bottom flap pattern */}
           <div
-            className="absolute bottom-0 left-0 right-0"
+            className="absolute right-0 bottom-0 left-0"
             style={{
               height: '60%',
               background: 'linear-gradient(180deg, transparent 0%, rgba(217,119,6,0.1) 100%)',
@@ -107,7 +107,7 @@ export default function EnvelopeUnsealing({ isFullscreen, isPlaying }: HeroIntro
 
         {/* Letter inside */}
         <motion.div
-          className="absolute left-4 right-4 rounded bg-white shadow-lg"
+          className="absolute right-4 left-4 rounded bg-white shadow-lg"
           style={{
             top: '10%',
             height: '80%',
@@ -131,7 +131,7 @@ export default function EnvelopeUnsealing({ isFullscreen, isPlaying }: HeroIntro
 
         {/* Top flap (opens) */}
         <motion.div
-          className="absolute left-0 right-0 top-0 origin-bottom"
+          className="absolute top-0 right-0 left-0 origin-bottom"
           style={{
             height: envelopeHeight * 0.55,
             transformStyle: 'preserve-3d',
@@ -151,7 +151,7 @@ export default function EnvelopeUnsealing({ isFullscreen, isPlaying }: HeroIntro
           >
             {/* Wax seal */}
             <motion.div
-              className="absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2"
+              className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2"
               initial={{ scale: 1 }}
               animate={{ scale: 0, opacity: 0 }}
               transition={{ duration: 0.3, delay: 0.2 }}
@@ -181,14 +181,20 @@ export default function EnvelopeUnsealing({ isFullscreen, isPlaying }: HeroIntro
 
         {/* Side flaps (decorative) */}
         <div
-          className="absolute bottom-0 left-0 right-0"
+          className="absolute right-0 bottom-0 left-0"
           style={{
             height: '50%',
           }}
         >
           <svg viewBox="0 0 100 50" className="h-full w-full" preserveAspectRatio="none">
             <path d="M0,0 L50,50 L100,0 L100,50 L0,50 Z" fill="#fcd34d" />
-            <path d="M0,0 L50,50 L100,0" fill="none" stroke="#d97706" strokeWidth="0.5" opacity="0.3" />
+            <path
+              d="M0,0 L50,50 L100,0"
+              fill="none"
+              stroke="#d97706"
+              strokeWidth="0.5"
+              opacity="0.3"
+            />
           </svg>
         </div>
       </div>
@@ -216,7 +222,7 @@ export default function EnvelopeUnsealing({ isFullscreen, isPlaying }: HeroIntro
 
       {/* Replay button */}
       <motion.button
-        className="absolute bottom-4 right-4 z-20 rounded-full bg-rose-700/80 px-4 py-2 text-sm text-rose-100 backdrop-blur-sm transition-colors hover:bg-rose-600"
+        className="absolute right-4 bottom-4 z-20 rounded-full bg-rose-700/80 px-4 py-2 text-sm text-rose-100 backdrop-blur-sm transition-colors hover:bg-rose-600"
         onClick={() => setAnimationKey((k) => k + 1)}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
