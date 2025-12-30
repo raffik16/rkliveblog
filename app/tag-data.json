@@ -3,8 +3,8 @@
   "canvas": 1,
   "gsap": 1,
   "nextjs": 1,
-  "react": 1,
-  "animation": 2,
+  "react": 2,
+  "animation": 3,
   "simulation": 1,
   "claude-code": 1,
   "blogging": 1,
@@ -12,6 +12,9 @@
   "ai": 1,
   "interactive": 1,
   "history": 1,
-  "design": 1,
-  "clocks": 1
+  "design": 2,
+  "clocks": 1,
+  "motion": 1,
+  "framer-motion": 1,
+  "ux": 1
 }
