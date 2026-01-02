@@ -66,11 +66,11 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
   }
 
   return (
-    <div className="mb-8 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
-      {/* Search and Sort Row */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+    <div className="mb-8 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:p-4 dark:border-gray-700 dark:bg-gray-800/50">
+      {/* Search and Sort Row - Always horizontal */}
+      <div className="flex items-center gap-2 sm:gap-4">
         {/* Search Input */}
-        <div className="relative flex-1">
+        <div className="relative min-w-0 flex-1">
           <label>
             <span className="sr-only">Search posts</span>
             <input
@@ -78,12 +78,12 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
               type="text"
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Search posts..."
-              className="focus:border-primary-500 focus:ring-primary-500/20 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 pl-10 text-sm text-gray-900 transition-colors focus:ring-2 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-400"
+              placeholder="Search..."
+              className="focus:border-primary-500 focus:ring-primary-500/20 block w-full rounded-lg border border-gray-300 bg-white py-2 pr-8 pl-8 text-sm text-gray-900 transition-colors focus:ring-2 sm:py-2.5 sm:pr-10 sm:pl-10 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-400"
             />
           </label>
           <svg
-            className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400"
+            className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2 text-gray-400 sm:left-3"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -99,7 +99,7 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
           {searchQuery && (
             <button
               onClick={() => handleSearchChange('')}
-              className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="absolute top-1/2 right-2 -translate-y-1/2 text-gray-400 hover:text-gray-600 sm:right-3 dark:hover:text-gray-300"
               aria-label="Clear search"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -115,26 +115,29 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
         </div>
 
         {/* Sort Dropdown */}
-        <div className="flex items-center gap-2">
-          <label htmlFor="sort-select" className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex shrink-0 items-center">
+          <label
+            htmlFor="sort-select"
+            className="sr-only sm:not-sr-only sm:mr-2 sm:text-sm sm:text-gray-600 sm:dark:text-gray-400"
+          >
             Sort:
           </label>
           <select
             id="sort-select"
             value={sortBy}
             onChange={(e) => handleSortChange(e.target.value as 'newest' | 'oldest' | 'title')}
-            className="focus:border-primary-500 focus:ring-primary-500/20 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition-colors focus:ring-2 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+            className="focus:border-primary-500 focus:ring-primary-500/20 rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900 transition-colors focus:ring-2 sm:px-3 sm:py-2.5 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
           >
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
-            <option value="title">Title A-Z</option>
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="title">A-Z</option>
           </select>
         </div>
 
         {/* Filter Toggle Button */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${
+          className={`flex shrink-0 items-center gap-1 rounded-lg border px-2 py-2 text-sm font-medium transition-all sm:gap-2 sm:px-4 sm:py-2.5 ${
             isExpanded || selectedTags.length > 0
               ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400'
               : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-500'
@@ -148,7 +151,7 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
               d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
             />
           </svg>
-          Tags
+          <span className="hidden sm:inline">Tags</span>
           {selectedTags.length > 0 && (
             <span className="bg-primary-500 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white">
               {selectedTags.length}
