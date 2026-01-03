@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { slug } from 'github-slugger'
 import Link from '@/components/Link'
 import siteMetadata from '@/data/siteMetadata'
 import NewsletterForm from '@/components/NewsletterForm'
@@ -89,6 +88,18 @@ export default function Home({ posts, tagData }: HomeProps) {
     setFilters(newFilters)
   }, [])
 
+  const toggleTag = useCallback((tag: string) => {
+    setFilters((prev) => {
+      const isSelected = prev.selectedTags.includes(tag)
+      return {
+        ...prev,
+        selectedTags: isSelected
+          ? prev.selectedTags.filter((t) => t !== tag)
+          : [...prev.selectedTags, tag],
+      }
+    })
+  }, [])
+
   // When filters are active, show all matching posts; otherwise limit to MAX_DISPLAY
   const displayPosts = hasActiveFilters
     ? filteredAndSortedPosts
@@ -123,18 +134,40 @@ export default function Home({ posts, tagData }: HomeProps) {
           {/* Left Sidebar - Tags */}
           <div className="hidden h-full max-h-screen max-w-[280px] min-w-[280px] flex-wrap overflow-auto rounded-sm bg-gray-50 pt-5 shadow-md sm:flex dark:bg-gray-900/70 dark:shadow-gray-800/40">
             <div className="px-6 py-4">
-              <h3 className="text-primary-500 font-bold uppercase">All Posts</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-primary-500 font-bold uppercase">Filter by Tag</h3>
+                {filters.selectedTags.length > 0 && (
+                  <button
+                    onClick={() => setFilters((prev) => ({ ...prev, selectedTags: [] }))}
+                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
               <ul>
                 {displayTags.map((t) => {
+                  const isSelected = filters.selectedTags.includes(t)
                   return (
-                    <li key={t} className="my-3">
-                      <Link
-                        href={`/tags/${slug(t)}`}
-                        className="hover:text-primary-500 dark:hover:text-primary-500 px-3 py-2 text-sm font-medium text-gray-500 uppercase dark:text-gray-300"
-                        aria-label={`View posts tagged ${t}`}
+                    <li key={t} className="my-2">
+                      <button
+                        onClick={() => toggleTag(t)}
+                        className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium uppercase transition-all duration-200 ${
+                          isSelected
+                            ? 'bg-primary-500 text-white shadow-sm'
+                            : 'hover:text-primary-500 text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                        }`}
+                        aria-label={`${isSelected ? 'Remove' : 'Add'} filter for ${t}`}
                       >
-                        {`${t} (${tagData[t]})`}
-                      </Link>
+                        <span className="flex items-center justify-between">
+                          <span>{t}</span>
+                          <span
+                            className={`text-xs ${isSelected ? 'text-white/80' : 'text-gray-400'}`}
+                          >
+                            {tagData[t]}
+                          </span>
+                        </span>
+                      </button>
                     </li>
                   )
                 })}
