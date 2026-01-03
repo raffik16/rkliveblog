@@ -2,14 +2,23 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import Link from '@/components/Link'
-import Tag from '@/components/Tag'
 import siteMetadata from '@/data/siteMetadata'
-import { formatDate } from 'pliny/utils/formatDate'
 import NewsletterForm from '@/components/NewsletterForm'
 import { Hero6 } from '@/components/heroes'
 import BlogFilters, { FilterState } from '@/components/BlogFilters'
 
-const MAX_DISPLAY = 5
+const MAX_DISPLAY = 10
+
+// Fix timezone issue by parsing date as local time
+function formatDateLocal(dateString: string, locale: string) {
+  const [year, month, day] = dateString.split('T')[0].split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  return date.toLocaleDateString(locale, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
 
 interface Post {
   slug: string
@@ -31,6 +40,12 @@ export default function Home({ posts, tagData }: HomeProps) {
     selectedTags: [],
     sortBy: 'newest',
   })
+  const [showAllTags, setShowAllTags] = useState(false)
+
+  const tagKeys = Object.keys(tagData)
+  const sortedTags = tagKeys.sort((a, b) => tagData[b] - tagData[a])
+  const displayTags = showAllTags ? sortedTags : sortedTags.slice(0, 8)
+  const hasMoreTags = sortedTags.length > 8
 
   const hasActiveFilters =
     filters.searchQuery || filters.selectedTags.length > 0 || filters.sortBy !== 'newest'
@@ -73,6 +88,18 @@ export default function Home({ posts, tagData }: HomeProps) {
     setFilters(newFilters)
   }, [])
 
+  const toggleTag = useCallback((tag: string) => {
+    setFilters((prev) => {
+      const isSelected = prev.selectedTags.includes(tag)
+      return {
+        ...prev,
+        selectedTags: isSelected
+          ? prev.selectedTags.filter((t) => t !== tag)
+          : [...prev.selectedTags, tag],
+      }
+    })
+  }, [])
+
   // When filters are active, show all matching posts; otherwise limit to MAX_DISPLAY
   const displayPosts = hasActiveFilters
     ? filteredAndSortedPosts
@@ -81,7 +108,7 @@ export default function Home({ posts, tagData }: HomeProps) {
   return (
     <>
       <Hero6 />
-      <div className="divide-y divide-gray-200 dark:divide-gray-700">
+      <div>
         <div className="space-y-2 pt-6 pb-8 md:space-y-5">
           <h1 className="text-3xl leading-9 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14 dark:text-gray-100">
             Latest
@@ -92,19 +119,74 @@ export default function Home({ posts, tagData }: HomeProps) {
         </div>
 
         {/* Smart Filter System */}
-        <div className="pt-6">
+        <div className="mb-6">
           <BlogFilters allTags={tagData} onFiltersChange={handleFiltersChange} />
 
           {/* Results count when filtering */}
           {hasActiveFilters && (
-            <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+            <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
               Showing {filteredAndSortedPosts.length} of {posts.length} posts
             </div>
           )}
+        </div>
 
-          <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="flex sm:space-x-24">
+          {/* Left Sidebar - Tags */}
+          <div className="hidden h-full max-h-screen max-w-[280px] min-w-[280px] flex-wrap overflow-auto rounded-sm bg-gray-50 pt-5 shadow-md sm:flex dark:bg-gray-900/70 dark:shadow-gray-800/40">
+            <div className="w-full px-6 py-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-primary-500 font-bold uppercase">Filter by Tag</h3>
+                {filters.selectedTags.length > 0 && (
+                  <button
+                    onClick={() => setFilters((prev) => ({ ...prev, selectedTags: [] }))}
+                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <ul>
+                {displayTags.map((t) => {
+                  const isSelected = filters.selectedTags.includes(t)
+                  return (
+                    <li key={t} className="my-2">
+                      <button
+                        onClick={() => toggleTag(t)}
+                        className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium uppercase transition-all duration-200 ${
+                          isSelected
+                            ? 'bg-primary-500 text-white shadow-sm'
+                            : 'hover:text-primary-500 text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                        }`}
+                        aria-label={`${isSelected ? 'Remove' : 'Add'} filter for ${t}`}
+                      >
+                        <span className="flex items-center justify-between">
+                          <span>{t}</span>
+                          <span
+                            className={`text-xs ${isSelected ? 'text-white/80' : 'text-gray-400'}`}
+                          >
+                            {tagData[t]}
+                          </span>
+                        </span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+              {hasMoreTags && (
+                <button
+                  onClick={() => setShowAllTags(!showAllTags)}
+                  className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 mt-2 px-3 text-sm font-medium transition-colors"
+                >
+                  {showAllTags ? '← Show less' : `See more (${sortedTags.length - 8})`}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Main Content - Grid Posts */}
+          <div className="w-full">
             {!displayPosts.length && (
-              <li className="py-12 text-center">
+              <div className="py-12 text-center">
                 <div className="text-gray-500 dark:text-gray-400">
                   <svg
                     className="mx-auto mb-4 h-12 w-12 text-gray-400"
@@ -122,70 +204,51 @@ export default function Home({ posts, tagData }: HomeProps) {
                   <p className="text-lg font-medium">No posts found</p>
                   <p className="mt-1 text-sm">Try adjusting your filters or search query</p>
                 </div>
-              </li>
+              </div>
             )}
-            {displayPosts.map((post) => {
-              const { slug, date, title, summary, tags } = post
-              return (
-                <li key={slug} className="py-12">
-                  <article>
-                    <div className="space-y-2 xl:grid xl:grid-cols-4 xl:items-baseline xl:space-y-0">
-                      <dl>
-                        <dt className="sr-only">Published on</dt>
-                        <dd className="text-base leading-6 font-medium text-gray-500 dark:text-gray-400">
-                          <time dateTime={date}>{formatDate(date, siteMetadata.locale)}</time>
-                        </dd>
-                      </dl>
-                      <div className="space-y-5 xl:col-span-3">
-                        <div className="space-y-6">
-                          <div>
-                            <h2 className="text-2xl leading-8 font-bold tracking-tight">
-                              <Link
-                                href={`/blog/${slug}`}
-                                className="text-gray-900 dark:text-gray-100"
-                              >
-                                {title}
-                              </Link>
-                            </h2>
-                            <div className="flex flex-wrap">
-                              {tags.map((tag) => (
-                                <Tag key={tag} text={tag} />
-                              ))}
-                            </div>
-                          </div>
-                          <div className="prose max-w-none text-gray-500 dark:text-gray-400">
-                            {summary}
-                          </div>
-                        </div>
-                        <div className="text-base leading-6 font-medium">
-                          <Link
-                            href={`/blog/${slug}`}
-                            className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-                            aria-label={`Read more: "${title}"`}
-                          >
-                            Read more &rarr;
-                          </Link>
-                        </div>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {displayPosts.map((post) => {
+                const { slug: postSlug, date, title } = post
+                return (
+                  <article
+                    key={postSlug}
+                    className="group relative flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-gray-700 dark:bg-gray-800/50"
+                  >
+                    {/* Animated gradient border on hover */}
+                    <div className="from-primary-500 absolute inset-0 rounded-lg bg-gradient-to-r via-purple-500 to-cyan-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    <div className="absolute inset-[2px] rounded-lg bg-white dark:bg-gray-800/95" />
+
+                    <Link href={`/blog/${postSlug}`} className="relative flex flex-1 flex-col p-5">
+                      <h2 className="mb-3 text-lg leading-6 font-bold tracking-tight">
+                        <span className="group-hover:from-primary-500 relative text-gray-900 transition-colors duration-300 group-hover:bg-gradient-to-r group-hover:via-purple-500 group-hover:to-cyan-500 group-hover:bg-clip-text group-hover:text-transparent dark:text-gray-100">
+                          {title}
+                        </span>
+                      </h2>
+                      <div className="mt-auto border-t border-gray-100 pt-3 dark:border-gray-700">
+                        <time dateTime={date} className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatDateLocal(date, siteMetadata.locale)}
+                        </time>
                       </div>
-                    </div>
+                    </Link>
                   </article>
-                </li>
-              )
-            })}
-          </ul>
+                )
+              })}
+            </div>
+
+            {!hasActiveFilters && posts.length > MAX_DISPLAY && (
+              <div className="mt-8 flex justify-end text-base leading-6 font-medium">
+                <Link
+                  href="/blog"
+                  className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
+                  aria-label="All posts"
+                >
+                  All Posts &rarr;
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-      {!hasActiveFilters && posts.length > MAX_DISPLAY && (
-        <div className="flex justify-end text-base leading-6 font-medium">
-          <Link
-            href="/blog"
-            className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-            aria-label="All posts"
-          >
-            All Posts &rarr;
-          </Link>
-        </div>
-      )}
       {siteMetadata.newsletter?.provider && (
         <div className="flex items-center justify-center pt-4">
           <NewsletterForm />

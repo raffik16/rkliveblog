@@ -3,14 +3,23 @@
 import { useState, useMemo, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import { slug } from 'github-slugger'
-import { formatDate } from 'pliny/utils/formatDate'
 import { CoreContent } from 'pliny/utils/contentlayer'
 import type { Blog } from 'contentlayer/generated'
 import Link from '@/components/Link'
-import Tag from '@/components/Tag'
 import siteMetadata from '@/data/siteMetadata'
 import tagData from 'app/tag-data.json'
 import BlogFilters, { FilterState } from '@/components/BlogFilters'
+
+// Fix timezone issue by parsing date as local time
+function formatDateLocal(dateString: string, locale: string) {
+  const [year, month, day] = dateString.split('T')[0].split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  return date.toLocaleDateString(locale, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
 
 interface PaginationProps {
   totalPages: number
@@ -39,6 +48,10 @@ export default function ListLayoutWithTags({
     selectedTags: [],
     sortBy: 'newest',
   })
+  const [showAllTags, setShowAllTags] = useState(false)
+
+  const displayTags = showAllTags ? sortedTags : sortedTags.slice(0, 8)
+  const hasMoreTags = sortedTags.length > 8
 
   const hasActiveFilters =
     filters.searchQuery || filters.selectedTags.length > 0 || filters.sortBy !== 'newest'
@@ -111,7 +124,7 @@ export default function ListLayoutWithTags({
 
         <div className="flex sm:space-x-24">
           <div className="hidden h-full max-h-screen max-w-[280px] min-w-[280px] flex-wrap overflow-auto rounded-sm bg-gray-50 pt-5 shadow-md sm:flex dark:bg-gray-900/70 dark:shadow-gray-800/40">
-            <div className="px-6 py-4">
+            <div className="w-full px-6 py-4">
               {pathname.startsWith('/blog') ? (
                 <h3 className="text-primary-500 font-bold uppercase">All Posts</h3>
               ) : (
@@ -123,7 +136,7 @@ export default function ListLayoutWithTags({
                 </Link>
               )}
               <ul>
-                {sortedTags.map((t) => {
+                {displayTags.map((t) => {
                   return (
                     <li key={t} className="my-3">
                       {decodeURI(pathname.split('/tags/')[1]) === slug(t) ? (
@@ -143,66 +156,70 @@ export default function ListLayoutWithTags({
                   )
                 })}
               </ul>
+              {hasMoreTags && (
+                <button
+                  onClick={() => setShowAllTags(!showAllTags)}
+                  className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 mt-2 px-3 text-sm font-medium transition-colors"
+                >
+                  {showAllTags ? '← Show less' : `See more (${sortedTags.length - 8})`}
+                </button>
+              )}
             </div>
           </div>
           <div className="w-full">
-            <ul>
-              {!displayPosts.length && (
-                <li className="py-12 text-center">
-                  <div className="text-gray-500 dark:text-gray-400">
-                    <svg
-                      className="mx-auto mb-4 h-12 w-12 text-gray-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <p className="text-lg font-medium">No posts found</p>
-                    <p className="mt-1 text-sm">Try adjusting your filters or search query</p>
-                  </div>
-                </li>
-              )}
+            {!displayPosts.length && (
+              <div className="py-12 text-center">
+                <div className="text-gray-500 dark:text-gray-400">
+                  <svg
+                    className="mx-auto mb-4 h-12 w-12 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p className="text-lg font-medium">No posts found</p>
+                  <p className="mt-1 text-sm">Try adjusting your filters or search query</p>
+                </div>
+              </div>
+            )}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {displayPosts.map((post) => {
-                const { path, date, title, summary, tags } = post
+                const { path, date, title } = post
                 return (
-                  <li key={path} className="py-5">
-                    <article className="flex flex-col space-y-2 xl:space-y-0">
-                      <dl>
-                        <dt className="sr-only">Published on</dt>
-                        <dd className="text-base leading-6 font-medium text-gray-500 dark:text-gray-400">
-                          <time dateTime={date} suppressHydrationWarning>
-                            {formatDate(date, siteMetadata.locale)}
-                          </time>
-                        </dd>
-                      </dl>
-                      <div className="space-y-3">
-                        <div>
-                          <h2 className="text-2xl leading-8 font-bold tracking-tight">
-                            <Link href={`/${path}`} className="text-gray-900 dark:text-gray-100">
-                              {title}
-                            </Link>
-                          </h2>
-                          <div className="flex flex-wrap">
-                            {tags?.map((tag) => (
-                              <Tag key={tag} text={tag} />
-                            ))}
-                          </div>
-                        </div>
-                        <div className="prose max-w-none text-gray-500 dark:text-gray-400">
-                          {summary}
-                        </div>
+                  <article
+                    key={path}
+                    className="group relative flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-gray-700 dark:bg-gray-800/50"
+                  >
+                    {/* Animated gradient border on hover */}
+                    <div className="from-primary-500 absolute inset-0 rounded-lg bg-gradient-to-r via-purple-500 to-cyan-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    <div className="absolute inset-[2px] rounded-lg bg-white dark:bg-gray-800/95" />
+
+                    <Link href={`/${path}`} className="relative flex flex-1 flex-col p-5">
+                      <h2 className="mb-3 text-lg leading-6 font-bold tracking-tight">
+                        <span className="group-hover:from-primary-500 relative text-gray-900 transition-colors duration-300 group-hover:bg-gradient-to-r group-hover:via-purple-500 group-hover:to-cyan-500 group-hover:bg-clip-text group-hover:text-transparent dark:text-gray-100">
+                          {title}
+                        </span>
+                      </h2>
+                      <div className="mt-auto border-t border-gray-100 pt-3 dark:border-gray-700">
+                        <time
+                          dateTime={date}
+                          className="text-xs text-gray-500 dark:text-gray-400"
+                          suppressHydrationWarning
+                        >
+                          {formatDateLocal(date, siteMetadata.locale)}
+                        </time>
                       </div>
-                    </article>
-                  </li>
+                    </Link>
+                  </article>
                 )
               })}
-            </ul>
+            </div>
             {pagination && pagination.totalPages > 1 && !hasActiveFilters && (
               <div className="space-y-2 pt-6 pb-8 md:space-y-5">
                 <nav className="flex justify-between">
