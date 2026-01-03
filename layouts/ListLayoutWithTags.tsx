@@ -146,63 +146,72 @@ export default function ListLayoutWithTags({
             </div>
           </div>
           <div className="w-full">
-            <ul>
-              {!displayPosts.length && (
-                <li className="py-12 text-center">
-                  <div className="text-gray-500 dark:text-gray-400">
-                    <svg
-                      className="mx-auto mb-4 h-12 w-12 text-gray-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <p className="text-lg font-medium">No posts found</p>
-                    <p className="mt-1 text-sm">Try adjusting your filters or search query</p>
-                  </div>
-                </li>
-              )}
+            {!displayPosts.length && (
+              <div className="py-12 text-center">
+                <div className="text-gray-500 dark:text-gray-400">
+                  <svg
+                    className="mx-auto mb-4 h-12 w-12 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p className="text-lg font-medium">No posts found</p>
+                  <p className="mt-1 text-sm">Try adjusting your filters or search query</p>
+                </div>
+              </div>
+            )}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {displayPosts.map((post) => {
                 const { path, date, title, summary, tags } = post
                 return (
-                  <li key={path} className="py-5">
-                    <article className="flex flex-col space-y-2 xl:space-y-0">
-                      <dl>
-                        <dt className="sr-only">Published on</dt>
-                        <dd className="text-base leading-6 font-medium text-gray-500 dark:text-gray-400">
-                          <time dateTime={date} suppressHydrationWarning>
-                            {formatDate(date, siteMetadata.locale)}
-                          </time>
-                        </dd>
-                      </dl>
-                      <div className="space-y-3">
-                        <div>
-                          <h2 className="text-2xl leading-8 font-bold tracking-tight">
-                            <Link href={`/${path}`} className="text-gray-900 dark:text-gray-100">
-                              {title}
-                            </Link>
-                          </h2>
-                          <div className="flex flex-wrap">
-                            {tags?.map((tag) => (
-                              <Tag key={tag} text={tag} />
-                            ))}
-                          </div>
-                        </div>
-                        <div className="prose max-w-none text-gray-500 dark:text-gray-400">
-                          {summary}
-                        </div>
+                  <article
+                    key={path}
+                    className="group flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:shadow-lg dark:border-gray-700 dark:bg-gray-800/50"
+                  >
+                    <div className="flex flex-1 flex-col p-5">
+                      <div className="mb-3 flex flex-wrap gap-1">
+                        {tags?.map((tag) => (
+                          <Tag key={tag} text={tag} />
+                        ))}
                       </div>
-                    </article>
-                  </li>
+                      <h2 className="mb-2 text-lg leading-6 font-bold tracking-tight">
+                        <Link
+                          href={`/${path}`}
+                          className="group-hover:text-primary-500 dark:group-hover:text-primary-400 text-gray-900 transition-colors dark:text-gray-100"
+                        >
+                          {title}
+                        </Link>
+                      </h2>
+                      <p className="mb-4 line-clamp-3 flex-1 text-sm text-gray-500 dark:text-gray-400">
+                        {summary}
+                      </p>
+                      <div className="mt-auto flex items-center justify-between border-t border-gray-100 pt-4 dark:border-gray-700">
+                        <time
+                          dateTime={date}
+                          className="text-xs text-gray-500 dark:text-gray-400"
+                          suppressHydrationWarning
+                        >
+                          {formatDate(date, siteMetadata.locale)}
+                        </time>
+                        <Link
+                          href={`/${path}`}
+                          className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 text-xs font-medium"
+                        >
+                          Read more →
+                        </Link>
+                      </div>
+                    </div>
+                  </article>
                 )
               })}
-            </ul>
+            </div>
             {pagination && pagination.totalPages > 1 && !hasActiveFilters && (
               <div className="space-y-2 pt-6 pb-8 md:space-y-5">
                 <nav className="flex justify-between">
