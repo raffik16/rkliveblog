@@ -3,14 +3,23 @@
 import { useState, useMemo, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import { slug } from 'github-slugger'
-import { formatDate } from 'pliny/utils/formatDate'
 import { CoreContent } from 'pliny/utils/contentlayer'
 import type { Blog } from 'contentlayer/generated'
 import Link from '@/components/Link'
-import Tag from '@/components/Tag'
 import siteMetadata from '@/data/siteMetadata'
 import tagData from 'app/tag-data.json'
 import BlogFilters, { FilterState } from '@/components/BlogFilters'
+
+// Fix timezone issue by parsing date as local time
+function formatDateLocal(dateString: string, locale: string) {
+  const [year, month, day] = dateString.split('T')[0].split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  return date.toLocaleDateString(locale, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
 
 interface PaginationProps {
   totalPages: number
@@ -169,45 +178,29 @@ export default function ListLayoutWithTags({
             )}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {displayPosts.map((post) => {
-                const { path, date, title, summary, tags } = post
+                const { path, date, title } = post
                 return (
                   <article
                     key={path}
-                    className="group flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:shadow-lg dark:border-gray-700 dark:bg-gray-800/50"
+                    className="group hover:border-primary-300 dark:hover:border-primary-600 flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:shadow-lg dark:border-gray-700 dark:bg-gray-800/50"
                   >
-                    <div className="flex flex-1 flex-col p-5">
-                      <div className="mb-3 flex flex-wrap gap-1">
-                        {tags?.map((tag) => (
-                          <Tag key={tag} text={tag} />
-                        ))}
-                      </div>
-                      <h2 className="mb-2 text-lg leading-6 font-bold tracking-tight">
-                        <Link
-                          href={`/${path}`}
-                          className="group-hover:text-primary-500 dark:group-hover:text-primary-400 text-gray-900 transition-colors dark:text-gray-100"
-                        >
-                          {title}
-                        </Link>
+                    <Link href={`/${path}`} className="flex flex-1 flex-col p-5">
+                      <h2 className="mb-3 text-lg leading-6 font-bold tracking-tight">
+                        <span className="relative text-gray-900 dark:text-gray-100">
+                          <span className="relative z-10">{title}</span>
+                          <span className="bg-primary-500 absolute bottom-0 left-0 h-[2px] w-0 transition-all duration-300 group-hover:w-full" />
+                        </span>
                       </h2>
-                      <p className="mb-4 line-clamp-3 flex-1 text-sm text-gray-500 dark:text-gray-400">
-                        {summary}
-                      </p>
-                      <div className="mt-auto flex items-center justify-between border-t border-gray-100 pt-4 dark:border-gray-700">
+                      <div className="mt-auto border-t border-gray-100 pt-3 dark:border-gray-700">
                         <time
                           dateTime={date}
                           className="text-xs text-gray-500 dark:text-gray-400"
                           suppressHydrationWarning
                         >
-                          {formatDate(date, siteMetadata.locale)}
+                          {formatDateLocal(date, siteMetadata.locale)}
                         </time>
-                        <Link
-                          href={`/${path}`}
-                          className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 text-xs font-medium"
-                        >
-                          Read more →
-                        </Link>
                       </div>
-                    </div>
+                    </Link>
                   </article>
                 )
               })}
