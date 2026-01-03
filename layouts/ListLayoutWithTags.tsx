@@ -48,6 +48,10 @@ export default function ListLayoutWithTags({
     selectedTags: [],
     sortBy: 'newest',
   })
+  const [showAllTags, setShowAllTags] = useState(false)
+
+  const displayTags = showAllTags ? sortedTags : sortedTags.slice(0, 8)
+  const hasMoreTags = sortedTags.length > 8
 
   const hasActiveFilters =
     filters.searchQuery || filters.selectedTags.length > 0 || filters.sortBy !== 'newest'
@@ -132,7 +136,7 @@ export default function ListLayoutWithTags({
                 </Link>
               )}
               <ul>
-                {sortedTags.map((t) => {
+                {displayTags.map((t) => {
                   return (
                     <li key={t} className="my-3">
                       {decodeURI(pathname.split('/tags/')[1]) === slug(t) ? (
@@ -152,6 +156,14 @@ export default function ListLayoutWithTags({
                   )
                 })}
               </ul>
+              {hasMoreTags && (
+                <button
+                  onClick={() => setShowAllTags(!showAllTags)}
+                  className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 mt-2 px-3 text-sm font-medium transition-colors"
+                >
+                  {showAllTags ? '← Show less' : `See more (${sortedTags.length - 8})`}
+                </button>
+              )}
             </div>
           </div>
           <div className="w-full">

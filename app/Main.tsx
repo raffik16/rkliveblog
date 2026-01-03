@@ -41,9 +41,12 @@ export default function Home({ posts, tagData }: HomeProps) {
     selectedTags: [],
     sortBy: 'newest',
   })
+  const [showAllTags, setShowAllTags] = useState(false)
 
   const tagKeys = Object.keys(tagData)
   const sortedTags = tagKeys.sort((a, b) => tagData[b] - tagData[a])
+  const displayTags = showAllTags ? sortedTags : sortedTags.slice(0, 8)
+  const hasMoreTags = sortedTags.length > 8
 
   const hasActiveFilters =
     filters.searchQuery || filters.selectedTags.length > 0 || filters.sortBy !== 'newest'
@@ -122,7 +125,7 @@ export default function Home({ posts, tagData }: HomeProps) {
             <div className="px-6 py-4">
               <h3 className="text-primary-500 font-bold uppercase">All Posts</h3>
               <ul>
-                {sortedTags.map((t) => {
+                {displayTags.map((t) => {
                   return (
                     <li key={t} className="my-3">
                       <Link
@@ -136,6 +139,14 @@ export default function Home({ posts, tagData }: HomeProps) {
                   )
                 })}
               </ul>
+              {hasMoreTags && (
+                <button
+                  onClick={() => setShowAllTags(!showAllTags)}
+                  className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 mt-2 px-3 text-sm font-medium transition-colors"
+                >
+                  {showAllTags ? '← Show less' : `See more (${sortedTags.length - 8})`}
+                </button>
+              )}
             </div>
           </div>
 
