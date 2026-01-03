@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useMemo, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import { slug } from 'github-slugger'
 import { formatDate } from 'pliny/utils/formatDate'
@@ -9,6 +10,7 @@ import Link from '@/components/Link'
 import Tag from '@/components/Tag'
 import siteMetadata from '@/data/siteMetadata'
 import tagData from 'app/tag-data.json'
+import BlogFilters, { FilterState } from '@/components/BlogFilters'
 
 interface PaginationProps {
   totalPages: number
@@ -19,51 +21,6 @@ interface ListLayoutProps {
   title: string
   initialDisplayPosts?: CoreContent<Blog>[]
   pagination?: PaginationProps
-}
-
-function Pagination({ totalPages, currentPage }: PaginationProps) {
-  const pathname = usePathname()
-  const segments = pathname.split('/')
-  const lastSegment = segments[segments.length - 1]
-  const basePath = pathname
-    .replace(/^\//, '') // Remove leading slash
-    .replace(/\/page\/\d+\/?$/, '') // Remove any trailing /page
-    .replace(/\/$/, '') // Remove trailing slash
-  const prevPage = currentPage - 1 > 0
-  const nextPage = currentPage + 1 <= totalPages
-
-  return (
-    <div className="space-y-2 pt-6 pb-8 md:space-y-5">
-      <nav className="flex justify-between">
-        {!prevPage && (
-          <button className="cursor-auto disabled:opacity-50" disabled={!prevPage}>
-            Previous
-          </button>
-        )}
-        {prevPage && (
-          <Link
-            href={currentPage - 1 === 1 ? `/${basePath}/` : `/${basePath}/page/${currentPage - 1}`}
-            rel="prev"
-          >
-            Previous
-          </Link>
-        )}
-        <span>
-          {currentPage} of {totalPages}
-        </span>
-        {!nextPage && (
-          <button className="cursor-auto disabled:opacity-50" disabled={!nextPage}>
-            Next
-          </button>
-        )}
-        {nextPage && (
-          <Link href={`/${basePath}/page/${currentPage + 1}`} rel="next">
-            Next
-          </Link>
-        )}
-      </nav>
-    </div>
-  )
 }
 
 export default function ListLayoutWithTags({
@@ -77,16 +34,81 @@ export default function ListLayoutWithTags({
   const tagKeys = Object.keys(tagCounts)
   const sortedTags = tagKeys.sort((a, b) => tagCounts[b] - tagCounts[a])
 
-  const displayPosts = initialDisplayPosts.length > 0 ? initialDisplayPosts : posts
+  const [filters, setFilters] = useState<FilterState>({
+    searchQuery: '',
+    selectedTags: [],
+    sortBy: 'newest',
+  })
+
+  const hasActiveFilters =
+    filters.searchQuery || filters.selectedTags.length > 0 || filters.sortBy !== 'newest'
+
+  const filteredAndSortedPosts = useMemo(() => {
+    let result = [...posts]
+
+    // Filter by search query
+    if (filters.searchQuery) {
+      const query = filters.searchQuery.toLowerCase()
+      result = result.filter((post) => {
+        const searchContent = `${post.title} ${post.summary || ''} ${post.tags?.join(' ') || ''}`
+        return searchContent.toLowerCase().includes(query)
+      })
+    }
+
+    // Filter by selected tags
+    if (filters.selectedTags.length > 0) {
+      result = result.filter((post) => filters.selectedTags.some((tag) => post.tags?.includes(tag)))
+    }
+
+    // Sort posts
+    switch (filters.sortBy) {
+      case 'oldest':
+        result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        break
+      case 'title':
+        result.sort((a, b) => a.title.localeCompare(b.title))
+        break
+      case 'newest':
+      default:
+        result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        break
+    }
+
+    return result
+  }, [posts, filters])
+
+  const handleFiltersChange = useCallback((newFilters: FilterState) => {
+    setFilters(newFilters)
+  }, [])
+
+  // When filters are active, show all matching posts; otherwise use pagination
+  const displayPosts = hasActiveFilters
+    ? filteredAndSortedPosts
+    : initialDisplayPosts.length > 0
+      ? initialDisplayPosts
+      : posts
 
   return (
     <>
       <div>
         <div className="pt-6 pb-6">
-          <h1 className="text-3xl leading-9 font-extrabold tracking-tight text-gray-900 sm:hidden sm:text-4xl sm:leading-10 md:text-6xl md:leading-14 dark:text-gray-100">
+          <h1 className="text-3xl leading-9 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14 dark:text-gray-100">
             {title}
           </h1>
         </div>
+
+        {/* Smart Filter System */}
+        <div className="mb-6">
+          <BlogFilters allTags={tagCounts} onFiltersChange={handleFiltersChange} />
+
+          {/* Results count when filtering */}
+          {hasActiveFilters && (
+            <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              Showing {filteredAndSortedPosts.length} of {posts.length} posts
+            </div>
+          )}
+        </div>
+
         <div className="flex sm:space-x-24">
           <div className="hidden h-full max-h-screen max-w-[280px] min-w-[280px] flex-wrap overflow-auto rounded-sm bg-gray-50 pt-5 shadow-md sm:flex dark:bg-gray-900/70 dark:shadow-gray-800/40">
             <div className="px-6 py-4">
@@ -123,8 +145,29 @@ export default function ListLayoutWithTags({
               </ul>
             </div>
           </div>
-          <div>
+          <div className="w-full">
             <ul>
+              {!displayPosts.length && (
+                <li className="py-12 text-center">
+                  <div className="text-gray-500 dark:text-gray-400">
+                    <svg
+                      className="mx-auto mb-4 h-12 w-12 text-gray-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <p className="text-lg font-medium">No posts found</p>
+                    <p className="mt-1 text-sm">Try adjusting your filters or search query</p>
+                  </div>
+                </li>
+              )}
               {displayPosts.map((post) => {
                 const { path, date, title, summary, tags } = post
                 return (
@@ -160,12 +203,77 @@ export default function ListLayoutWithTags({
                 )
               })}
             </ul>
-            {pagination && pagination.totalPages > 1 && (
-              <Pagination currentPage={pagination.currentPage} totalPages={pagination.totalPages} />
+            {pagination && pagination.totalPages > 1 && !hasActiveFilters && (
+              <div className="space-y-2 pt-6 pb-8 md:space-y-5">
+                <nav className="flex justify-between">
+                  <PaginationLink
+                    currentPage={pagination.currentPage}
+                    totalPages={pagination.totalPages}
+                    direction="prev"
+                  />
+                  <span>
+                    {pagination.currentPage} of {pagination.totalPages}
+                  </span>
+                  <PaginationLink
+                    currentPage={pagination.currentPage}
+                    totalPages={pagination.totalPages}
+                    direction="next"
+                  />
+                </nav>
+              </div>
             )}
           </div>
         </div>
       </div>
     </>
+  )
+}
+
+function PaginationLink({
+  currentPage,
+  totalPages,
+  direction,
+}: {
+  currentPage: number
+  totalPages: number
+  direction: 'prev' | 'next'
+}) {
+  const pathname = usePathname()
+  const basePath = pathname
+    .replace(/^\//, '')
+    .replace(/\/page\/\d+\/?$/, '')
+    .replace(/\/$/, '')
+
+  if (direction === 'prev') {
+    const prevPage = currentPage - 1 > 0
+    if (!prevPage) {
+      return (
+        <button className="cursor-auto disabled:opacity-50" disabled>
+          Previous
+        </button>
+      )
+    }
+    return (
+      <Link
+        href={currentPage - 1 === 1 ? `/${basePath}/` : `/${basePath}/page/${currentPage - 1}`}
+        rel="prev"
+      >
+        Previous
+      </Link>
+    )
+  }
+
+  const nextPage = currentPage + 1 <= totalPages
+  if (!nextPage) {
+    return (
+      <button className="cursor-auto disabled:opacity-50" disabled>
+        Next
+      </button>
+    )
+  }
+  return (
+    <Link href={`/${basePath}/page/${currentPage + 1}`} rel="next">
+      Next
+    </Link>
   )
 }
