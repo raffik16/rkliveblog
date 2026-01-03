@@ -182,13 +182,16 @@ export default function ListLayoutWithTags({
                 return (
                   <article
                     key={path}
-                    className="group hover:border-primary-300 dark:hover:border-primary-600 flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:shadow-lg dark:border-gray-700 dark:bg-gray-800/50"
+                    className="group relative flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-gray-700 dark:bg-gray-800/50"
                   >
-                    <Link href={`/${path}`} className="flex flex-1 flex-col p-5">
+                    {/* Animated gradient border on hover */}
+                    <div className="from-primary-500 absolute inset-0 rounded-lg bg-gradient-to-r via-purple-500 to-cyan-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    <div className="absolute inset-[2px] rounded-lg bg-white dark:bg-gray-800/95" />
+
+                    <Link href={`/${path}`} className="relative flex flex-1 flex-col p-5">
                       <h2 className="mb-3 text-lg leading-6 font-bold tracking-tight">
-                        <span className="relative text-gray-900 dark:text-gray-100">
-                          <span className="relative z-10">{title}</span>
-                          <span className="bg-primary-500 absolute bottom-0 left-0 h-[2px] w-0 transition-all duration-300 group-hover:w-full" />
+                        <span className="group-hover:from-primary-500 relative text-gray-900 transition-colors duration-300 group-hover:bg-gradient-to-r group-hover:via-purple-500 group-hover:to-cyan-500 group-hover:bg-clip-text group-hover:text-transparent dark:text-gray-100">
+                          {title}
                         </span>
                       </h2>
                       <div className="mt-auto border-t border-gray-100 pt-3 dark:border-gray-700">
