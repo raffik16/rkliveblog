@@ -90,6 +90,40 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
             </dl>
             <div className="divide-y divide-gray-200 xl:col-span-3 xl:row-span-2 xl:pb-0 dark:divide-gray-700">
               <div className="prose dark:prose-invert max-w-none pt-10 pb-8">{children}</div>
+              {(next || prev) && (
+                <nav className="flex justify-between border-t border-gray-200 pt-8 pb-8 dark:border-gray-700">
+                  <div className="flex-1">
+                    {prev && prev.path && (
+                      <Link
+                        href={`/${prev.path}`}
+                        className="group flex flex-col"
+                      >
+                        <span className="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">
+                          &larr; Previous
+                        </span>
+                        <span className="text-primary-500 group-hover:text-primary-600 dark:group-hover:text-primary-400 font-medium">
+                          {prev.title}
+                        </span>
+                      </Link>
+                    )}
+                  </div>
+                  <div className="flex-1 text-right">
+                    {next && next.path && (
+                      <Link
+                        href={`/${next.path}`}
+                        className="group flex flex-col items-end"
+                      >
+                        <span className="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">
+                          Next &rarr;
+                        </span>
+                        <span className="text-primary-500 group-hover:text-primary-600 dark:group-hover:text-primary-400 font-medium">
+                          {next.title}
+                        </span>
+                      </Link>
+                    )}
+                  </div>
+                </nav>
+              )}
             </div>
             <footer>
               <div className="divide-gray-200 text-sm leading-5 font-medium xl:col-start-1 xl:row-start-2 xl:divide-y dark:divide-gray-700">
@@ -103,30 +137,6 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                         <Tag key={tag} text={tag} />
                       ))}
                     </div>
-                  </div>
-                )}
-                {(next || prev) && (
-                  <div className="flex justify-between py-4 xl:block xl:space-y-8 xl:py-8">
-                    {prev && prev.path && (
-                      <div>
-                        <h2 className="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                          Previous Article
-                        </h2>
-                        <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
-                          <Link href={`/${prev.path}`}>{prev.title}</Link>
-                        </div>
-                      </div>
-                    )}
-                    {next && next.path && (
-                      <div>
-                        <h2 className="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                          Next Article
-                        </h2>
-                        <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
-                          <Link href={`/${next.path}`}>{next.title}</Link>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
