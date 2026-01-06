@@ -94,10 +94,7 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                 <nav className="flex justify-between border-t border-gray-200 pt-8 pb-8 dark:border-gray-700">
                   <div className="flex-1">
                     {prev && prev.path && (
-                      <Link
-                        href={`/${prev.path}`}
-                        className="group flex flex-col"
-                      >
+                      <Link href={`/${prev.path}`} className="group flex flex-col">
                         <span className="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">
                           &larr; Previous
                         </span>
@@ -109,10 +106,7 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                   </div>
                   <div className="flex-1 text-right">
                     {next && next.path && (
-                      <Link
-                        href={`/${next.path}`}
-                        className="group flex flex-col items-end"
-                      >
+                      <Link href={`/${next.path}`} className="group flex flex-col items-end">
                         <span className="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">
                           Next &rarr;
                         </span>
