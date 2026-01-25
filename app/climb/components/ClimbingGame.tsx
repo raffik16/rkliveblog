@@ -4,10 +4,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 const CANVAS_WIDTH = 400
 const CANVAS_HEIGHT = 600
-const GRAVITY = 0.6
-const JUMP_FORCE = -12
-const INITIAL_SPEED = 2
-const SPEED_INCREMENT = 0.001
+const GRAVITY = 0.5
+const JUMP_FORCE = -11
+const INITIAL_SPEED = 4
+const SPEED_INCREMENT = 0.002
+const GAP_SIZE = 180
 
 interface Hold {
   x: number
@@ -40,14 +41,13 @@ export default function ClimbingGame() {
   const scoreRef = useRef(0)
 
   const generateHold = useCallback((startX: number): Hold => {
-    const gapSize = 150
     const minY = 80
-    const maxY = CANVAS_HEIGHT - 80 - gapSize
+    const maxY = CANVAS_HEIGHT - 80 - GAP_SIZE
     const y = minY + Math.random() * (maxY - minY)
 
     return {
       x: startX,
-      y: y + gapSize / 2,
+      y: y + GAP_SIZE / 2,
       width: 60,
       passed: false,
     }
@@ -117,16 +117,15 @@ export default function ClimbingGame() {
 
     // Check collisions
     const climberX = 100
-    const climberSize = 25
-    const gapSize = 140
+    const climberSize = 20
 
     for (const hold of holds) {
       // Check if climber is in the hold's x range
       if (climberX + climberSize > hold.x && climberX - climberSize < hold.x + hold.width) {
         // Check if climber is outside the gap
         if (
-          climber.y - climberSize < hold.y - gapSize / 2 ||
-          climber.y + climberSize > hold.y + gapSize / 2
+          climber.y - climberSize < hold.y - GAP_SIZE / 2 ||
+          climber.y + climberSize > hold.y + GAP_SIZE / 2
         ) {
           endGame()
           return
@@ -169,28 +168,28 @@ export default function ClimbingGame() {
     holds.forEach((hold) => {
       // Top rock
       ctx.fillStyle = '#4a3728'
-      ctx.fillRect(hold.x, 0, hold.width, hold.y - gapSize / 2)
+      ctx.fillRect(hold.x, 0, hold.width, hold.y - GAP_SIZE / 2)
 
       // Top rock edge
       ctx.fillStyle = '#5d4a3a'
-      ctx.fillRect(hold.x, hold.y - gapSize / 2 - 15, hold.width, 15)
+      ctx.fillRect(hold.x, hold.y - GAP_SIZE / 2 - 15, hold.width, 15)
 
       // Bottom rock
       ctx.fillStyle = '#4a3728'
-      ctx.fillRect(hold.x, hold.y + gapSize / 2, hold.width, CANVAS_HEIGHT - hold.y - gapSize / 2)
+      ctx.fillRect(hold.x, hold.y + GAP_SIZE / 2, hold.width, CANVAS_HEIGHT - hold.y - GAP_SIZE / 2)
 
       // Bottom rock edge
       ctx.fillStyle = '#5d4a3a'
-      ctx.fillRect(hold.x, hold.y + gapSize / 2, hold.width, 15)
+      ctx.fillRect(hold.x, hold.y + GAP_SIZE / 2, hold.width, 15)
 
       // Handhold markers
       ctx.fillStyle = '#FFD700'
       ctx.beginPath()
-      ctx.ellipse(hold.x + hold.width / 2, hold.y - gapSize / 2 + 5, 12, 6, 0, 0, Math.PI * 2)
+      ctx.ellipse(hold.x + hold.width / 2, hold.y - GAP_SIZE / 2 + 5, 12, 6, 0, 0, Math.PI * 2)
       ctx.fill()
 
       ctx.beginPath()
-      ctx.ellipse(hold.x + hold.width / 2, hold.y + gapSize / 2 - 5, 12, 6, 0, 0, Math.PI * 2)
+      ctx.ellipse(hold.x + hold.width / 2, hold.y + GAP_SIZE / 2 - 5, 12, 6, 0, 0, Math.PI * 2)
       ctx.fill()
     })
 
