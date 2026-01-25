@@ -1,6 +1,6 @@
 ---
 title: 'I Built a Free Solo Climbing Game with Flappy Bird Mechanics'
-date: '2025-01-25'
+date: '2026-01-25'
 tags: ['game-dev', 'javascript', 'canvas', 'react', 'nextjs']
 draft: false
 summary: 'A simple, addictive browser game where you navigate a climber through gaps in the rock face. One button. Endless climbing. Speed increases over time.'
@@ -18,7 +18,7 @@ One button. Endless climbing. How far can you go?
 
 **Free Solo Climber** takes the addictive simplicity of Flappy Bird and wraps it in a rock climbing theme. You control a climber navigating through gaps in an endless rock face. Tap or press space to jump. That's it.
 
-The twist? Speed increases over time. What starts as a leisurely climb becomes an intense test of reflexes.
+The twist? Speed increases over time. What starts as a fast climb becomes an intense test of reflexes.
 
 ## How to Play
 
@@ -31,13 +31,14 @@ The twist? Speed increases over time. What starts as a leisurely climb becomes a
 ## The Mechanics
 
 ```typescript
-const GRAVITY = 0.6
-const JUMP_FORCE = -12
-const INITIAL_SPEED = 2
-const SPEED_INCREMENT = 0.001
+const GRAVITY = 0.5
+const JUMP_FORCE = -11
+const INITIAL_SPEED = 4
+const SPEED_INCREMENT = 0.002
+const GAP_SIZE = 255
 ```
 
-Every frame, speed increases slightly. By the time you hit 20+ points, you're moving significantly faster than when you started.
+The game starts fast and gets faster. Every frame, speed increases slightly. The generous gap size keeps it fun while the accelerating speed provides the challenge.
 
 ## Why It's Addictive
 
