@@ -328,23 +328,19 @@ export default function ClimbingGame() {
 
       if (gameState.status === 'menu') {
         // Title
-        ctx.fillStyle = '#FFF'
-        ctx.font = 'bold 42px Arial'
-        ctx.fillText('FREE SOLO', CANVAS_WIDTH / 2, 180)
-
         ctx.fillStyle = '#FF5B04'
-        ctx.font = 'bold 36px Arial'
-        ctx.fillText('CLIMBER', CANVAS_WIDTH / 2, 225)
+        ctx.font = 'bold 64px Arial'
+        ctx.fillText('GAPPER', CANVAS_WIDTH / 2, 200)
 
         // Instructions
         ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
         ctx.font = '18px Arial'
-        ctx.fillText('Press SPACE or Tap to jump', CANVAS_WIDTH / 2, 320)
+        ctx.fillText('Tap or SPACE to jump', CANVAS_WIDTH / 2, 280)
 
         ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
         ctx.font = '14px Arial'
-        ctx.fillText('Navigate through the gaps', CANVAS_WIDTH / 2, 350)
-        ctx.fillText('Speed increases over time!', CANVAS_WIDTH / 2, 375)
+        ctx.fillText('Get through the gaps', CANVAS_WIDTH / 2, 310)
+        ctx.fillText('It gets faster...', CANVAS_WIDTH / 2, 335)
 
         // Start prompt
         ctx.fillStyle = '#FF5B04'
@@ -391,9 +387,9 @@ export default function ClimbingGame() {
   }, [gameState])
 
   const shareScore = () => {
-    const text = `I scored ${gameState.score} in Free Solo Climber! Can you beat me? 🧗‍♂️`
+    const text = `I scored ${gameState.score} in Gapper! Can you beat me?`
     if (navigator.share) {
-      navigator.share({ title: 'Free Solo Climber', text, url: window.location.href })
+      navigator.share({ title: 'Gapper', text, url: window.location.href })
     } else {
       navigator.clipboard.writeText(text + ' ' + window.location.href)
     }

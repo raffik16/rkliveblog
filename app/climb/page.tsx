@@ -25,7 +25,7 @@ export default function ClimbPage() {
         {/* Header */}
         <header className="mb-6 flex w-full max-w-md items-center justify-between">
           <Link
-            href="/blog/free-solo-climbing-game"
+            href="/blog/gapper"
             className="flex items-center gap-2 text-white/60 transition-colors hover:text-white"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
