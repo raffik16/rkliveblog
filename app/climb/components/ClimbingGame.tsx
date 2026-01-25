@@ -8,7 +8,7 @@ const GRAVITY = 0.5
 const JUMP_FORCE = -11
 const INITIAL_SPEED = 4
 const SPEED_INCREMENT = 0.002
-const GAP_SIZE = 220
+const GAP_SIZE = 255
 
 interface Hold {
   x: number
