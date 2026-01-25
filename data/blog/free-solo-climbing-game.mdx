@@ -1,0 +1,182 @@
+---
+title: 'I Built a Free Solo Climbing Game with Flappy Bird Mechanics'
+date: '2025-01-25'
+tags: ['game-dev', 'javascript', 'canvas', 'react', 'nextjs']
+draft: false
+summary: 'A deep dive into building an addictive browser-based climbing game using the Canvas API, React, and GSAP. Tap to jump, avoid falling rocks, and see how high you can climb.'
+authors: ['default']
+layout: PostLayout
+---
+
+# Free Solo Climber: Where Flappy Bird Meets Alex Honnold
+
+[**Play the game now**](/climb)
+
+What happens when you combine the addictive one-button mechanics of Flappy Bird with the heart-pounding tension of free solo climbing? You get **Free Solo Climber** - a browser game that will have you saying "just one more try" for hours.
+
+## The Concept
+
+The idea hit me while watching _Free Solo_, the documentary about Alex Honnold climbing El Capitan without ropes. There's something primal about the simplicity of the challenge: go up, don't fall. That's essentially what Flappy Bird captured too - simple mechanics, brutal difficulty, and an irresistible urge to beat your high score.
+
+In Free Solo Climber, you control a climber ascending an infinite rock face. Tap (or press space) to leap to the next handhold. Miss, and you plummet. It sounds simple because it is - but mastering it is another story entirely.
+
+## Core Mechanics
+
+### The Flappy Bird DNA
+
+Like its avian inspiration, Free Solo Climber uses a single input:
+
+- **Tap/Click/Space** - Jump toward the next hold
+
+That's it. One button. But the game layers complexity through its hold types and obstacles:
+
+### Hold Types
+
+| Hold Type | Color      | Behavior                 |
+| --------- | ---------- | ------------------------ |
+| Stable    | Brown      | Safe and reliable        |
+| Perfect   | Gold       | Bonus points!            |
+| Crumbling | Dark Brown | Breaks after 1.5 seconds |
+| Icy       | Light Blue | Slippery - be careful!   |
+
+### Dynamic Obstacles
+
+The mountain fights back:
+
+- **Falling Rocks** - Tumbling debris that knocks you off
+- **Birds** - Swooping hazards at higher altitudes
+- **Wind Gusts** - Pushes you sideways mid-jump
+
+## Technical Deep Dive
+
+### Canvas-Based Rendering
+
+For smooth 60 FPS gameplay, I went with the HTML5 Canvas API instead of DOM manipulation:
+
+```typescript
+const animate = () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+  // Update physics
+  climber.velocityY += GRAVITY
+  climber.y += climber.velocityY
+
+  // Render everything
+  renderBackground()
+  renderHolds()
+  renderClimber()
+  renderParticles()
+
+  requestAnimationFrame(animate)
+}
+```
+
+### Physics System
+
+The physics are intentionally floaty to give players a chance to react:
+
+```typescript
+const GRAVITY = 0.35 // Gentle gravity for hangtime
+const JUMP_FORCE = -9 // Strong initial impulse
+```
+
+This creates that satisfying arc where you leap up, hang in the air for a moment, then curve toward your target hold.
+
+### Particle Effects
+
+Every grab creates particles - chalk dust for normal holds, golden sparks for perfect holds, snow flakes for icy surfaces:
+
+```typescript
+const createParticles = (x, y, count, type, color) => {
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x,
+      y,
+      velocityX: (Math.random() - 0.5) * 6,
+      velocityY: (Math.random() - 0.5) * 6,
+      life: 30 + Math.random() * 30,
+      size: 2 + Math.random() * 4,
+      color,
+      type,
+    })
+  }
+}
+```
+
+### Procedural Generation
+
+The rock face generates infinitely as you climb. Each new hold is placed within a horizontal range of the previous one, ensuring the climb is always possible but never predictable:
+
+```typescript
+const newX = Math.max(50, Math.min(CANVAS_WIDTH - 80, prevHold.x + (Math.random() - 0.5) * 150))
+```
+
+### Screen Shake
+
+Nothing says "you messed up" like a good screen shake. When you get hit by a rock or a hold crumbles beneath you:
+
+```typescript
+const triggerShake = (intensity) => {
+  shakeRef.current.intensity = intensity
+}
+
+// In render loop
+ctx.translate(shake.x * Math.random(), shake.y * Math.random())
+```
+
+## The Psychology of "One More Try"
+
+Free Solo Climber is designed to hook you with several psychological triggers:
+
+1. **Instant Restart** - No loading, no menus. Tap and you're climbing again.
+
+2. **Visible Progress** - Your altitude in meters is always displayed. You can always see how close you were to beating your record.
+
+3. **Combo System** - Consecutive successful grabs multiply your score. Break the combo and you feel it.
+
+4. **High Score Persistence** - Your best is saved locally. The game remembers your achievement.
+
+5. **Share Button** - Did you climb 500m? The world needs to know.
+
+## Performance Optimizations
+
+Browser games need to run on everything from gaming PCs to budget phones:
+
+- **Object Pooling** - Particles and obstacles are recycled, not recreated
+- **Viewport Culling** - Only visible elements are rendered
+- **RAF Throttling** - Locked to 60 FPS to prevent battery drain
+- **Minimal Allocations** - Using refs instead of state for frequent updates
+
+## Mobile Considerations
+
+The game is fully playable on mobile:
+
+- Touch events with `preventDefault()` to stop scrolling
+- Large tap target (the entire canvas)
+- No pinch-zoom interference
+- Battery-conscious rendering
+
+## Try It Yourself
+
+Enough reading. Time to climb.
+
+[**Launch Free Solo Climber**](/climb)
+
+Your mission: reach 1000m. I'll be waiting to see your scores.
+
+## What's Next?
+
+Future updates might include:
+
+- **Leaderboards** - Global competition
+- **Different Routes** - Varying difficulty and aesthetics
+- **Power-ups** - Chalk for grip, energy drinks for stamina
+- **Achievements** - Unlock cosmetics for milestones
+
+But for now, the core experience is polished and addictive. Sometimes constraints breed creativity.
+
+---
+
+_Built with React, Next.js, Canvas API, and GSAP. The game runs entirely in your browser - no server, no latency, just pure climbing action._
+
+[**Play Now**](/climb)
