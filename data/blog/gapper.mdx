@@ -1,0 +1,63 @@
+---
+title: 'Gapper: The Game That Will Destroy Your Productivity'
+date: '2026-01-25'
+tags: ['game-dev', 'javascript', 'canvas', 'react', 'nextjs']
+draft: false
+summary: 'I built a stupidly addictive one-button game. You have been warned.'
+authors: ['default']
+layout: PostLayout
+---
+
+# Gapper
+
+[**Play Gapper**](/climb)
+
+You tap. You gap. You die. You tap again.
+
+That's it. That's the game.
+
+## Why Did I Build This?
+
+Because Flappy Bird ruined my life in 2014 and I wanted to pass that trauma on to others.
+
+Seriously though - there's something beautiful about one-button games. No tutorial needed. No complex controls. Just you, a gap, and your increasingly sweaty thumbs.
+
+## The Rules
+
+1. Press **SPACE** (or tap)
+2. Go through the gap
+3. Don't hit the rocks
+4. Repeat until you inevitably fail
+5. Convince yourself you can do better
+6. You can't
+7. Try anyway
+
+## The Numbers
+
+```typescript
+const GRAVITY = 0.5 // Floaty enough to feel hopeful
+const JUMP_FORCE = -11 // Punchy enough to feel powerful
+const INITIAL_SPEED = 4 // Fast enough to panic
+const SPEED_INCREMENT = 0.002 // Slow enough to not notice until it's too late
+const GAP_SIZE = 255 // Generous. I'm not a monster.
+```
+
+## What Makes It Evil
+
+The speed increases every frame. It's barely noticeable at first. "This is easy," you think at score 5. "I'm basically a pro," you say at score 15.
+
+Then you're at score 25 and the rocks are flying at you like they have a personal vendetta and suddenly you understand why your high score is 31 and you've been playing for 45 minutes.
+
+## My High Score
+
+I'm not telling you. It's embarrassing.
+
+## Your Turn
+
+[**Play Gapper**](/climb)
+
+Don't say I didn't warn you.
+
+---
+
+_Built in a day with React, Canvas, and questionable life choices._
