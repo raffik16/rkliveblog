@@ -49,9 +49,14 @@ export async function generateMetadata(props: {
     }
   })
 
+  const postUrl = post.canonicalUrl || `${siteMetadata.siteUrl}/blog/${slug}`
+
   return {
     title: post.title,
     description: post.summary,
+    alternates: {
+      canonical: postUrl,
+    },
     openGraph: {
       title: post.title,
       description: post.summary,
@@ -60,9 +65,10 @@ export async function generateMetadata(props: {
       type: 'article',
       publishedTime: publishedAt,
       modifiedTime: modifiedAt,
-      url: './',
+      url: postUrl,
       images: ogImages,
       authors: authors.length > 0 ? authors : [siteMetadata.author],
+      tags: post.tags,
     },
     twitter: {
       card: 'summary_large_image',
@@ -70,6 +76,7 @@ export async function generateMetadata(props: {
       description: post.summary,
       images: imageList,
     },
+    keywords: post.tags,
   }
 }
 
@@ -96,13 +103,26 @@ export default async function Page(props: { params: Promise<{ slug: string[] }> 
     return coreContent(authorResults as Authors)
   })
   const mainContent = coreContent(post)
-  const jsonLd = post.structuredData
-  jsonLd['author'] = authorDetails.map((author) => {
-    return {
+  const postUrl = post.canonicalUrl || `${siteMetadata.siteUrl}/blog/${slug}`
+  const jsonLd = {
+    ...post.structuredData,
+    url: postUrl,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': postUrl,
+    },
+    keywords: post.tags?.join(', '),
+    author: authorDetails.map((author) => ({
       '@type': 'Person',
       name: author.name,
-    }
-  })
+      url: siteMetadata.siteUrl,
+    })),
+    publisher: {
+      '@type': 'Person',
+      name: siteMetadata.author,
+      url: siteMetadata.siteUrl,
+    },
+  }
 
   const Layout = layouts[post.layout || defaultLayout]
 

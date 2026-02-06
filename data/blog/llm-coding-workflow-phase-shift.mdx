@@ -1,0 +1,148 @@
+---
+title: 'The Phase Shift: Notes from a Few Weeks of Agent-First Coding'
+date: '2026-01-28'
+lastmod: '2026-01-28'
+tags: ['ai', 'coding', 'workflow', 'claude-code', 'software-engineering', 'productivity', 'llm']
+draft: false
+summary: 'In December 2025, LLM coding agents crossed a threshold. My workflow flipped from 80% manual to 80% agent-driven in weeks. Notes on what works, what breaks, and where this is heading.'
+authors: ['default']
+layout: PostLayout
+---
+
+# The Flip
+
+Something shifted in December 2025. Over just a few weeks, I went from 80% manual coding with autocomplete and 20% agent assistance to the complete inverse: 80% agent-driven coding with 20% manual edits and touchups.
+
+I'm now mostly programming in English. Telling an LLM what code to write... in words. It hurts the ego a bit, I'll admit. But the power to operate over software in large "code actions" is just too useful, especially once you adapt to it, learn its quirks, and wrap your head around what it can and cannot do.
+
+This is easily the biggest change to my basic coding workflow in two decades of programming. And it happened in weeks, not years.
+
+I'd estimate something similar is happening to a double-digit percentage of engineers right now. Meanwhile, awareness in the general population feels like it's in the low single digits. There's a widening gap between what's actually happening and what most people think is happening.
+
+---
+
+## The Reality Check
+
+Let me be clear: both the "no need for IDEs anymore" hype and the "agent swarm" hype are premature.
+
+The models still make mistakes. If you have code you actually care about, watch them like a hawk. Keep a nice large IDE open on the side.
+
+But the nature of mistakes has changed. These aren't simple syntax errors anymore. They're subtle conceptual errors - the kind a slightly sloppy, hasty junior developer might make. The most common pattern: the model makes wrong assumptions on your behalf and just runs along with them without checking.
+
+**What LLMs still struggle with:**
+
+- They don't manage their confusion well
+- They don't seek clarifications when they should
+- They don't surface inconsistencies
+- They don't present tradeoffs
+- They don't push back when your idea is bad
+- They're still too sycophantic
+
+Things improve in "plan mode," but there's a need for something lighter - inline planning that doesn't break the flow.
+
+**The over-engineering problem:**
+
+LLMs _love_ to overcomplicate. They bloat abstractions. They don't clean up dead code after themselves. They'll implement an inefficient, brittle construction over 1000 lines and it's up to you to say "umm... couldn't you just do this instead?" And they'll immediately be like "of course!" and cut it down to 100 lines.
+
+They also still sometimes change or remove comments and code they don't like or don't sufficiently understand - even when it's orthogonal to the task at hand. All of this happens despite careful instructions in configuration files.
+
+Despite all these issues? It's still a net huge improvement. Going back to manual coding is very difficult to imagine.
+
+**My current setup:** A few Claude Code sessions in Ghostty windows on the left, IDE on the right for viewing code and making manual edits.
+
+---
+
+## The Tenacity
+
+Here's what's fascinating to watch: an agent relentlessly working at something. They never get tired. They never get demoralized. They just keep going and trying things where a human would have given up long ago to fight another day.
+
+It's a "feel the AGI" moment - watching it struggle with something for thirty minutes, trying approach after approach, just to come out victorious. You realize that stamina is a core bottleneck to work. With LLMs, that bottleneck has been dramatically expanded.
+
+---
+
+## Speedup vs. Expansion
+
+How do you measure the "speedup" from LLM assistance? Certainly I feel net way faster at what I was going to do anyway.
+
+But that's not the main effect.
+
+The main effect is that I do a lot _more_ than I was going to do:
+
+1. **I can code up things that weren't worth coding before.** Small utilities, one-off tools, quick experiments - stuff that wouldn't have cleared the effort threshold now gets built.
+
+2. **I can approach code I couldn't work on before.** Knowledge gaps and skill issues that would have blocked me are now manageable.
+
+So yes, it's speedup. But it's possibly much more an _expansion_ of what's possible.
+
+---
+
+## Finding Leverage
+
+LLMs are exceptionally good at looping until they meet specific goals. This is where most of the magic lives.
+
+**The shift in mindset:**
+
+Don't tell it _what to do_. Give it _success criteria_ and watch it go.
+
+- Get it to write tests first, then pass them
+- Put it in the loop with a browser
+- Write the naive algorithm that's very likely correct first, then ask it to optimize while preserving correctness
+- Change your approach from **imperative** (step-by-step instructions) to **declarative** (desired outcomes)
+
+Declarative prompting gets agents looping longer. That's where the leverage lives.
+
+---
+
+## The Fun Factor
+
+I didn't anticipate this: programming with agents feels _more_ fun.
+
+A lot of the fill-in-the-blanks drudgery is removed. What remains is the creative part - the architecture, the decisions, the "what should this even do?"
+
+I feel less blocked and stuck. There's almost always a way to make positive progress by working hand-in-hand with the agent. That absence of being stuck? That's a big quality-of-life improvement.
+
+I've seen the opposite sentiment from others, though. LLM coding seems to be splitting engineers into two camps: those who primarily liked _coding_ (and may feel something's been taken away) versus those who primarily liked _building_ (and feel liberated).
+
+---
+
+## The Atrophy
+
+I've already noticed it: I'm slowly losing my ability to write code manually.
+
+Generation (writing code) and discrimination (reading and reviewing code) are different capabilities in the brain. The little syntactic details required for writing - the exact method names, the import paths, the punctuation - you can review code just fine without being able to produce it fluently.
+
+This is probably fine. Probably.
+
+---
+
+## The Slopacolypse
+
+I'm bracing for 2026 as the year of the slopacolypse. It's coming for GitHub. It's coming for Substack. It's coming for arXiv. It's coming for social media. It's coming for all digital media.
+
+We're also going to see a lot more AI productivity theater on top of the actual, real improvements. Distinguishing signal from noise is about to get much harder.
+
+---
+
+## Open Questions
+
+A few things I keep thinking about:
+
+**The 10X engineer ratio.** What happens to the productivity gap between the mean and max engineer? It's quite possible this grows _dramatically_. If leverage compounds on top of skill, the spread could widen, not narrow.
+
+**Generalists vs. specialists.** Armed with LLMs, do generalists increasingly outperform specialists? LLMs are much better at filling in the blanks (the micro) than grand strategy (the macro). Someone who knows _what_ to build might now beat someone who only knows _how_ to build.
+
+**The future feel.** What does LLM coding feel like when it matures? Is it like playing StarCraft - managing units and resources in real-time? Like Factorio - designing systems and watching them run? Like playing music - improvisational collaboration with an instrument?
+
+**The ceiling question.** How much of society is actually bottlenecked by digital knowledge work? We're about to find out.
+
+---
+
+## Where This Leaves Us
+
+LLM agent capabilities - Claude and Codex especially - crossed some threshold of coherence around December 2025. It caused a phase shift in software engineering and adjacent fields.
+
+The intelligence part suddenly feels quite a bit ahead of everything else: the integrations, the tools, the organizational workflows, the processes, the broader diffusion. The capability arrived before the infrastructure to use it well.
+
+2026 is going to be a high-energy year as the industry metabolizes this new reality. We're in the early, chaotic part - where those paying attention are living in a different world than those who aren't.
+
+The gap won't last forever. But right now, it's real.
