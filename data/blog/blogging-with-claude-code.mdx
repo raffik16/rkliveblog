@@ -1,9 +1,10 @@
 ---
 title: 'Blogging with Claude Code: A Voice-First Workflow'
 date: '2025-10-27'
-tags: ['claude-code', 'blogging', 'workflow', 'ai']
+lastmod: '2026-01-28'
+tags: ['claude-code', 'blogging', 'workflow', 'ai', 'productivity', 'content-creation']
 draft: false
-summary: 'Learn how to create blog posts effortlessly using voice dictation with Claude Code. No more context switching or manual file management.'
+summary: 'Create blog posts with natural language commands and voice dictation using Claude Code. From idea to published MDX in minutes - no manual file creation, no YAML syntax errors, no context switching.'
 authors: ['default']
 layout: PostLayout
 ---
@@ -32,9 +33,11 @@ The old way of creating a blog post involved:
 With Claude Code, the process becomes:
 
 **Simply say (or type):**
+
 > "Create a blog post titled 'My Amazing Idea' about [your topic]. Tag it with [relevant tags]."
 
 **Claude handles:**
+
 - File creation with proper naming
 - Frontmatter generation with current date
 - Content formatting
@@ -48,24 +51,28 @@ With Claude Code, the process becomes:
 Here are some examples of natural language commands that work great:
 
 ### Quick Post
+
 ```
 "Create a blog post titled 'TypeScript Tips' with 5 tips for beginners.
 Tag it with typescript and tutorial."
 ```
 
 ### Draft Post
+
 ```
 "Write a draft post called 'Future Plans' with placeholder content.
 I'll finish it later."
 ```
 
 ### Technical Post with Code
+
 ```
 "Create a post about React hooks with code examples showing useState
 and useEffect. Use PostLayout and tag it react, javascript, tutorial."
 ```
 
 ### Visual Post
+
 ```
 "Make a blog post titled 'Photos from Iceland' using PostBanner layout.
 Add placeholder text for now. Tag it travel, photography."
@@ -79,6 +86,7 @@ When you give Claude a command to create a post, it:
    - "My Amazing Post!" → `my-amazing-post.mdx`
 
 2. **Creates frontmatter** with sensible defaults:
+
    ```yaml
    ---
    title: 'Your Title'
@@ -102,6 +110,7 @@ When you give Claude a command to create a post, it:
 ### Multi-Section Posts
 
 Request structured content:
+
 ```
 "Create a post about API design with sections:
 - Introduction
@@ -116,6 +125,7 @@ Add actual content for each section."
 ### Code Examples
 
 Claude can add properly formatted code blocks:
+
 ```javascript
 // Example: React Component
 function BlogPost({ title, content }) {
@@ -124,7 +134,7 @@ function BlogPost({ title, content }) {
       <h1>{title}</h1>
       <div>{content}</div>
     </article>
-  );
+  )
 }
 ```
 
@@ -138,10 +148,13 @@ about keyboard shortcuts."
 ## Best Practices
 
 ### 1. Be Specific with Tags
+
 Tags help readers find related content. Use 3-5 relevant tags per post.
 
 ### 2. Write Compelling Summaries
+
 The summary appears in:
+
 - Blog listing pages
 - Social media cards (Open Graph)
 - Search engine results
@@ -149,15 +162,19 @@ The summary appears in:
 Keep it to 150-200 characters.
 
 ### 3. Choose the Right Layout
+
 - **PostLayout**: Standard posts with sidebar (default)
 - **PostSimple**: Minimal, distraction-free reading
 - **PostBanner**: Posts with featured images
 
 ### 4. Use Draft Status
+
 Set `draft: true` while working on a post. It won't appear in production builds.
 
 ### 5. Organize with Folders
+
 For post series, use nested folders:
+
 ```
 data/blog/
 └── react-tutorial/
@@ -171,6 +188,7 @@ data/blog/
 After Claude creates your post:
 
 1. **Review the content**
+
    ```bash
    yarn dev
    # Visit http://localhost:3000/blog
@@ -182,6 +200,7 @@ After Claude creates your post:
    - Adjust formatting
 
 3. **Deploy**
+
    ```bash
    yarn build
    git add .
@@ -221,9 +240,11 @@ If you're using voice input:
 Here's exactly how I created this post using voice:
 
 **Command:**
+
 > "Create a blog post titled 'Blogging with Claude Code: A Voice-First Workflow' about how to use Claude Code to create blog posts with voice commands. Include sections on traditional workflow, Claude workflow, voice commands, behind the scenes, advanced features, best practices, publishing, and voice tips. Tag it with claude-code, blogging, workflow, and ai. Use PostLayout."
 
 Claude generated the complete structure, and I refined specific sections by asking:
+
 > "Expand the section on voice-optimized commands with more examples"
 
 Total time from idea to publishable post: **5 minutes**

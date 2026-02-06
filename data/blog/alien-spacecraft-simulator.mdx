@@ -1,9 +1,10 @@
 ---
 title: 'Building an Alien Spacecraft Command Center: A WebGL Adventure'
 date: '2025-11-22'
-tags: ['webgl', 'canvas', 'gsap', 'nextjs', 'react', 'animation', 'simulation']
+lastmod: '2026-01-28'
+tags: ['webgl', 'canvas', 'gsap', 'nextjs', 'react', 'animation', 'simulation', 'javascript']
 draft: false
-summary: 'Dive into the creation of a comprehensive alien spacecraft simulator featuring warp speed visualization, velocity gauges, anti-gravity systems, and stealth observability - all built with Canvas API and GSAP.'
+summary: 'How I built an immersive alien spacecraft simulator in the browser. Warp speed visualization, velocity gauges, anti-gravity physics, and stealth systems - all using Canvas API and GSAP animations.'
 authors: ['default']
 layout: PostLayout
 ---
@@ -155,8 +156,8 @@ const drawGauge = (
 - **Configurable Acceleration**: 1-10 second duration slider
 - **Target Speed Slider**: Set target velocity from 10% to 100% of max
 - **Preset Maneuvers**:
-  - *Cautious Approach*: 30% speed, slow 8s acceleration
-  - *Emergency Escape*: 90% speed, rapid 2s acceleration
+  - _Cautious Approach_: 30% speed, slow 8s acceleration
+  - _Emergency Escape_: 90% speed, rapid 2s acceleration
 
 GSAP handles all gauge animations with smooth easing curves, making transitions feel natural and realistic.
 
@@ -189,6 +190,7 @@ Stealth is critical for any alien spacecraft. The observability module tracks al
 **Stealth Mode Toggle:**
 
 Engaging stealth mode dramatically reduces all signatures:
+
 - Radar: 125m² → 2m²
 - IR: 450K → 280K
 - EM: 15kW → 100W
@@ -258,6 +260,7 @@ Early steering implementations were too sensitive, causing disorienting movement
 **Solution:**
 
 Reduced sensitivity values dramatically:
+
 - Lateral drift: 10x less (0.5 → 0.05)
 - Banking angle: 50% gentler (0.3 → 0.15)
 - Transition time: 2.4x slower (0.5s → 1.2s)
@@ -277,6 +280,7 @@ Reduced sensitivity values dramatically:
 **Fixed Toolbars:**
 
 All control panels are positioned top-left over the canvas with:
+
 - Semi-transparent backgrounds (`bg-black/90`)
 - Backdrop blur effects (`backdrop-blur-md`)
 - Fixed positioning that doesn't interfere with canvas
@@ -284,6 +288,7 @@ All control panels are positioned top-left over the canvas with:
 **Fullscreen Support:**
 
 Toggle fullscreen mode using the native Fullscreen API:
+
 ```typescript
 const toggleFullscreen = () => {
   if (!document.fullscreenElement) {
@@ -299,6 +304,7 @@ const toggleFullscreen = () => {
 **Responsive Design:**
 
 The app uses viewport-based heights and responsive grids that adapt from mobile to desktop:
+
 - `min-h-screen` for full viewport coverage
 - Grid layouts with `md:grid-cols-2` and `lg:grid-cols-3`
 - Flexible canvas sizing with `min-h-[600px]`
@@ -316,6 +322,7 @@ The app uses viewport-based heights and responsive grids that adapt from mobile 
 **[Launch the Alien Spacecraft Simulator](/alien)**
 
 Controls:
+
 - **Tab Navigation**: Switch between Warp Speed, Velocity, Anti-Gravity, and Observability
 - **Fullscreen Button**: Maximize immersion (top-right corner)
 - **Sliders**: Adjust all parameters in real-time
@@ -325,6 +332,7 @@ Controls:
 ## Future Enhancements
 
 Ideas for v2:
+
 - **3D Mode**: WebGL for true 3D navigation
 - **Multiplayer**: See other pilots' spacecraft
 - **Sound Effects**: Spatial audio with Web Audio API
@@ -335,6 +343,7 @@ Ideas for v2:
 ## Source Code
 
 This is part of my personal blog/portfolio. The entire simulator is built with:
+
 - Next.js 15 App Router
 - TypeScript with strict mode
 - Tailwind CSS for styling

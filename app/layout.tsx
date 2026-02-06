@@ -30,14 +30,21 @@ export const metadata: Metadata = {
   openGraph: {
     title: siteMetadata.title,
     description: siteMetadata.description,
-    url: './',
+    url: siteMetadata.siteUrl,
     siteName: siteMetadata.title,
-    images: [siteMetadata.socialBanner],
+    images: [
+      {
+        url: `${siteMetadata.siteUrl}${siteMetadata.socialBanner}`,
+        width: 1200,
+        height: 630,
+        alt: siteMetadata.title,
+      },
+    ],
     locale: 'en_US',
     type: 'website',
   },
   alternates: {
-    canonical: './',
+    canonical: siteMetadata.siteUrl,
     types: {
       'application/rss+xml': `${siteMetadata.siteUrl}/feed.xml`,
     },
@@ -106,6 +113,35 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       </Script>
       {/* End Google Tag Manager */}
       <body className="bg-white pl-[calc(100vw-100%)] text-black antialiased dark:bg-gray-950 dark:text-white">
+        {/* Organization Schema */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: siteMetadata.title,
+              description: siteMetadata.description,
+              url: siteMetadata.siteUrl,
+              author: {
+                '@type': 'Person',
+                name: siteMetadata.author,
+                url: siteMetadata.siteUrl,
+                sameAs: [siteMetadata.github, siteMetadata.x, siteMetadata.linkedin],
+              },
+              publisher: {
+                '@type': 'Person',
+                name: siteMetadata.author,
+                url: siteMetadata.siteUrl,
+              },
+              potentialAction: {
+                '@type': 'SearchAction',
+                target: `${siteMetadata.siteUrl}/blog?q={search_term_string}`,
+                'query-input': 'required name=search_term_string',
+              },
+            }),
+          }}
+        />
         {/* Google Tag Manager (noscript) */}
         <noscript>
           <iframe

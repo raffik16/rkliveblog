@@ -1,10 +1,10 @@
 /** @type {import("pliny/config").PlinyConfig } */
 const siteMetadata = {
-  title: 'rkRanched - Daily Moments & Insights',
+  title: 'rkRanched - Engineering, AI & Creative Code',
   author: 'Raffik Keklikian',
   headerTitle: 'rkRanched',
   description:
-    'Daily perspectives and authentic moments from everyday life. Sharing thoughts, experiences, and insights as they happen.',
+    'Deep dives into software engineering, AI-assisted development, and creative coding. Practical guides, interactive demos, and honest takes on the tools shaping modern development.',
   language: 'en-us',
   theme: 'system', // system, dark or light
   siteUrl: 'https://rkliveblog.vercel.app',

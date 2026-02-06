@@ -1,9 +1,10 @@
 ---
 title: 'The Phase Shift: Notes from a Few Weeks of Agent-First Coding'
 date: '2026-01-28'
-tags: ['ai', 'coding', 'workflow', 'claude-code', 'software-engineering']
+lastmod: '2026-01-28'
+tags: ['ai', 'coding', 'workflow', 'claude-code', 'software-engineering', 'productivity', 'llm']
 draft: false
-summary: 'In December 2025, LLM coding agents crossed a threshold. Here are notes from the other side - where 80% of programming happens in English.'
+summary: 'In December 2025, LLM coding agents crossed a threshold. My workflow flipped from 80% manual to 80% agent-driven in weeks. Notes on what works, what breaks, and where this is heading.'
 authors: ['default']
 layout: PostLayout
 ---
@@ -41,7 +42,7 @@ Things improve in "plan mode," but there's a need for something lighter - inline
 
 **The over-engineering problem:**
 
-LLMs *love* to overcomplicate. They bloat abstractions. They don't clean up dead code after themselves. They'll implement an inefficient, brittle construction over 1000 lines and it's up to you to say "umm... couldn't you just do this instead?" And they'll immediately be like "of course!" and cut it down to 100 lines.
+LLMs _love_ to overcomplicate. They bloat abstractions. They don't clean up dead code after themselves. They'll implement an inefficient, brittle construction over 1000 lines and it's up to you to say "umm... couldn't you just do this instead?" And they'll immediately be like "of course!" and cut it down to 100 lines.
 
 They also still sometimes change or remove comments and code they don't like or don't sufficiently understand - even when it's orthogonal to the task at hand. All of this happens despite careful instructions in configuration files.
 
@@ -65,13 +66,13 @@ How do you measure the "speedup" from LLM assistance? Certainly I feel net way f
 
 But that's not the main effect.
 
-The main effect is that I do a lot *more* than I was going to do:
+The main effect is that I do a lot _more_ than I was going to do:
 
 1. **I can code up things that weren't worth coding before.** Small utilities, one-off tools, quick experiments - stuff that wouldn't have cleared the effort threshold now gets built.
 
 2. **I can approach code I couldn't work on before.** Knowledge gaps and skill issues that would have blocked me are now manageable.
 
-So yes, it's speedup. But it's possibly much more an *expansion* of what's possible.
+So yes, it's speedup. But it's possibly much more an _expansion_ of what's possible.
 
 ---
 
@@ -81,7 +82,7 @@ LLMs are exceptionally good at looping until they meet specific goals. This is w
 
 **The shift in mindset:**
 
-Don't tell it *what to do*. Give it *success criteria* and watch it go.
+Don't tell it _what to do_. Give it _success criteria_ and watch it go.
 
 - Get it to write tests first, then pass them
 - Put it in the loop with a browser
@@ -94,13 +95,13 @@ Declarative prompting gets agents looping longer. That's where the leverage live
 
 ## The Fun Factor
 
-I didn't anticipate this: programming with agents feels *more* fun.
+I didn't anticipate this: programming with agents feels _more_ fun.
 
 A lot of the fill-in-the-blanks drudgery is removed. What remains is the creative part - the architecture, the decisions, the "what should this even do?"
 
 I feel less blocked and stuck. There's almost always a way to make positive progress by working hand-in-hand with the agent. That absence of being stuck? That's a big quality-of-life improvement.
 
-I've seen the opposite sentiment from others, though. LLM coding seems to be splitting engineers into two camps: those who primarily liked *coding* (and may feel something's been taken away) versus those who primarily liked *building* (and feel liberated).
+I've seen the opposite sentiment from others, though. LLM coding seems to be splitting engineers into two camps: those who primarily liked _coding_ (and may feel something's been taken away) versus those who primarily liked _building_ (and feel liberated).
 
 ---
 
@@ -126,9 +127,9 @@ We're also going to see a lot more AI productivity theater on top of the actual,
 
 A few things I keep thinking about:
 
-**The 10X engineer ratio.** What happens to the productivity gap between the mean and max engineer? It's quite possible this grows *dramatically*. If leverage compounds on top of skill, the spread could widen, not narrow.
+**The 10X engineer ratio.** What happens to the productivity gap between the mean and max engineer? It's quite possible this grows _dramatically_. If leverage compounds on top of skill, the spread could widen, not narrow.
 
-**Generalists vs. specialists.** Armed with LLMs, do generalists increasingly outperform specialists? LLMs are much better at filling in the blanks (the micro) than grand strategy (the macro). Someone who knows *what* to build might now beat someone who only knows *how* to build.
+**Generalists vs. specialists.** Armed with LLMs, do generalists increasingly outperform specialists? LLMs are much better at filling in the blanks (the micro) than grand strategy (the macro). Someone who knows _what_ to build might now beat someone who only knows _how_ to build.
 
 **The future feel.** What does LLM coding feel like when it matures? Is it like playing StarCraft - managing units and resources in real-time? Like Factorio - designing systems and watching them run? Like playing music - improvisational collaboration with an instrument?
 
