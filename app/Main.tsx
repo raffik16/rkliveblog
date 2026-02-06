@@ -208,7 +208,7 @@ export default function Home({ posts, tagData }: HomeProps) {
             )}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {displayPosts.map((post) => {
-                const { slug: postSlug, date, title } = post
+                const { slug: postSlug, date, title, summary } = post
                 return (
                   <article
                     key={postSlug}
@@ -224,6 +224,11 @@ export default function Home({ posts, tagData }: HomeProps) {
                           {title}
                         </span>
                       </h2>
+                      {summary && (
+                        <p className="mb-3 line-clamp-2 text-sm text-gray-500 dark:text-gray-400">
+                          {summary}
+                        </p>
+                      )}
                       <div className="mt-auto border-t border-gray-100 pt-3 dark:border-gray-700">
                         <time dateTime={date} className="text-xs text-gray-500 dark:text-gray-400">
                           {formatDateLocal(date, siteMetadata.locale)}

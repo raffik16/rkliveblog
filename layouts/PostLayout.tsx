@@ -62,7 +62,7 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                           src={author.avatar}
                           width={38}
                           height={38}
-                          alt="avatar"
+                          alt={`Avatar of ${author.name}`}
                           className="h-10 w-10 rounded-full"
                         />
                       )}
