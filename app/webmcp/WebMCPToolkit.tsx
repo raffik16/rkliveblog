@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { motion } from 'framer-motion'
+import { motion, type Variants } from 'framer-motion'
 import type { ToolDefinition, ToolParam } from './types'
 import { generateDeclarativeHTML, generateImperativeJS } from './generators'
 import { validate } from './validator'
@@ -10,7 +10,7 @@ import { CodeBlock } from './highlight'
 /* ------------------------------------------------------------------ */
 /*  Fade-in animation variant                                         */
 /* ------------------------------------------------------------------ */
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
     opacity: 1,
