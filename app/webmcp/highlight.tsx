@@ -27,13 +27,31 @@ function tokenizeHTML(code: string): Token[] {
 function tokenizeJS(code: string): Token[] {
   const tokens: Token[] = []
   const keywords = new Set([
-    'const', 'let', 'var', 'function', 'return', 'async', 'await',
-    'if', 'else', 'for', 'while', 'import', 'export', 'from',
-    'true', 'false', 'null', 'undefined', 'new', 'typeof', 'class',
+    'const',
+    'let',
+    'var',
+    'function',
+    'return',
+    'async',
+    'await',
+    'if',
+    'else',
+    'for',
+    'while',
+    'import',
+    'export',
+    'from',
+    'true',
+    'false',
+    'null',
+    'undefined',
+    'new',
+    'typeof',
+    'class',
   ])
 
   const re =
-    /(\/\/.*$|\/\*[\s\S]*?\*\/)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)|(\b\d+\.?\d*\b)|(\b[a-zA-Z_$][\w$]*\b)|([{}()\[\];:.,=>+\-*\/!?&|])|(\s+)/gm
+    /(\/\/.*$|\/\*[\s\S]*?\*\/)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)|(\b\d+\.?\d*\b)|(\b[a-zA-Z_$][\w$]*\b)|([{}()[\];:.,=>+\-*/!?&|])|(\s+)/gm
   let match: RegExpExecArray | null
 
   while ((match = re.exec(code)) !== null) {
@@ -62,13 +80,7 @@ const colorMap: Record<Token['type'], string> = {
   number: 'text-amber-300',
 }
 
-export function CodeBlock({
-  code,
-  language,
-}: {
-  code: string
-  language: 'html' | 'js'
-}) {
+export function CodeBlock({ code, language }: { code: string; language: 'html' | 'js' }) {
   const tokens = language === 'html' ? tokenizeHTML(code) : tokenizeJS(code)
 
   return (

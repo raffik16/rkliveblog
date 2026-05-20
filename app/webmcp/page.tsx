@@ -14,8 +14,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'WebMCP Toolkit',
-    description:
-      'Generate and validate WebMCP integrations for AI browser agents.',
+    description: 'Generate and validate WebMCP integrations for AI browser agents.',
   },
 }
 

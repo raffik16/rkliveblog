@@ -33,7 +33,9 @@ function validateHTML(code: string): ValidationRule[] {
     id: 'html-toolname',
     label: 'toolname attribute',
     status: hasToolName ? 'pass' : 'fail',
-    message: hasToolName ? 'toolname attribute present' : 'Missing required toolname attribute on <form>',
+    message: hasToolName
+      ? 'toolname attribute present'
+      : 'Missing required toolname attribute on <form>',
   })
 
   const hasToolDesc = /tooldescription\s*=/i.test(code)
@@ -41,7 +43,9 @@ function validateHTML(code: string): ValidationRule[] {
     id: 'html-tooldesc',
     label: 'tooldescription attribute',
     status: hasToolDesc ? 'pass' : 'fail',
-    message: hasToolDesc ? 'tooldescription attribute present' : 'Missing required tooldescription attribute',
+    message: hasToolDesc
+      ? 'tooldescription attribute present'
+      : 'Missing required tooldescription attribute',
   })
 
   const hasParamTitle = /toolparamtitle\s*=/i.test(code)
@@ -111,10 +115,12 @@ function validateJS(code: string): ValidationRule[] {
     id: 'js-schema',
     label: 'inputSchema property',
     status: hasInputSchema ? 'pass' : 'fail',
-    message: hasInputSchema ? 'inputSchema defined' : 'Missing inputSchema; agents need this to pass parameters',
+    message: hasInputSchema
+      ? 'inputSchema defined'
+      : 'Missing inputSchema; agents need this to pass parameters',
   })
 
-  const hasExecute = /execute\s*[\(:]/.test(code)
+  const hasExecute = /execute\s*[(:]/.test(code)
   rules.push({
     id: 'js-execute',
     label: 'execute function',
@@ -146,8 +152,9 @@ export function validate(code: string): { type: CodeType; rules: ValidationRule[
         id: 'detect-fail',
         label: 'Code detection',
         status: 'fail',
-        message: 'Could not detect WebMCP code. Paste a <form> with toolname or a registerTool() call.',
+        message:
+          'Could not detect WebMCP code. Paste a <form> with toolname or a registerTool() call.',
       },
     ],
   }
-    }
+}

@@ -45,16 +45,15 @@ function Hero() {
       variants={fadeUp}
       custom={0}
     >
-      <span className="mb-4 inline-block rounded-full bg-primary-500/10 px-4 py-1.5 text-sm font-medium text-primary-500">
+      <span className="bg-primary-500/10 text-primary-500 mb-4 inline-block rounded-full px-4 py-1.5 text-sm font-medium">
         Google I/O 2026
       </span>
-      <h1 className="mb-4 text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-5xl">
+      <h1 className="mb-4 text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl dark:text-white">
         WebMCP Toolkit
       </h1>
       <p className="mx-auto max-w-2xl text-lg text-gray-600 dark:text-gray-400">
-        Make your website agent-ready. Generate declarative HTML or imperative
-        JavaScript for the WebMCP standard, then validate your implementation
-        against the spec.
+        Make your website agent-ready. Generate declarative HTML or imperative JavaScript for the
+        WebMCP standard, then validate your implementation against the spec.
       </p>
     </motion.section>
   )
@@ -75,13 +74,16 @@ function Generator() {
     []
   )
 
-  const updateParam = useCallback((index: number, field: keyof ToolParam, value: string | boolean) => {
-    setTool((prev) => {
-      const params = [...prev.params]
-      params[index] = { ...params[index], [field]: value }
-      return { ...prev, params }
-    })
-  }, [])
+  const updateParam = useCallback(
+    (index: number, field: keyof ToolParam, value: string | boolean) => {
+      setTool((prev) => {
+        const params = [...prev.params]
+        params[index] = { ...params[index], [field]: value }
+        return { ...prev, params }
+      })
+    },
+    []
+  )
 
   const addParam = useCallback(() => {
     setTool((prev) => ({
@@ -114,34 +116,40 @@ function Generator() {
       variants={fadeUp}
       custom={1}
     >
-      <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">
-        Generator
-      </h2>
+      <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">Generator</h2>
 
       <div className="grid gap-8 lg:grid-cols-2">
         {/* Left: Form inputs */}
         <div className="space-y-4 rounded-2xl border border-gray-200 bg-white/60 p-6 backdrop-blur-md dark:border-gray-700 dark:bg-gray-800/60">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label
+              htmlFor="webmcp-tool-name"
+              className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
               Tool Name
             </label>
             <input
+              id="webmcp-tool-name"
               type="text"
               value={tool.name}
               onChange={(e) => updateField('name', e.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+              className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:outline-none dark:border-gray-600 dark:bg-gray-900 dark:text-white"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label
+              htmlFor="webmcp-tool-description"
+              className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
               Description
             </label>
             <textarea
+              id="webmcp-tool-description"
               value={tool.description}
               onChange={(e) => updateField('description', e.target.value)}
               rows={2}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+              className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:outline-none dark:border-gray-600 dark:bg-gray-900 dark:text-white"
             />
           </div>
 
@@ -150,7 +158,7 @@ function Generator() {
               type="checkbox"
               checked={tool.autoSubmit}
               onChange={(e) => updateField('autoSubmit', e.target.checked)}
-              className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+              className="text-primary-500 focus:ring-primary-500 rounded border-gray-300"
             />
             Auto-submit (toolautosubmit)
           </label>
@@ -162,7 +170,7 @@ function Generator() {
               </span>
               <button
                 onClick={addParam}
-                className="rounded-lg bg-primary-500/10 px-3 py-1 text-xs font-medium text-primary-500 transition hover:bg-primary-500/20"
+                className="bg-primary-500/10 text-primary-500 hover:bg-primary-500/20 rounded-lg px-3 py-1 text-xs font-medium transition"
               >
                 + Add
               </button>
@@ -193,7 +201,7 @@ function Generator() {
                       type="checkbox"
                       checked={param.required}
                       onChange={(e) => updateParam(i, 'required', e.target.checked)}
-                      className="rounded border-gray-300 text-primary-500"
+                      className="text-primary-500 rounded border-gray-300"
                     />
                     Req
                   </label>
@@ -259,21 +267,25 @@ function Validator() {
       variants={fadeUp}
       custom={2}
     >
-      <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">
-        Validator
-      </h2>
+      <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">Validator</h2>
 
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="rounded-2xl border border-gray-200 bg-white/60 p-6 backdrop-blur-md dark:border-gray-700 dark:bg-gray-800/60">
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            htmlFor="webmcp-validator-input"
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Paste your WebMCP code
           </label>
           <textarea
+            id="webmcp-validator-input"
             value={code}
             onChange={(e) => setCode(e.target.value)}
             rows={12}
-            placeholder={'<form toolname="..." tooldescription="...">\n  ...\n</form>\n\nor\n\nnavigator.modelContext.registerTool({ ... })'}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+            placeholder={
+              '<form toolname="..." tooldescription="...">\n  ...\n</form>\n\nor\n\nnavigator.modelContext.registerTool({ ... })'
+            }
+            className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm text-gray-900 focus:ring-1 focus:outline-none dark:border-gray-600 dark:bg-gray-900 dark:text-white"
           />
         </div>
 
@@ -281,7 +293,7 @@ function Validator() {
           {result ? (
             <>
               <div className="mb-4 flex items-center gap-2">
-                <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-gray-600 dark:bg-gray-900 dark:text-gray-400">
+                <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium tracking-wide text-gray-600 uppercase dark:bg-gray-900 dark:text-gray-400">
                   {result.type === 'html'
                     ? 'Declarative HTML'
                     : result.type === 'js'
@@ -310,9 +322,7 @@ function Validator() {
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {rule.label}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {rule.message}
-                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{rule.message}</p>
                     </div>
                   </li>
                 ))}
@@ -357,9 +367,7 @@ function Reference() {
       variants={fadeUp}
       custom={3}
     >
-      <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">
-        Quick Reference
-      </h2>
+      <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">Quick Reference</h2>
 
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="rounded-2xl border border-gray-200 bg-white/60 p-6 backdrop-blur-md dark:border-gray-700 dark:bg-gray-800/60">
@@ -369,15 +377,11 @@ function Reference() {
           <div className="space-y-3">
             {declarativeAttrs.map((a) => (
               <div key={a.attr} className="flex items-baseline gap-2">
-                <code className="shrink-0 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs font-medium text-primary-500">
+                <code className="text-primary-500 shrink-0 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs font-medium">
                   {a.attr}
                 </code>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {a.desc}
-                </span>
-                <span className="ml-auto shrink-0 text-xs text-gray-400">
-                  {a.on}
-                </span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">{a.desc}</span>
+                <span className="ml-auto shrink-0 text-xs text-gray-400">{a.on}</span>
               </div>
             ))}
           </div>
@@ -390,12 +394,10 @@ function Reference() {
           <div className="space-y-3">
             {imperativeProps.map((p) => (
               <div key={p.prop} className="flex items-baseline gap-2">
-                <code className="shrink-0 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs font-medium text-primary-500">
+                <code className="text-primary-500 shrink-0 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs font-medium">
                   {p.prop}
                 </code>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {p.desc}
-                </span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">{p.desc}</span>
                 <span
                   className={`ml-auto shrink-0 text-xs ${
                     p.required ? 'text-red-400' : 'text-gray-400'
