@@ -120,7 +120,7 @@ function Generator() {
 
       <div className="grid gap-8 lg:grid-cols-2">
         {/* Left: Form inputs */}
-        <div className="space-y-4 rounded-2xl border border-gray-200 bg-white/60 p-6 backdrop-blur-md dark:border-gray-700 dark:bg-gray-800/60">
+        <div className="min-w-0 space-y-4 rounded-2xl border border-gray-200 bg-white/60 p-6 backdrop-blur-md dark:border-gray-700 dark:bg-gray-800/60">
           <div>
             <label
               htmlFor="webmcp-tool-name"
@@ -179,23 +179,23 @@ function Generator() {
             {tool.params.map((param, i) => (
               <div
                 key={i}
-                className="grid grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/50"
+                className="flex flex-col gap-2 rounded-lg border border-gray-100 bg-gray-50 p-3 sm:grid sm:grid-cols-[1fr_1fr_auto] dark:border-gray-700 dark:bg-gray-900/50"
               >
                 <input
                   type="text"
                   placeholder="name"
                   value={param.name}
                   onChange={(e) => updateParam(i, 'name', e.target.value)}
-                  className="rounded border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                  className="w-full min-w-0 rounded border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-white"
                 />
                 <input
                   type="text"
                   placeholder="description"
                   value={param.description}
                   onChange={(e) => updateParam(i, 'description', e.target.value)}
-                  className="rounded border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                  className="w-full min-w-0 rounded border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-white"
                 />
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-end gap-2 sm:justify-start">
                   <label className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
                     <input
                       type="checkbox"
@@ -219,8 +219,8 @@ function Generator() {
         </div>
 
         {/* Right: Code output */}
-        <div className="rounded-2xl border border-gray-200 bg-white/60 p-6 backdrop-blur-md dark:border-gray-700 dark:bg-gray-800/60">
-          <div className="mb-4 flex items-center justify-between">
+        <div className="min-w-0 rounded-2xl border border-gray-200 bg-white/60 p-6 backdrop-blur-md dark:border-gray-700 dark:bg-gray-800/60">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div className="flex gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-900">
               {(['html', 'js'] as const).map((t) => (
                 <button
@@ -270,7 +270,7 @@ function Validator() {
       <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">Validator</h2>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <div className="rounded-2xl border border-gray-200 bg-white/60 p-6 backdrop-blur-md dark:border-gray-700 dark:bg-gray-800/60">
+        <div className="min-w-0 rounded-2xl border border-gray-200 bg-white/60 p-6 backdrop-blur-md dark:border-gray-700 dark:bg-gray-800/60">
           <label
             htmlFor="webmcp-validator-input"
             className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
@@ -289,7 +289,7 @@ function Validator() {
           />
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white/60 p-6 backdrop-blur-md dark:border-gray-700 dark:bg-gray-800/60">
+        <div className="min-w-0 rounded-2xl border border-gray-200 bg-white/60 p-6 backdrop-blur-md dark:border-gray-700 dark:bg-gray-800/60">
           {result ? (
             <>
               <div className="mb-4 flex items-center gap-2">
