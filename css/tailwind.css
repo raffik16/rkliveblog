@@ -228,3 +228,9 @@ input:-webkit-autofill:focus {
     linear-gradient(135deg, rgba(16, 185, 129, 0.4), rgba(20, 184, 166, 0.4));
   background-origin: border-box;
 }
+
+/* Hide the real header logo+title while a logo intro animation is playing so the
+   overlay can dock into the empty slot without doubling up. */
+body.logo-intro-playing header a[href='/'] > div {
+  visibility: hidden;
+}
