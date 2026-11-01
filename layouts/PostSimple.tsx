@@ -1,13 +1,12 @@
 import { ReactNode } from 'react'
-import { formatDate } from 'pliny/utils/formatDate'
 import { CoreContent } from 'pliny/utils/contentlayer'
 import type { Blog } from 'contentlayer/generated'
 import Comments from '@/components/Comments'
 import Link from '@/components/Link'
 import PageTitle from '@/components/PageTitle'
-import SectionContainer from '@/components/SectionContainer'
 import siteMetadata from '@/data/siteMetadata'
 import ScrollTopAndComment from '@/components/ScrollTopAndComment'
+import { PostMeta } from '@/layouts/PostLayout'
 
 interface LayoutProps {
   content: CoreContent<Blog>
@@ -17,23 +16,16 @@ interface LayoutProps {
 }
 
 export default function PostLayout({ content, next, prev, children }: LayoutProps) {
-  const { path, slug, date, title } = content
+  const { slug, date, lastmod, title, readingTime } = content
 
   return (
-    <SectionContainer>
+    <>
       <ScrollTopAndComment />
-      <article>
+      <article className="mx-auto max-w-[70ch]">
         <div>
           <header>
             <div className="space-y-1 border-b border-gray-200 pb-10 text-center dark:border-gray-700">
-              <dl>
-                <div>
-                  <dt className="sr-only">Published on</dt>
-                  <dd className="text-base leading-6 font-medium text-gray-500 dark:text-gray-400">
-                    <time dateTime={date}>{formatDate(date, siteMetadata.locale)}</time>
-                  </dd>
-                </div>
-              </dl>
+              <PostMeta date={date} lastmod={lastmod} readingTime={readingTime} weekday={false} />
               <div>
                 <PageTitle>{title}</PageTitle>
               </div>
@@ -54,7 +46,7 @@ export default function PostLayout({ content, next, prev, children }: LayoutProp
                   <div className="pt-4 xl:pt-8">
                     <Link
                       href={`/${prev.path}`}
-                      className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
+                      className="text-primary-700 hover:text-primary-800 dark:text-primary-500 dark:hover:text-primary-400"
                       aria-label={`Previous post: ${prev.title}`}
                     >
                       &larr; {prev.title}
@@ -65,7 +57,7 @@ export default function PostLayout({ content, next, prev, children }: LayoutProp
                   <div className="pt-4 xl:pt-8">
                     <Link
                       href={`/${next.path}`}
-                      className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
+                      className="text-primary-700 hover:text-primary-800 dark:text-primary-500 dark:hover:text-primary-400"
                       aria-label={`Next post: ${next.title}`}
                     >
                       {next.title} &rarr;
@@ -77,6 +69,6 @@ export default function PostLayout({ content, next, prev, children }: LayoutProp
           </div>
         </div>
       </article>
-    </SectionContainer>
+    </>
   )
 }
