@@ -7,19 +7,52 @@ interface Token {
   value: string
 }
 
+/**
+ * HTML tokenizer that tracks whether it is inside a tag, so every attribute gets colored (not
+ * just the first), and hands inline <script> bodies to the JS tokenizer. Every character of the
+ * input ends up in exactly one token.
+ */
 function tokenizeHTML(code: string): Token[] {
   const tokens: Token[] = []
-  const re =
-    /(<!--[\s\S]*?-->)|(<\/?[\w-]+)|(\s+[\w-]+)(?==)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(>|\/>)|([^<]+)/g
-  let match: RegExpExecArray | null
+  const outside = /(<!--[\s\S]*?(?:-->|$))|(<\/?)([A-Za-z][\w-]*)|([^<]+)|([\s\S])/y
+  const inside = /(\s+)|(\/?>)|("[^"]*"?|'[^']*'?)|(=)|([^\s"'=<>/]+)|([\s\S])/y
+  let i = 0
+  let inTag = false
+  let tagName = ''
+  let closing = false
 
-  while ((match = re.exec(code)) !== null) {
-    if (match[1]) tokens.push({ type: 'comment', value: match[1] })
-    else if (match[2]) tokens.push({ type: 'tag', value: match[2] })
-    else if (match[3]) tokens.push({ type: 'attr', value: match[3] })
-    else if (match[4]) tokens.push({ type: 'string', value: match[4] })
-    else if (match[5]) tokens.push({ type: 'punctuation', value: match[5] })
-    else if (match[6]) tokens.push({ type: 'text', value: match[6] })
+  while (i < code.length) {
+    const re = inTag ? inside : outside
+    re.lastIndex = i
+    const m = re.exec(code)
+    if (!m) break
+    i = re.lastIndex
+
+    if (!inTag) {
+      if (m[1]) tokens.push({ type: 'comment', value: m[1] })
+      else if (m[3]) {
+        tokens.push({ type: 'tag', value: m[2] + m[3] })
+        inTag = true
+        closing = m[2] === '</'
+        tagName = m[3].toLowerCase()
+      } else tokens.push({ type: 'text', value: m[4] || m[5] })
+      continue
+    }
+
+    if (m[1]) tokens.push({ type: 'text', value: m[1] })
+    else if (m[2]) {
+      tokens.push({ type: 'punctuation', value: m[2] })
+      inTag = false
+      if (tagName === 'script' && !closing && m[2] === '>') {
+        const end = code.toLowerCase().indexOf('</script', i)
+        const stop = end === -1 ? code.length : end
+        tokens.push(...tokenizeJS(code.slice(i, stop)))
+        i = stop
+      }
+    } else if (m[3]) tokens.push({ type: 'string', value: m[3] })
+    else if (m[4]) tokens.push({ type: 'punctuation', value: m[4] })
+    else if (m[5]) tokens.push({ type: 'attr', value: m[5] })
+    else tokens.push({ type: 'text', value: m[6] })
   }
   return tokens
 }
@@ -48,10 +81,16 @@ function tokenizeJS(code: string): Token[] {
     'new',
     'typeof',
     'class',
+    'try',
+    'catch',
+    'throw',
+    'instanceof',
+    'in',
   ])
 
+  // The last alternative catches any character the others miss, so nothing is dropped.
   const re =
-    /(\/\/.*$|\/\*[\s\S]*?\*\/)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)|(\b\d+\.?\d*\b)|(\b[a-zA-Z_$][\w$]*\b)|([{}()[\];:.,=>+\-*/!?&|])|(\s+)/gm
+    /(\/\/.*$|\/\*[\s\S]*?\*\/)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)|(\b\d+\.?\d*\b)|([a-zA-Z_$][\w$]*)|([{}()[\];:.,=<>+\-*/%!?&|^~])|(\s+)|([\s\S])/gm
   let match: RegExpExecArray | null
 
   while ((match = re.exec(code)) !== null) {
@@ -64,7 +103,7 @@ function tokenizeJS(code: string): Token[] {
         value: match[4],
       })
     else if (match[5]) tokens.push({ type: 'punctuation', value: match[5] })
-    else if (match[6]) tokens.push({ type: 'text', value: match[6] })
+    else tokens.push({ type: 'text', value: match[0] })
   }
   return tokens
 }
