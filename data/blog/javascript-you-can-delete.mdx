@@ -3,7 +3,7 @@ title: 'The JavaScript You Can Delete: CSS and HTML in Late 2026'
 date: '2026-11-01'
 lastmod: '2026-11-01'
 tags: ['css', 'html', 'web-platform', 'javascript', 'animation', 'frontend']
-draft: true
+draft: false
 summary: 'Firefox 159 just brought scroll-driven animations to every engine. A field guide to the JS patterns CSS and HTML now replace, which need a fallback, and which are still Chromium-only.'
 images: ['/static/images/og/javascript-you-can-delete.jpg']
 authors: ['default']
@@ -26,11 +26,11 @@ Baseline is a label computed from data, and the label trails the data. This post
 
 Every feature in this post goes into one of three buckets:
 
-1. **Baseline: delete the JavaScript, once the fallback is acceptable.** It works in current Chrome, Edge, Firefox and Safari, desktop and mobile. The 2026 arrivals still miss iPhones on iOS 18 and [Firefox ESR 153](https://github.com/mdn/browser-compat-data/blob/0efedff8c8b6f131ad029443056bc74e00b1aca2/browsers/firefox.json) (no `sibling-index()`, no scroll-driven animations), so check what those users get. Once a feature is Widely available, the JS version is legacy code.
-2. **Two of three engines: ship it as an enhancement.** Use it, but make sure the third engine gets something acceptable, usually the plain, unanimated version.
+1. **Baseline: delete the JavaScript, once the fallback is acceptable.** It works in current Chrome, Edge, Firefox and Safari, desktop and mobile. Features that became Baseline this year still miss iPhones on iOS 18 and [Firefox ESR 153](https://github.com/mdn/browser-compat-data/blob/0efedff8c8b6f131ad029443056bc74e00b1aca2/browsers/firefox.json) (no `sibling-index()`, no scroll-driven animations), so check what those users get. Once a feature is Widely available, the JS version is legacy code.
+2. **Two of three engines: ship it as an enhancement.** Make sure the third engine gets something acceptable, usually the plain, unanimated version.
 3. **Chromium-only: purely additive.** Feature-detect it (`@supports` for CSS) and never let anything depend on it.
 
-The whole post at a glance:
+At a glance:
 
 | Pattern                             | Replaces                       | Tier                         |
 | ----------------------------------- | ------------------------------ | ---------------------------- |
@@ -64,7 +64,7 @@ The whole post at a glance:
 </div>
 ```
 
-That's a working menu. A bare `popover` attribute means `popover="auto"`. It renders in the top layer, closes on Escape or an outside click, and opening it closes any other auto popover that isn't its ancestor. `popovertarget="share-menu"` on the button does the same job; the gotcha below is why you might prefer it.
+That's a working menu. A bare `popover` attribute means `popover="auto"`. It renders in the top layer, closes on Escape or an outside click, and opening it closes any other auto popover that isn't its ancestor. `popovertarget` does the same job; the gotcha below is why you might prefer it.
 
 **Support:** `popover` has been [Baseline since 2025-01-27](https://github.com/web-platform-dx/web-features/blob/f8963c8ebf20d47143bf30fe545fa99ae1a8b884/features/popover.yml.dist) (Chrome 116, Firefox 125, Safari 17, iOS Safari 18.3). [Invoker commands](https://developer.mozilla.org/en-US/docs/Web/API/Invoker_Commands_API) (`commandfor` and `command`) have been Baseline since 2025-12-12 (Chrome 135, Firefox 144, Safari 26.2).
 
@@ -159,15 +159,15 @@ The menu from earlier already has an anchor. Per MDN's [anchor positioning guide
 
 `position-area` drops the menu below the button, lined up with its start edge. [`position-try-fallbacks`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/position-try-fallbacks) flips it above, or to the other side, when it would overflow. That's Floating UI's `flip()` middleware in one line.
 
-Keep the reset inside `@supports`. Without anchor positioning, the UA's centred box is a fine fallback, but an unconditional `margin: 0` pins the menu to the top-left corner.
+Keep the margin reset inside `@supports`. Without anchor positioning, the UA's centred box is a fine fallback, but an unconditional `margin: 0` pins the menu to the top-left corner.
 
-**Support:** [Firefox 147](https://developer.mozilla.org/en-US/docs/Mozilla/Firefox/Releases/147) enabled anchor positioning on January 13, 2026, and the core properties became Baseline that day (Chrome 125, Safari 26; `position-area` itself needs Chrome 129). The [umbrella web-features entry](https://github.com/web-platform-dx/web-features/blob/f8963c8ebf20d47143bf30fe545fa99ae1a8b884/features/anchor-positioning.yml.dist) still reads "not Baseline", only because of `position-visibility: anchor-valid` and `anchor-visible`. Those ship only in Safari 27 today; BCD lists them for Chrome 157, due November 3, and Firefox has neither.
+**Support:** [Firefox 147](https://developer.mozilla.org/en-US/docs/Mozilla/Firefox/Releases/147) enabled anchor positioning on January 13, 2026, and the core properties became Baseline that day (Chrome 125, Safari 26; `position-area` itself needs Chrome 129). The [umbrella web-features entry](https://github.com/web-platform-dx/web-features/blob/f8963c8ebf20d47143bf30fe545fa99ae1a8b884/features/anchor-positioning.yml.dist) still reads "not Baseline", but only because of `position-visibility: anchor-valid` and `anchor-visible`. Those ship only in Safari 27 today; BCD lists them for Chrome 157, due November 3, and Firefox has neither.
 
 **Gotchas:**
 
 - **The default popover margin.** Popovers get `margin: auto` from the UA stylesheet so they centre in the viewport. When you position with `anchor()` or `anchor-center`, [MDN](https://developer.mozilla.org/en-US/docs/Web/API/Popover_API/Using) advises setting it to `0`. `position-area` is meant to zero auto margins on its own, but BCD lists gaps (Chrome 130 to 142, Firefox 147, Safari before 26.2), so the snippet sets `margin: 0` anyway.
 - **Set `position-anchor` explicitly.** Its initial value has changed more than once across engines (BCD tracks `auto`, then `none`, then the spec's `normal`). `position-anchor: auto` gives the same result in all of them.
-- **Hover tooltips still need a little JS.** `interestfor` is Chromium-only, and `popover="hint"` is still Technology Preview-only in Safari. Cross-browser, make the tooltip `popover="manual"` so hovering it doesn't close an open menu, then call `showPopover({ source: button })` on `mouseenter` and `focus`, and `hidePopover()` on `mouseleave` and `blur`. The positioning stays in CSS.
+- **Hover tooltips still need a little JS.** `interestfor` is Chromium-only, and `popover="hint"` is still Technology Preview-only in Safari. Cross-browser, make the tooltip `popover="manual"` so showing it doesn't close an open menu, then call `showPopover({ source: button })` on `mouseenter` and `focus`, and `hidePopover()` on `mouseleave` and `blur`. The positioning stays in CSS.
 
 ### Auto-growing textareas: `field-sizing`
 
@@ -240,9 +240,9 @@ And reveal-on-scroll, which needs the reduced-motion guard more than the bar doe
 }
 ```
 
-**Support:** Chrome 115, Safari 26, Firefox 159. Not yet Baseline in web-features (see the top). In the Interop 2026 tests, Firefox's stable score for this area went from 9.2% to 70.1% on the first Firefox 159 run (full table below).
+**Support:** Chrome 115, Safari 26, Firefox 159. Not yet Baseline (see the top). In the Interop 2026 tests, Firefox's stable score for this area went from 9.2% to 70.1% on the first Firefox 159 run (full table below).
 
-So here's where I land: tier 1 for decorative effects like these, tier 2 for anything load-bearing until Firefox's pass rate catches up.
+Where I land: tier 1 for decorative effects like these, tier 2 for anything load-bearing until Firefox's pass rate catches up.
 
 **Gotchas:**
 
@@ -253,7 +253,7 @@ So here's where I land: tier 1 for decorative effects like these, tier 2 for any
 
 ### Entry and exit animations: `@starting-style`
 
-**Replaces:** the "add a class on the next frame" trick and a good chunk of what Transition components do.
+**Replaces:** the "add a class on the next frame" trick and much of what Transition components do.
 
 ```css
 #share-menu {
@@ -283,7 +283,7 @@ So here's where I land: tier 1 for decorative effects like these, tier 2 for any
 
 **Gotchas:**
 
-- **Entry works everywhere, exit doesn't.** Transitioning `display` works in Chrome 117 and Safari 18 but not Firefox ([bug 1882408](https://bugzilla.mozilla.org/show_bug.cgi?id=1882408)), and `overlay` is Chromium-only. In Firefox the menu fades in and simply vanishes on close. Safari plays the fade-out, but only after the popover has left the top layer, so for those 150ms it can slip under other content.
+- **Entry works everywhere, exit doesn't.** Transitioning `display` works in Chrome 117 and Safari 18 but not Firefox ([bug 1882408](https://bugzilla.mozilla.org/show_bug.cgi?id=1882408)), and `overlay` is Chromium-only. In Firefox the menu fades in and simply vanishes on close. Safari fades it out after it has left the top layer, so it can briefly slip under other content.
 - **Order matters.** `@starting-style` has the same specificity as the rule it overrides, so it has to come after that rule or be nested inside it.
 
 ### Staggered lists: `sibling-index()`
@@ -323,7 +323,7 @@ So here's where I land: tier 1 for decorative effects like these, tier 2 for any
 
 **Support:** Baseline since 2024-05-13 (Chrome 123, Firefox 120, Safari 17.5). By web-features' [30-month rule](https://github.com/web-platform-dx/web-features/blob/main/docs/baseline.md), that makes it Widely available around November 13, 2026. That's my arithmetic, not an official date.
 
-**Gotcha:** per [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/color_value/light-dark), without `color-scheme` you only ever get the light value. The two-colour form is the long-standing one. Passing two images, such as gradients, only became [Baseline on 2026-09-14](https://github.com/web-platform-dx/web-features/blob/f8963c8ebf20d47143bf30fe545fa99ae1a8b884/features/light-dark-image.yml.dist) (Chrome 150, Firefox 150, Safari 27).
+**Gotcha:** per [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/color_value/light-dark), without `color-scheme` you only ever get the light value. Colours have always worked; two images (gradients, say) only became [Baseline on 2026-09-14](https://github.com/web-platform-dx/web-features/blob/f8963c8ebf20d47143bf30fe545fa99ae1a8b884/features/light-dark-image.yml.dist) (Chrome 150, Firefox 150, Safari 27).
 
 The nice part: [next-themes](https://github.com/pacocoursey/next-themes), which this blog uses, writes `color-scheme` onto `<html>` as an inline style by default. That inline value beats the `:root` declaration, so `light-dark()` tokens follow the theme toggle with no extra code.
 
@@ -358,7 +358,7 @@ The nice part: [next-themes](https://github.com/pacocoursey/next-themes), which 
 
 **Support:** Chrome 135 and Safari 27 (released September 14, 2026). Firefox has it only behind prefs, since 149.
 
-**Gotcha:** both the `select` and its `::picker(select)` need the opt-in. Per MDN's [customizable select guide](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms/Customizable_select), browsers without support ignore the `<button>` and `<selectedcontent>` structure and strip non-text option content, so Firefox users get an ordinary, working select. Keep the custom styles inside `@supports` so native selects stay untouched.
+**Gotcha:** both the `select` and its `::picker(select)` need the opt-in. Per MDN's [customizable select guide](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms/Customizable_select), browsers without support ignore the `<button>` and `<selectedcontent>` structure and strip non-text option content, so Firefox users get an ordinary, working select. Keep custom styles inside `@supports`.
 
 ### Page transitions: `@view-transition`
 
@@ -408,11 +408,11 @@ Client-side routes need same-document view transitions, through `document.startV
 }
 ```
 
-**Support:** Chrome 129 only, and marked experimental in BCD. Neither Firefox nor Safari has an implementation.
+**Support:** Chrome 129 only, marked experimental in BCD.
 
 **Gotcha:** it's opt-in because, per [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/interpolate-size), turning it on by default would break existing sites. It's inherited, so `:root` covers the page. It can't interpolate between two keywords; one end must be a length. If you need maths, [`calc-size()`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/calc-size) does the same thing per property, as in `calc-size(auto, size + 1rem)`.
 
-Other Chromium-only features that belong in this tier, per BCD: `interestfor` hover invokers (Chrome 142), scroll-triggered animations (Chrome 146), `if()` (Chrome 137) and CSS carousels via `::scroll-marker` (Chrome 135). Fun on a demo page. Your layout shouldn't depend on any of them.
+Also Chromium-only, per BCD: `interestfor` hover invokers (Chrome 142), scroll-triggered animations (Chrome 146), `if()` (Chrome 137) and CSS carousels via `::scroll-marker` (Chrome 135). Fun on a demo page. Your layout shouldn't depend on any of them.
 
 ---
 
@@ -423,7 +423,6 @@ The list is shorter than it was. Not empty, though.
 - **Exit animations on DOM removal.** `@starting-style` handles arrival. When React unmounts a node, it's gone. That's still `AnimatePresence`, or a class plus `transitionend` plus `remove()`.
 - **Spring physics.** `linear()` easing (Chrome 113, Firefox 112, Safari 17.2) can fake a spring's shape. Interrupt a transition and it retargets from the current value, but with no memory of how fast it was moving. Keeping that velocity is what a spring library actually buys you.
 - **Play-once scroll triggers outside Chromium.** `IntersectionObserver` keeps its job.
-- **Exit animations in Firefox** for popovers, dialogs and `<details>`.
 - **Hover tooltips and client-side route transitions**, cross-browser, without a few lines of JS.
 - **Imperative timelines.** The [alien spacecraft simulator](/blog/alien-spacecraft-simulator) on this blog runs on Canvas and GSAP. CSS animates styles. It doesn't run a game loop.
 
@@ -431,7 +430,7 @@ The list is shorter than it was. Not empty, though.
 
 ## Interop 2026: Where the Gaps Are Closing
 
-[Interop 2026](https://github.com/web-platform-tests/interop/blob/main/2026/README.md) has 20 focus areas. Four matter for this post: CSS anchor positioning (carried over from 2025), dialogs and popovers (`closedby`, `:open` and `popover="hint"`), scroll-driven animations, and view transitions, including cross-document.
+[Interop 2026](https://github.com/web-platform-tests/interop/blob/main/2026/README.md) has 20 focus areas. Four matter here: CSS anchor positioning (carried over from 2025), dialogs and popovers (`closedby`, `:open` and `popover="hint"`), scroll-driven animations, and view transitions, including cross-document.
 
 I took these numbers from the latest row (October 31) of the [results-analysis CSV](https://github.com/web-platform-tests/results-analysis/blob/gh-pages/data/interop-2026/interop-2026-stable-v2.csv) behind the [wpt.fyi dashboard](https://wpt.fyi/interop-2026). That run used Chrome 156, Edge 156, Firefox 159 and Safari 27.2 stable. The CSV stores scores out of 1,000, which I divided by 10. "All browsers" is the CSV's interop column: the share of tests that pass in every browser at once.
 
@@ -501,7 +500,7 @@ It's Chromium-only. BCD marks it experimental and off the standards track, and t
 
 ## The Rule, Once More
 
-- **Baseline: delete the JS**, once you've checked what older browsers fall back to. Popover, invoker commands, `<details name>`, anchor positioning, `field-sizing`, `@starting-style`, `sibling-index()` and `light-dark()`. Decorative scroll-driven animations too, as of October 27, badge pending.
+- **Baseline: delete the JS**, after checking the fallback. Popover, invoker commands, `<details name>`, anchor positioning, `field-sizing`, `@starting-style`, `sibling-index()` and `light-dark()`. Decorative scroll-driven animations too, as of October 27, badge pending.
 - **Two of three engines: ship it with a fallback**, and let the fallback be the unanimated version. Customizable select, cross-document view transitions, `closedby` and exit animations.
 - **Chromium-only: additive.** `interpolate-size`, `interestfor`, scroll-triggered animations and `if()`. Feature-detect them and never make them load-bearing.
 
