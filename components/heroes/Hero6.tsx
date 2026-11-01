@@ -67,7 +67,7 @@ export default function Hero6({ stats }: Hero6Props) {
             style={{
               background: `linear-gradient(45deg, ${HERO_COLORS.join(', ')})`,
               backgroundSize: '300% 300%',
-              backgroundPosition: '0% 50%',
+              backgroundPosition: '100% 50%',
             }}
           />
         )}
@@ -96,6 +96,11 @@ export default function Hero6({ stats }: Hero6Props) {
         <div className="glass-frost-hero glass-border-hero relative overflow-hidden rounded-[2rem] p-6 shadow-2xl sm:rounded-[2.5rem] sm:p-12 lg:p-16">
           {/* Vibrant Gradient Border Glow */}
           <div className="from-primary-500/20 pointer-events-none absolute inset-0 rounded-[2rem] bg-gradient-to-r via-purple-500/20 to-cyan-500/20 opacity-50 blur-xl sm:rounded-[2.5rem]" />
+          {/* Scrim: keeps white text at >= 4.5:1 on every frame of the animated gradient */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 rounded-[2rem] bg-gray-950/35 sm:rounded-[2.5rem]"
+          />
 
           {/* Inner Content */}
           <div className="relative">

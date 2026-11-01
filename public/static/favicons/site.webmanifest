@@ -1,6 +1,9 @@
 {
   "name": "rkRanched",
   "short_name": "rkRanched",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
   "icons": [
     {
       "src": "android-chrome-96x96.png",

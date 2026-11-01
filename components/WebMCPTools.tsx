@@ -134,17 +134,29 @@ function termPattern(term: string): RegExp {
   return new RegExp(`(?:^|[^a-z0-9])${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`)
 }
 
+/** Lowercase letters and digits only, so "Next.js" and the tag "nextjs" compare equal. */
+function compact(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
 /** Title matches count most, then tags, then the summary. */
-function score(post: PostResult, patterns: RegExp[]): number {
+function score(post: PostResult, patterns: RegExp[], compactTerms: string[]): number {
   const title = post.title.toLowerCase()
   const tags = post.tags.join(' ').toLowerCase()
+  const compactTags = post.tags.map(compact)
   const summary = post.summary.toLowerCase()
   let total = 0
-  for (const pattern of patterns) {
+  patterns.forEach((pattern, i) => {
+    const term = compactTerms[i]
     if (pattern.test(title)) total += 3
-    if (pattern.test(tags)) total += 2
+    if (
+      pattern.test(tags) ||
+      (term.length > 1 && compactTags.some((tag) => tag.startsWith(term)))
+    ) {
+      total += 2
+    }
     if (pattern.test(summary)) total += 1
-  }
+  })
   return total
 }
 
@@ -203,12 +215,13 @@ const searchPostsTool: ModelContextTool = {
     }
 
     const patterns = terms.map(termPattern)
+    const compactTerms = terms.map(compact)
 
     try {
       const posts = await loadPosts(signal)
       if (!Array.isArray(posts)) return posts
       const matches = posts
-        .map((post) => ({ post, score: score(post, patterns) }))
+        .map((post) => ({ post, score: score(post, patterns, compactTerms) }))
         .filter((entry) => entry.score > 0)
         .sort((a, b) => b.score - a.score || b.post.date.localeCompare(a.post.date))
       return { results: matches.slice(0, limit).map((entry) => entry.post), total: matches.length }

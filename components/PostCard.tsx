@@ -56,11 +56,9 @@ export default function PostCard({
         className="absolute inset-[2px] rounded-lg bg-white dark:bg-gray-800/95"
       />
 
-      {/* The whole card is one link, so tags below are plain text (anchors can't nest) */}
-      <Link
-        href={href}
-        className={`relative flex flex-1 flex-col rounded-lg focus-visible:-outline-offset-4 ${featured ? 'p-6 sm:p-8' : 'p-5'}`}
-      >
+      {/* Stretched link: only the title is the link (so its accessible name is just the title),
+          and its ::after covers the card so the whole card stays clickable. */}
+      <div className={`relative flex flex-1 flex-col ${featured ? 'p-6 sm:p-8' : 'p-5'}`}>
         {featured && (
           <span className="text-primary-700 dark:text-primary-400 mb-2 text-xs font-semibold tracking-wide uppercase">
             Newest post
@@ -71,9 +69,11 @@ export default function PostCard({
             featured ? 'text-xl leading-7 sm:text-2xl sm:leading-8' : 'text-lg leading-6'
           }`}
         >
-          <span className="group-hover:from-primary-500 relative text-gray-900 transition-colors duration-300 group-hover:bg-gradient-to-r group-hover:via-purple-500 group-hover:to-cyan-500 group-hover:bg-clip-text group-hover:text-transparent dark:text-gray-100">
-            {title}
-          </span>
+          <Link href={href} className="after:absolute after:inset-0 after:rounded-lg">
+            <span className="group-hover:from-primary-500 text-gray-900 transition-colors duration-300 group-hover:bg-gradient-to-r group-hover:via-purple-500 group-hover:to-cyan-500 group-hover:bg-clip-text group-hover:text-transparent dark:text-gray-100">
+              {title}
+            </span>
+          </Link>
         </Heading>
         {summary && (
           <p
@@ -107,7 +107,7 @@ export default function PostCard({
             </>
           )}
         </div>
-      </Link>
+      </div>
     </article>
   )
 }

@@ -78,14 +78,14 @@ export default function LabPage() {
         Looking for the writing instead? Browse{' '}
         <Link
           href="/blog"
-          className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium underline-offset-2 hover:underline"
+          className="text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium underline-offset-2 hover:underline"
         >
           all posts
         </Link>{' '}
         or{' '}
         <Link
           href="/tags"
-          className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium underline-offset-2 hover:underline"
+          className="text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium underline-offset-2 hover:underline"
         >
           every topic
         </Link>

@@ -111,6 +111,60 @@ export default function ListLayoutWithTags({
           )}
         </div>
 
+        {/* Below lg the tag sidebar is hidden, so keep tag navigation reachable with a compact strip */}
+        <nav aria-label="Browse by tag" className="mb-6 lg:hidden">
+          <ul className="flex flex-wrap gap-2">
+            <li>
+              {pathname.startsWith('/blog') ? (
+                <span
+                  aria-current="page"
+                  className="bg-primary-700 inline-block rounded-full px-3 py-1 text-xs font-semibold text-white uppercase"
+                >
+                  All posts
+                </span>
+              ) : (
+                <Link
+                  href="/blog"
+                  className="inline-block rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 uppercase hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  All posts
+                </Link>
+              )}
+            </li>
+            {displayTags.map((t) => (
+              <li key={t}>
+                {decodeURI(pathname.split('/tags/')[1]) === slug(t) ? (
+                  <span
+                    aria-current="page"
+                    className="bg-primary-700 inline-block rounded-full px-3 py-1 text-xs font-semibold text-white uppercase"
+                  >
+                    {t}
+                  </span>
+                ) : (
+                  <Link
+                    href={`/tags/${slug(t)}`}
+                    className="inline-block rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 uppercase hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    {t}
+                  </Link>
+                )}
+              </li>
+            ))}
+            {hasMoreTags && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setShowAllTags(!showAllTags)}
+                  aria-expanded={showAllTags}
+                  className="text-primary-700 hover:text-primary-800 dark:text-primary-500 dark:hover:text-primary-400 inline-block px-2 py-1 text-xs font-medium"
+                >
+                  {showAllTags ? 'Show fewer' : `+${sortedTags.length - 8} more`}
+                </button>
+              </li>
+            )}
+          </ul>
+        </nav>
+
         <div className="flex lg:gap-8 xl:gap-10">
           {/* Tag sidebar from lg, so the card grid keeps its width on tablets */}
           <div className="hidden h-full w-64 shrink-0 flex-wrap rounded-sm bg-gray-50 pt-5 shadow-md lg:flex dark:bg-gray-900/70 dark:shadow-gray-800/40">

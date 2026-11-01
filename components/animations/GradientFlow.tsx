@@ -25,13 +25,13 @@ export default function GradientFlow({
       style={{
         background: `linear-gradient(45deg, ${colors.join(', ')})`,
         backgroundSize: '300% 300%',
-        backgroundPosition: '0% 50%',
+        backgroundPosition: '100% 50%',
       }}
       animate={
         shouldReduceMotion
           ? undefined
           : {
-              backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+              backgroundPosition: ['100% 50%', '0% 50%', '100% 50%'],
             }
       }
       transition={
