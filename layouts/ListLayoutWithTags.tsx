@@ -6,20 +6,9 @@ import { slug } from 'github-slugger'
 import { CoreContent } from 'pliny/utils/contentlayer'
 import type { Blog } from 'contentlayer/generated'
 import Link from '@/components/Link'
-import siteMetadata from '@/data/siteMetadata'
 import tagData from 'app/tag-data.json'
 import BlogFilters, { FilterState } from '@/components/BlogFilters'
-
-// Fix timezone issue by parsing date as local time
-function formatDateLocal(dateString: string, locale: string) {
-  const [year, month, day] = dateString.split('T')[0].split('-').map(Number)
-  const date = new Date(year, month - 1, day)
-  return date.toLocaleDateString(locale, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
+import PostCard from '@/components/PostCard'
 
 interface PaginationProps {
   totalPages: number
@@ -112,7 +101,7 @@ export default function ListLayoutWithTags({
 
         {/* Smart Filter System */}
         <div className="mb-6">
-          <BlogFilters allTags={tagCounts} onFiltersChange={handleFiltersChange} />
+          <BlogFilters allTags={tagCounts} value={filters} onFiltersChange={handleFiltersChange} />
 
           {/* Results count when filtering */}
           {hasActiveFilters && (
@@ -122,11 +111,14 @@ export default function ListLayoutWithTags({
           )}
         </div>
 
-        <div className="flex sm:space-x-24">
-          <div className="hidden h-full max-w-[280px] min-w-[280px] flex-wrap rounded-sm bg-gray-50 pt-5 shadow-md sm:flex dark:bg-gray-900/70 dark:shadow-gray-800/40">
-            <div className="w-full px-6 py-4">
+        <div className="flex lg:gap-8 xl:gap-10">
+          {/* Tag sidebar from lg, so the card grid keeps its width on tablets */}
+          <div className="hidden h-full w-64 shrink-0 flex-wrap rounded-sm bg-gray-50 pt-5 shadow-md lg:flex dark:bg-gray-900/70 dark:shadow-gray-800/40">
+            <div className="w-full px-5 py-4">
               {pathname.startsWith('/blog') ? (
-                <h3 className="text-primary-500 font-bold uppercase">All Posts</h3>
+                <h3 className="text-primary-700 dark:text-primary-500 font-bold uppercase">
+                  All Posts
+                </h3>
               ) : (
                 <Link
                   href={`/blog`}
@@ -140,7 +132,7 @@ export default function ListLayoutWithTags({
                   return (
                     <li key={t} className="my-3">
                       {decodeURI(pathname.split('/tags/')[1]) === slug(t) ? (
-                        <h3 className="text-primary-500 inline px-3 py-2 text-sm font-bold uppercase">
+                        <h3 className="text-primary-700 dark:text-primary-500 inline px-3 py-2 text-sm font-bold uppercase">
                           {`${t} (${tagCounts[t]})`}
                         </h3>
                       ) : (
@@ -158,19 +150,21 @@ export default function ListLayoutWithTags({
               </ul>
               {hasMoreTags && (
                 <button
+                  type="button"
                   onClick={() => setShowAllTags(!showAllTags)}
-                  className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 mt-2 px-3 text-sm font-medium transition-colors"
+                  className="text-primary-700 hover:text-primary-800 dark:text-primary-500 dark:hover:text-primary-400 mt-2 px-3 text-sm font-medium transition-colors"
                 >
                   {showAllTags ? '← Show less' : `See more (${sortedTags.length - 8})`}
                 </button>
               )}
             </div>
           </div>
-          <div className="w-full">
+          <div className="min-w-0 flex-1">
             {!displayPosts.length && (
               <div className="py-12 text-center">
                 <div className="text-gray-500 dark:text-gray-400">
                   <svg
+                    aria-hidden="true"
                     className="mx-auto mb-4 h-12 w-12 text-gray-400"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -188,37 +182,10 @@ export default function ListLayoutWithTags({
                 </div>
               </div>
             )}
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {displayPosts.map((post) => {
-                const { path, date, title } = post
-                return (
-                  <article
-                    key={path}
-                    className="group relative flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-gray-700 dark:bg-gray-800/50"
-                  >
-                    {/* Animated gradient border on hover */}
-                    <div className="from-primary-500 absolute inset-0 rounded-lg bg-gradient-to-r via-purple-500 to-cyan-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                    <div className="absolute inset-[2px] rounded-lg bg-white dark:bg-gray-800/95" />
-
-                    <Link href={`/${path}`} className="relative flex flex-1 flex-col p-5">
-                      <h2 className="mb-3 text-lg leading-6 font-bold tracking-tight">
-                        <span className="group-hover:from-primary-500 relative text-gray-900 transition-colors duration-300 group-hover:bg-gradient-to-r group-hover:via-purple-500 group-hover:to-cyan-500 group-hover:bg-clip-text group-hover:text-transparent dark:text-gray-100">
-                          {title}
-                        </span>
-                      </h2>
-                      <div className="mt-auto border-t border-gray-100 pt-3 dark:border-gray-700">
-                        <time
-                          dateTime={date}
-                          className="text-xs text-gray-500 dark:text-gray-400"
-                          suppressHydrationWarning
-                        >
-                          {formatDateLocal(date, siteMetadata.locale)}
-                        </time>
-                      </div>
-                    </Link>
-                  </article>
-                )
-              })}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {displayPosts.map((post) => (
+                <PostCard key={post.path} post={post} />
+              ))}
             </div>
             {pagination && pagination.totalPages > 1 && !hasActiveFilters && (
               <div className="space-y-2 pt-6 pb-8 md:space-y-5">
