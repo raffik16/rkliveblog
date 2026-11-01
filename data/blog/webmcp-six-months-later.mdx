@@ -1,0 +1,413 @@
+---
+title: 'WebMCP, Six Months Later: The API Moved Under My Toolkit'
+date: '2026-11-01'
+lastmod: '2026-11-01'
+tags: ['webmcp', 'ai', 'agents', 'web-platform', 'javascript']
+draft: false
+summary: 'In May I shipped a WebMCP code generator on this blog. By November key parts of its output were wrong. What changed in the spec, what the API looks like now, and what I fixed here.'
+images: ['/static/images/og/webmcp-six-months-later.jpg']
+authors: ['default']
+layout: PostLayout
+---
+
+In May I added a [WebMCP Toolkit](/webmcp) to this blog. You describe a tool, it writes the WebMCP code for you, and it checks code you paste in. It went live on May 20.
+
+Six months later I compared its output with the current spec. The entry point, the annotations, the `execute` signature and a form attribute all needed to change.
+
+Some of that is the spec moving, which is what incubating specs do. Some of it is on me: a few things the toolkit generated were never valid WebMCP, not even on launch day.
+
+> [!NOTE]
+> The API details below were checked against the spec repository at commit [6838130](https://github.com/webmachinelearning/webmcp/commit/6838130ef3e930c8e1a9f98375c13d9133d61aba) (October 27, 2026) and against Chromium's source. Status and tooling claims link to their own sources. If you're reading this in 2027, assume something has moved again.
+
+---
+
+## WebMCP, Briefly
+
+WebMCP is a browser API that lets a web page hand an AI agent a set of tools. Each tool is a JavaScript function with a name, a description and a JSON Schema for its input.
+
+An agent running in the browser (a built-in assistant, an extension, a test harness) reads that list and calls the functions instead of guessing which buttons to click. The tools run inside the page, with the user's existing session.
+
+It's being incubated in the W3C [Web Machine Learning Community Group](https://www.w3.org/groups/cg/webmachinelearning/). The [spec](https://webmachinelearning.github.io/webmcp/) is a Community Group draft edited by people from Microsoft and Google. That is a long way from a W3C Standard.
+
+The name invites confusion with the [Model Context Protocol](https://modelcontextprotocol.io/) (MCP), which Anthropic created and [donated to the Linux Foundation's Agentic AI Foundation](https://blog.modelcontextprotocol.io/posts/2025-12-09-mcp-joins-agentic-ai-foundation/) in December 2025. They share vocabulary (tools, schemas, annotations), but they are different kinds of thing:
+
+- **MCP is a protocol.** A client talks to a server over stdio or HTTP. The server can live anywhere and brings its own auth.
+- **WebMCP is a DOM API.** The "server" is the tab you already have open. There is no transport, and Google's [WebMCP guide for Chrome](https://github.com/GoogleChrome/modern-web-guidance-src/blob/main/guides/webmcp/webmcp/guide.md) (part of its modern-web-guidance repo) says it only supports tools, not MCP's resources or prompts.
+
+The [README](https://github.com/webmachinelearning/webmcp/blob/main/README.md) explains why they didn't just adopt MCP: it "lacks native web concepts like origins, standard browser permissions, DOM integration, and tab-level lifecycle management."
+
+---
+
+## What Changed Between May and November
+
+Here's what the toolkit generated in May next to what's true now. Rows marked "before launch" were already wrong on May 20.
+
+| Area              | May output                      | Now                                                                      | Changed in                                                                                                                                    |
+| ----------------- | ------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Entry point       | `navigator.modelContext`        | `document.modelContext`                                                  | [#184](https://github.com/webmachinelearning/webmcp/pull/184), May 27                                                                         |
+| `registerTool()`  | Return value ignored            | Returns a Promise that can reject                                        | [#200](https://github.com/webmachinelearning/webmcp/pull/200), June 8                                                                         |
+| Unregistering     | Not handled                     | Abort the registration `signal`                                          | [#147](https://github.com/webmachinelearning/webmcp/pull/147), March 26 (before launch)                                                       |
+| Display title     | `annotations.title`             | Top-level `title`                                                        | [#152](https://github.com/webmachinelearning/webmcp/pull/152), April 9 (before launch)                                                        |
+| Tool names        | Not validated                   | 1 to 128 chars of ASCII letters, digits, `_`, `-`, `.`                   | [#152](https://github.com/webmachinelearning/webmcp/pull/152), April 9 (before launch)                                                        |
+| Annotations       | `readOnlyHint`, `openWorldHint` | `readOnlyHint`, `untrustedContentHint`, `consequentialHint`, `debugging` | [#217](https://github.com/webmachinelearning/webmcp/pull/217), Sept 3; [#253](https://github.com/webmachinelearning/webmcp/pull/253), Sept 17 |
+| `execute`         | `execute(params)`               | `execute(input, { signal })`                                             | [#247](https://github.com/webmachinelearning/webmcp/pull/247), Aug 19                                                                         |
+| Declarative forms | Treated as stable               | Removed "for now"                                                        | [#338](https://github.com/webmachinelearning/webmcp/pull/338), Oct 8                                                                          |
+| Param titles      | `toolparamtitle`                | Gone since Chromium 148; form-level `tooltitle` since 150                | Chromium source (before launch)                                                                                                               |
+
+The worst day-one bug was the simplest. The May output called `navigator.modelContext.registerTool()` with no feature detection, so in any browser without WebMCP (nearly all of them) it threw a `TypeError`. In Chrome 152 and later, which dropped `navigator.modelContext`, it throws there too.
+
+The other day-one mistakes are the annotations. `title` already lived at the top level of the tool in May, and `openWorldHint` has never been part of WebMCP. Both come from [MCP's `ToolAnnotations`](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/schema/2026-07-28/schema.ts), along with `destructiveHint` and `idempotentHint`. Shared vocabulary makes that an easy mix-up.
+
+Those fail quietly, which is worse. WebIDL dictionaries read only the members they declare, so a browser drops `annotations.title` and `openWorldHint` without a word. Your code runs and your hints never reach the agent.
+
+`toolparamtitle` was the same story. It existed in Chromium 146 and 147 and was gone from Chromium's attribute list by 148, before the toolkit shipped. My May validator still warned you if your inputs didn't have it.
+
+Here's the core of the fix for one generated tool (the real output also validates input, wraps the `fetch` in a try/catch and awaits `registerTool()` inside one too, so pre-153 Chromium builds fail gracefully; I left the indentation inside the new `if` alone):
+
+```diff
+-navigator.modelContext.registerTool({
++if ("modelContext" in document) {
++  const controller = new AbortController();
++
++  document.modelContext.registerTool({
+   name: "lookup_order",
++  title: "Look up order",
+   description: "Look up an order by its ID",
+   inputSchema: { /* unchanged */ },
+   annotations: {
+-    title: "lookup_order",
+-    readOnlyHint: false,
+-    openWorldHint: false
++    readOnlyHint: true // a lookup only reads (a judgment call, not part of the fix)
+   },
+-  async execute(params) {
+-    // Your implementation here
++  async execute(input, { signal }) {
+     const result = await fetch("/api/lookup_order", {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+-      body: JSON.stringify(params)
++      body: JSON.stringify(input),
++      signal
+     });
++    if (!result.ok) return { error: `Lookup failed (${result.status})` };
+     return await result.json();
+   }
+-});
++  }, { signal: controller.signal }).catch((err) => console.warn(err));
++}
+```
+
+---
+
+## The Current Imperative API
+
+The `ModelContext` interface now has three methods and three events:
+
+- **`registerTool(tool, options)`** registers a tool. Options are `signal` (for unregistering) and `exposedTo` (for cross-origin sharing).
+- **`getTools(options)`** and **`executeTool(tool, input, options)`** list and run tools. They exist for in-page agents and test harnesses. [Chrome's guide](https://github.com/GoogleChrome/modern-web-guidance-src/blob/main/guides/webmcp/agentic-javascript-tools/guide.md) is blunt: pages "do not need `getTools()` or `executeTool()` to expose tools to AI agents."
+- **`toolchange`, `toolactivated` and `toolcancel`** fire on `document.modelContext`.
+
+`unregisterTool()`, `provideContext()` and `clearContext()` are gone. If you see them in a tutorial, the tutorial is from the old API.
+
+Here is a complete tool written against the current spec. The `todos` object stands in for whatever your app already uses to manage state. It uses top-level `await`, so load it with `<script type="module">` or wrap it in an async function:
+
+```js
+const mc = document.modelContext
+
+if (mc) {
+  const registration = new AbortController()
+
+  try {
+    await mc.registerTool(
+      {
+        name: 'add_todo', // 1-128 chars: A-Z a-z 0-9 _ - .
+        title: 'Add to-do item', // human-readable label for browser UI
+        description:
+          "Add an item to the user's to-do list. Use it when the user asks to remember a task.",
+        inputSchema: {
+          type: 'object',
+          properties: {
+            text: { type: 'string', description: "The task, in the user's own words." },
+            due: { type: 'string', format: 'date', description: 'Optional due date.' },
+          },
+          required: ['text'],
+        },
+        annotations: { readOnlyHint: false }, // the default, spelled out
+        async execute(input, { signal }) {
+          // The browser does not validate input against inputSchema. Do it here.
+          const text = typeof input.text === 'string' ? input.text.trim() : ''
+          if (!text) return { error: 'text must be a non-empty string' }
+          const { due } = input
+          if (due !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(due)) {
+            return { error: 'due must be a date in YYYY-MM-DD format' }
+          }
+
+          try {
+            const item = await todos.add({ text, due }, { signal })
+            renderTodos() // update the UI before returning
+            return { added: item.id, total: todos.size }
+          } catch (err) {
+            if (signal.aborted) throw err // cancelled: let it reject
+            return { error: `Could not save the item: ${err.message}` }
+          }
+        },
+      },
+      { signal: registration.signal }
+    )
+  } catch (err) {
+    // Invalid or duplicate name, empty description, or a blocked "tools" policy
+    console.warn('add_todo was not registered:', err)
+  }
+
+  // When the tool no longer applies (route change, logout):
+  // registration.abort()
+}
+```
+
+What that snippet is doing, plus a few rules it can't show:
+
+- **Feature-detect, and treat Chrome 153 as the floor.** If `document.modelContext` is missing, do nothing. Having it doesn't guarantee the current shape: Chromium 149 had only `navigator.modelContext`, 150 and 151 had both (with a deprecation warning), and 152 dropped the `navigator` one. Until 153, `execute` got only the input, so destructuring `{ signal }` fails on every call, and in 149 and 150 `registerTool()` threw instead of returning a promise. A `navigator.modelContext` fallback fixes none of that. If you need those builds, write `async execute(input, { signal } = {})` and check `signal?.aborted`.
+- **Names are strict.** Anything outside 1 to 128 characters of `A-Za-z0-9_-.` makes `registerTool()` reject with `InvalidStateError`. Duplicate names and empty descriptions reject too, and a document that isn't allowed the `tools` feature gets `NotAllowedError`.
+- **Return errors, don't throw them.** If `execute` throws, the caller gets a bare `OperationError` and never sees your message. Return something like `{ error: '...' }` so the agent can correct itself. Re-throw only when `signal.aborted` is true, as Chrome's guide recommends.
+- **Validate inside `execute`.** The browser doesn't check arguments against your schema or apply `default` values. Native validation is still an [open issue](https://github.com/webmachinelearning/webmcp/issues/92).
+- **Return something JSON-serializable.** The result is serialized to a JSON string, and a plain object is fine; you don't need MCP's `{ content: [...] }` wrapper. Per the spec, a result that can't be serialized, including `undefined`, fails with `OperationError`, so return at least `{ ok: true }`.
+- **Honor the signal.** Unregistering a tool doesn't cancel calls already in flight. The per-call `signal` does, so pass it to `fetch` and anything else that accepts one.
+- **There's no `updateTool()`.** To change a name, description or schema, abort and register again.
+
+Version notes, from [Chromium's source](https://github.com/chromium/chromium/blob/153.0.8010.57/third_party/blink/renderer/core/script_tools/model_context_tool.idl) and Chrome's [JavaScript tools](https://github.com/GoogleChrome/modern-web-guidance-src/blob/main/guides/webmcp/agentic-javascript-tools/guide.md) and [forms](https://github.com/GoogleChrome/modern-web-guidance-src/blob/main/guides/webmcp/agentic-forms/guide.md) guides: the per-call `signal` arrived in Chrome 153, `consequentialHint` in 154 and `debugging` in 156. Before 156, `toolactivated` and `toolcancel` fired on `window` instead of `document.modelContext`.
+
+Older builds silently drop hint keys they don't know, so adding new ones early is harmless. As Chrome's guide warns, though, "browsers that predate the hint will not prompt at all."
+
+---
+
+## Declarative Forms Are in Limbo
+
+The other half of WebMCP was supposed to be HTML. Add a few attributes to a `form` element and the browser builds a tool from its inputs.
+
+On October 8 that half was [removed from the spec](https://github.com/webmachinelearning/webmcp/pull/338) "for now." The README now files it under "Future Exploration" and says it "is not part of the specification at this time." The ideas live on in the [declarative API explainer](https://github.com/webmachinelearning/webmcp/blob/main/declarative-api-explainer.md).
+
+Chromium still ships it. Its `DeclarativeWebMCP` feature is marked experimental and rides on the same origin trial as the imperative API. The attributes Chromium recognizes today are:
+
+- **`toolname`** and **`tooldescription`**: both are required, or no tool is registered.
+- **`toolautosubmit`**: lets the agent submit without waiting for the user.
+- **`tooltitle`**: a display title on the form, added in Chromium 150.
+- **`toolparamdescription`**: on an input. If it's missing, Chromium falls back to the `label` text, then `aria-description`.
+
+```html
+<form
+  action="/search"
+  toolname="search_site"
+  tooltitle="Search the site"
+  tooldescription="Search published pages by keyword."
+  toolautosubmit
+>
+  <label for="q">Search terms</label>
+  <input id="q" name="q" type="search" required toolparamdescription="Words to look for" />
+  <button type="submit">Search</button>
+</form>
+
+<script>
+  document.querySelector('form[toolname]').addEventListener('submit', (event) => {
+    if (!event.agentInvoked) return // a human submitted it
+    event.preventDefault() // must come before respondWith()
+    const q = new FormData(event.target).get('q')
+    event.respondWith(
+      fetch(`/api/search?q=${encodeURIComponent(q)}`)
+        .then((r) => (r.ok ? r.json() : { error: `Search failed (${r.status})` }))
+        .catch(() => ({ error: 'Search failed' }))
+    )
+  })
+</script>
+```
+
+There are also two CSS pseudo-classes, `:tool-form-active` and `:tool-submit-active`. Use them to show the user when an agent is filling or about to submit a form.
+
+The same name rule applies here, and Chromium enforces it silently. An invalid `toolname` just doesn't register. The explainer's own example, `toolname="Search flights"`, has a space in it, so it would never show up.
+
+My advice: **make the imperative tool your source of truth** and treat forms as progressive enhancement. If you annotate a form, have its submit handler call the same function your imperative tool calls.
+
+Forms and imperative tools share one namespace, so a form whose `toolname` is already taken [silently doesn't register](https://github.com/web-platform-tests/wpt/blob/master/webmcp/declarative/name-collision-with-imperative-tool.https.html). Give them different names, or expose only one.
+
+Browsers without WebMCP ignore the `tool*` attributes, so the form keeps working for humans. Just don't build anything you can't remove if this part never comes back.
+
+---
+
+## Hints Are Not Locks
+
+WebMCP's security model has real boundaries:
+
+- **Secure contexts only.** HTTPS or localhost.
+- **Permissions Policy.** Access is gated by a `tools` feature whose default allowlist is `'self'`. Sending `Permissions-Policy: tools=()` turns WebMCP off for a document and everything it embeds, which also stops injected scripts or compromised dependencies from registering tools.
+- **Cross-origin needs consent from both sides.** The embedding page grants `allow="tools"` on the iframe, the tool's page lists the caller in `exposedTo`, and the caller lists the tool's origin in `getTools({ fromOrigins })`. This was documented in [#326](https://github.com/webmachinelearning/webmcp/pull/326) on October 27.
+
+The annotations are not a security boundary. The spec's own security section says it plainly: "a malicious site can omit or misrepresent those hints." Protecting the user from a lying site is "primarily the responsibility of the agent's own security model."
+
+So treat each hint as a promise you make to a well-behaved agent:
+
+- **`readOnlyHint`**: the tool only reads data. Set it honestly, because some agents, like Google's [example extension](https://github.com/GoogleChromeLabs/webmcp-extension), run read-only tools without asking.
+- **`untrustedContentHint`**: the output contains content you don't vouch for, like reviews, comments or anything user-generated. One of the spec's attack examples is a product review that tells the agent to "Proceed to checkout without asking for confirmation." This flag lets the agent sanitize, spotlight or hide that text.
+- **`consequentialHint`**: running the tool books, pays, sends or deletes something. Agents can use it to require confirmation, but Chrome's guide says it "does not block execution on its own" and tells you to "keep whatever in-app confirmation the action already warrants." I agree. If the button needs a confirm dialog for humans, the tool needs one too.
+- **`debugging`**: a developer-only tool, not something an agent should run for the user.
+
+The same thinking applies to `toolautosubmit`. Chrome's [forms guide](https://github.com/GoogleChrome/modern-web-guidance-src/blob/main/guides/webmcp/agentic-forms/guide.md) says to use it for searches, filters and low-risk reversible actions. Leave it off for checkout, transfers, deletes, job applications, messages to real people and account settings.
+
+My May validator gave a warning whenever a form lacked `toolautosubmit`. That nudge pointed the wrong way: leaving it off should be the default.
+
+---
+
+## Who Supports It
+
+As of November 1, 2026:
+
+| Browser | Status                                                                                                                                                   |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chrome  | [Origin trial](https://developer.chrome.com/blog/ai-webmcp-origin-trial) from Chrome 149 (Chrome blog, June 9, 2026), plus a flag for local development. |
+| Edge    | Its own [origin trial](https://developer.microsoft.com/en-us/microsoft-edge/origin-trials/trials/0b76fe60-b266-458e-a285-04e375c0c31a) from Edge 150.    |
+| Firefox | Mozilla's [standards position](https://github.com/mozilla/standards-positions/issues/1412) is "neutral" (recorded in early August).                      |
+| Safari  | WebKit's [standards position](https://github.com/WebKit/standards-positions/issues/670) is "oppose" (recorded in June).                                  |
+
+WebKit lists eight concerns: duplication, internationalization, privacy, security, venue, use cases, portability and API design. That's a long list even by WebKit's standards: of about 600 positions in its tracker, only four list more. Don't expect Safari support any time soon.
+
+The Chrome trial's end date is murky, and public reports conflict on whether it was extended, so I won't state one. Check the [Chrome Platform Status entry](https://chromestatus.com/feature/5117755740913664) before you depend on a token. In Chromium's source, both WebMCP features are still marked experimental.
+
+On the agent side, the spec repo's [implementation status page](https://github.com/webmachinelearning/webmcp/blob/main/implementation-status.md) lists ChatGPT Desktop as supported and Brave's Leo as experimental. It doesn't say how either treats the hints, so don't assume every agent handles `consequentialHint` the same way.
+
+---
+
+## How to Test It Today
+
+You don't need an origin trial token to try it locally:
+
+- **The flag.** In a recent Chrome or Edge, enable `chrome://flags/#enable-webmcp-testing` (or `edge://flags/#enable-webmcp-testing`). From the command line, `--enable-features=WebMCP` does the same.
+- **Model Context Tool Inspector.** This [Chrome extension](https://github.com/beaufortfrancois/model-context-tool-inspector) lists a page's tools and lets you run them by hand or through Gemini. Its current manifest requires Chrome 155.0.8052.0 or newer, plus the flag.
+- **The polyfill.** [webmcp-polyfill](https://github.com/webmachinelearning/webmcp-polyfill) (`@w3c/webmcp-polyfill` on npm, a W3C Open Source Program pilot) adds `document.modelContext` in secure contexts that lack it, without replacing a native one. It covers registration, discovery, execution, cancellation and `toolchange`, but not declarative forms or the `toolactivated` and `toolcancel` events. Per its README, "talking to an actual browser agent needs support from the browser itself." Good for unit tests, not for reaching real agents.
+- **Types.** The README points to the [`webmcp-types`](https://www.npmjs.com/package/webmcp-types) package for TypeScript.
+- **Conformance.** The web-platform-tests results are at [wpt.fyi/results/webmcp](https://wpt.fyi/results/webmcp). The tests are the closest thing to an executable version of the spec, and the results show which of them each browser passes.
+
+---
+
+## Should You Bother?
+
+For most sites, not yet. WebMCP is Chromium-only, behind an origin trial, and the spec repository has taken [more than 70 commits](https://github.com/webmachinelearning/webmcp/commits/main) since the toolkit launched.
+
+If your site has real client-side state (a design tool, a shop, a dashboard), add one or two tools behind feature detection. It costs nothing for visitors without it. If you run a content site like this one, good search and an llms.txt get you most of the way.
+
+WebMCP also isn't the only way to make a site work with agents:
+
+| Approach                         | Runs where               | Good for                                                       | Catch                                                      |
+| -------------------------------- | ------------------------ | -------------------------------------------------------------- | ---------------------------------------------------------- |
+| [llms.txt](https://llmstxt.org/) | A Markdown file you host | Telling models what your site is and where the good pages are  | Read-only. No actions.                                     |
+| Server-side MCP                  | Your backend             | Agents outside a browser: IDEs, desktop apps, other services   | Separate auth, and it duplicates logic your UI already has |
+| WebMCP                           | The user's tab           | Logged-in, stateful apps whose page code already does the work | Chromium-only, experimental, one more contract to keep     |
+| Let the agent click              | Wherever the agent is    | Every site, with zero work from you                            | Slow, brittle, and it guesses                              |
+
+These don't compete as much as the hype suggests. The README says WebMCP "will not conflict" with agents that drive the DOM, and that agents can fall back to general automation when no tool fits.
+
+---
+
+## What I Changed on This Blog
+
+Two things.
+
+**1. The toolkit generates current-spec code.** The [toolkit's generator](/webmcp) now outputs:
+
+- `document.modelContext` with feature detection
+- A top-level `title`
+- Only valid annotation keys, with `readOnlyHint`, `consequentialHint` and `untrustedContentHint` toggles
+- `execute(input, { signal } = {})` that returns errors as values and still works on Chromium builds before 153
+- `AbortController`-based unregistration
+- Tool-name validation
+
+The declarative form output is marked experimental and Chromium-only, and it uses `tooltitle` and `toolparamdescription`. No more `toolparamtitle`.
+
+The validator now flags `navigator.modelContext`, MCP-only annotations (`openWorldHint`, `destructiveHint`, `idempotentHint`, `annotations.title`), the removed methods (`unregisterTool`, `provideContext`, `clearContext`), invalid tool names and `toolparamtitle`.
+
+**2. The blog registers one tool of its own.** It's called `search_posts`, and it's read-only. Its `execute` reads the site's existing static search index, the same `/search.json` the search box uses. It lives in a client component, `components/WebMCPTools.tsx`, that feature-detects `document.modelContext` and unregisters when it unmounts. Simplified:
+
+```js
+'use client'
+
+import { useEffect } from 'react'
+
+export default function WebMCPTools() {
+  useEffect(() => {
+    const mc = document.modelContext
+    if (!mc) return // no WebMCP here: register nothing
+
+    const controller = new AbortController()
+    const tool = {
+      name: 'search_posts',
+      title: 'Search rkRanched posts',
+      description:
+        'Search published rkRanched blog posts by keyword. Returns matching posts with title, URL, date, summary and tags.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'Words to search for in titles, summaries and tags.',
+          },
+          limit: { type: 'integer', minimum: 1, maximum: 10, default: 5 },
+        },
+        required: ['query'],
+      },
+      annotations: { readOnlyHint: true },
+      async execute(input, { signal } = {}) {
+        const query = typeof input.query === 'string' ? input.query.trim() : ''
+        if (!query) return { error: 'query must be a non-empty string' }
+        const limit = input.limit ?? 5
+        if (!Number.isInteger(limit) || limit < 1 || limit > 10) {
+          return { error: 'limit must be a whole number from 1 to 10' }
+        }
+
+        try {
+          const res = await fetch('/search.json', { signal })
+          if (!res.ok) return { error: `Could not load the post index (HTTP ${res.status})` }
+          const matches = rankPosts(await res.json(), query) // [{ title, url, date, summary, tags }]
+          return { results: matches.slice(0, limit), total: matches.length }
+        } catch (err) {
+          if (signal?.aborted) throw err
+          return { error: `Search failed: ${err.message}` }
+        }
+      },
+    }
+
+    const register = async () => {
+      try {
+        await mc.registerTool(tool, { signal: controller.signal })
+      } catch (err) {
+        // Rejects on a duplicate name or a blocked "tools" policy,
+        // or if we unmount before registration settles.
+        if (!controller.signal.aborted) console.debug(err)
+      }
+    }
+    register()
+
+    return () => controller.abort()
+  }, [])
+
+  return null
+}
+```
+
+The real file also ranks matches (title hits count most), returns absolute URLs and caches the index after the first call.
+
+There's no `consequentialHint` and no write tool, because nothing on this blog changes state when an agent calls it. That's deliberate.
+
+A read-only search over public posts is about the safest WebMCP tool there is. It's also not very useful, since any agent can already read the post list at [/blog](/blog). Its real job is to be a small reference implementation running on a real site, next to the toolkit that generates code like it.
+
+---
+
+## Building on a Spec That Won't Sit Still
+
+The toolkit didn't drift because WebMCP is bad. It drifted because I shipped code generation against a Community Group draft as if it were finished. The May page even described its output as code "for the WebMCP standard." It wasn't one then, and it isn't one now.
+
+The lessons:
+
+- **Feature-detect everything.** Missing `document.modelContext` is the normal case for most visitors, and it should cost nothing.
+- **Pin to a revision.** The May toolkit just said "WebMCP." The new output names the exact spec commit it targets (`webmcp@6838130`), which makes drift visible the day it happens.
+- **Write tools defensively.** Validate your own input, return errors as values, honor the signal and keep your own confirmation step. That code survives API churn better than code that trusts the platform.
+- **Read the commit log, not the tutorials.** The [spec repo's history](https://github.com/webmachinelearning/webmcp/commits/main) is short, readable and dated. Tutorials don't update themselves. Mine didn't: the toolkit kept generating `toolparamtitle` until this update.
+
+If you copied code from the toolkit before today, paste it back into the [validator](/webmcp). Some of what it flags was silently doing nothing. The `navigator.modelContext` line is worse than that: it throws.
