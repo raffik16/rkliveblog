@@ -89,16 +89,6 @@ module.exports = () => {
         },
       ]
     },
-    async redirects() {
-      return [
-        // Removed post: send old links to the post that replaced it
-        {
-          source: '/blog/best-ab-testing-tools-stellar',
-          destination: '/blog/rolling-my-own-ab-testing',
-          permanent: true,
-        },
-      ]
-    },
     webpack: (config, options) => {
       config.module.rules.push({
         test: /\.svg$/,
