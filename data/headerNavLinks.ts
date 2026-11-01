@@ -1,9 +1,10 @@
+// Home stays first for the mobile menu; the desktop header skips it (the logo links home).
+// Tags and WebMCP are reachable from the /blog filters and the /lab page.
 const headerNavLinks = [
   { href: '/', title: 'Home' },
   { href: '/blog', title: 'Blog' },
-  { href: '/tags', title: 'Tags' },
+  { href: '/lab', title: 'Lab' },
   { href: '/projects', title: 'Projects' },
-  { href: '/webmcp', title: 'WebMCP' },
   { href: '/about', title: 'About' },
 ]
 

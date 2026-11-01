@@ -192,10 +192,8 @@ const TextType: React.FC<TextTypeProps> = ({
       style={{ minHeight: minHeight > 0 ? `${minHeight}px` : undefined }}
       {...props}
     >
-      <span
-        className="text-type__content whitespace-nowrap"
-        style={{ color: getCurrentTextColor() || 'inherit' }}
-      >
+      {/* No forced nowrap: inside an overflow-hidden parent a long phrase would be clipped on phones */}
+      <span className="text-type__content" style={{ color: getCurrentTextColor() || 'inherit' }}>
         {displayedText}
       </span>
       {showCursor && (

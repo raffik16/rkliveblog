@@ -82,14 +82,19 @@
 
 @layer utilities {
   .prose {
+    /* primary-700/800 keep small link text above WCAG AA 4.5:1 on white (primary-500 is ~3.3:1) */
     & a {
-      color: var(--color-primary-500);
+      color: var(--color-primary-700);
       &:hover {
-        color: var(--color-primary-600);
+        color: var(--color-primary-800);
       }
       & code {
         color: var(--color-primary-400);
       }
+    }
+    /* Keep in-page anchor targets (TOC, heading links) clear of the sticky header */
+    & :where(h1, h2, h3, h4, h5, h6) {
+      scroll-margin-top: 6rem;
     }
     & :where(h1, h2) {
       font-weight: 700;
@@ -100,6 +105,24 @@
     }
     & :where(code):not(pre code) {
       color: var(--color-indigo-500);
+    }
+  }
+
+  /*
+    Dark mode. `dark:prose-invert` only swaps the typography plugin's own color variables; it
+    does not apply the plain `.prose-invert` rules below (Tailwind v4 no longer turns classes in
+    @layer utilities into variant-aware utilities), so dark overrides are keyed off `.dark`.
+  */
+  .dark .prose {
+    & a {
+      color: var(--color-primary-500);
+      &:hover {
+        color: var(--color-primary-400);
+      }
+    }
+    /* indigo-500 is ~4.3:1 on gray-950; indigo-400 is ~6.4:1 */
+    & :where(code):not(pre code) {
+      color: var(--color-indigo-400);
     }
   }
 
@@ -174,6 +197,34 @@ input:-webkit-autofill:focus {
 .linkicon {
   display: inline-block;
   vertical-align: middle;
+}
+
+/* "On this page" sidebar list in layouts/PostLayout.tsx (links rendered by pliny's TOCInline) */
+.post-toc {
+  & ul ul {
+    margin-top: 0.25rem;
+    padding-left: 0.75rem;
+  }
+  & a {
+    display: block;
+    padding-block: 0.125rem;
+    color: var(--color-gray-500);
+    transition: color 150ms ease;
+    &:hover {
+      color: var(--color-primary-700);
+    }
+    /* The list can scroll, which would clip an outset focus ring */
+    &:focus-visible {
+      outline-offset: -2px;
+    }
+  }
+}
+
+.dark .post-toc a {
+  color: var(--color-gray-400);
+  &:hover {
+    color: var(--color-primary-400);
+  }
 }
 
 /* Frosted Glass with Gradient Borders */

@@ -10,10 +10,12 @@ const NewsletterForm = ({ title = 'Subscribe to the newsletter' }: NewsletterFor
   const inputEl = useRef<HTMLInputElement>(null)
   const [subscribed, setSubscribed] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
+    setError(null)
 
     const form = e.currentTarget
     const formData = new FormData(form)
@@ -32,9 +34,12 @@ const NewsletterForm = ({ title = 'Subscribe to the newsletter' }: NewsletterFor
         if (inputEl.current) {
           inputEl.current.value = ''
         }
+      } else {
+        setError("Sorry, that didn't go through. Please check your email address and try again.")
       }
-    } catch (error) {
-      console.error('Error submitting form:', error)
+    } catch (err) {
+      console.error('Error submitting form:', err)
+      setError("Couldn't reach the signup service. Please check your connection and try again.")
     } finally {
       setLoading(false)
     }
@@ -57,15 +62,14 @@ const NewsletterForm = ({ title = 'Subscribe to the newsletter' }: NewsletterFor
               required
               type="email"
               disabled={subscribed || loading}
+              aria-describedby={error ? 'newsletter-error' : undefined}
             />
           </label>
         </div>
         <div className="mt-2 flex w-full rounded-md shadow-sm sm:mt-0 sm:ml-3">
           <button
-            className={`bg-primary-500 w-full rounded-md px-4 py-2 font-medium text-white sm:py-0 ${
-              subscribed || loading
-                ? 'cursor-default'
-                : 'hover:bg-primary-700 dark:hover:bg-primary-400'
+            className={`bg-primary-700 w-full rounded-md px-4 py-2 font-medium text-white sm:py-0 ${
+              subscribed || loading ? 'cursor-default' : 'hover:bg-primary-800'
             } focus:ring-primary-600 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-black`}
             type="submit"
             disabled={subscribed || loading}
@@ -74,6 +78,15 @@ const NewsletterForm = ({ title = 'Subscribe to the newsletter' }: NewsletterFor
           </button>
         </div>
       </form>
+      {error && (
+        <p
+          id="newsletter-error"
+          role="alert"
+          className="mt-2 max-w-md text-sm text-red-700 dark:text-red-400"
+        >
+          {error}
+        </p>
+      )}
     </div>
   )
 }

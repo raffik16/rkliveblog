@@ -12,6 +12,7 @@ import PostLayout from '@/layouts/PostLayout'
 import PostBanner from '@/layouts/PostBanner'
 import { Metadata } from 'next'
 import siteMetadata from '@/data/siteMetadata'
+import { twitterHandle } from 'app/seo'
 import { notFound } from 'next/navigation'
 
 const defaultLayout = 'PostLayout'
@@ -72,6 +73,8 @@ export async function generateMetadata(props: {
     },
     twitter: {
       card: 'summary_large_image',
+      site: twitterHandle,
+      creator: twitterHandle,
       title: post.title,
       description: post.summary,
       images: imageList,

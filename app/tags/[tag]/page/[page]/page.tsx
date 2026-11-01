@@ -4,8 +4,31 @@ import ListLayout from '@/layouts/ListLayoutWithTags'
 import { allBlogs } from 'contentlayer/generated'
 import tagData from 'app/tag-data.json'
 import { notFound } from 'next/navigation'
+import { Metadata } from 'next'
+import siteMetadata from '@/data/siteMetadata'
+import { genPageMetadata } from 'app/seo'
 
-const POSTS_PER_PAGE = 5
+const POSTS_PER_PAGE = 12
+
+export async function generateMetadata(props: {
+  params: Promise<{ tag: string; page: string }>
+}): Promise<Metadata> {
+  const params = await props.params
+  const tag = decodeURI(params.tag)
+  const pageNumber = parseInt(params.page)
+  // Page 1 is the same listing as /tags/<tag>, so it points its canonical there
+  const path = pageNumber > 1 ? `/tags/${tag}/page/${pageNumber}` : `/tags/${tag}`
+  return genPageMetadata({
+    title: pageNumber > 1 ? `${tag} - Page ${pageNumber}` : tag,
+    description: `${siteMetadata.title} ${tag} tagged content`,
+    path,
+    alternates: {
+      types: {
+        'application/rss+xml': `${siteMetadata.siteUrl}/tags/${tag}/feed.xml`,
+      },
+    },
+  })
+}
 
 export const generateStaticParams = async () => {
   const tagCounts = tagData as Record<string, number>

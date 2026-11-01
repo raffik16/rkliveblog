@@ -23,6 +23,8 @@ export default function PostMinimal({ content, next, prev, children }: LayoutPro
     images && images.length > 0 ? images[0] : 'https://picsum.photos/seed/picsum/800/400'
 
   return (
+    // Unlike the other post layouts this keeps its own SectionContainer: pliny's <Bleed> pulls the
+    // banner out with negative margins and relies on the extra side room this inner wrapper adds.
     <SectionContainer>
       <ScrollTopAndComment />
       <article>
@@ -39,38 +41,41 @@ export default function PostMinimal({ content, next, prev, children }: LayoutPro
               <PageTitle>{title}</PageTitle>
             </div>
           </div>
-          <div className="prose dark:prose-invert max-w-none py-4">{children}</div>
-          {siteMetadata.comments && (
-            <div className="pt-6 pb-6 text-center text-gray-700 dark:text-gray-300" id="comment">
-              <Comments slug={slug} />
-            </div>
-          )}
-          <footer>
-            <div className="flex flex-col text-sm font-medium sm:flex-row sm:justify-between sm:text-base">
-              {prev && prev.path && (
-                <div className="pt-4 xl:pt-8">
-                  <Link
-                    href={`/${prev.path}`}
-                    className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-                    aria-label={`Previous post: ${prev.title}`}
-                  >
-                    &larr; {prev.title}
-                  </Link>
-                </div>
-              )}
-              {next && next.path && (
-                <div className="pt-4 xl:pt-8">
-                  <Link
-                    href={`/${next.path}`}
-                    className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-                    aria-label={`Next post: ${next.title}`}
-                  >
-                    {next.title} &rarr;
-                  </Link>
-                </div>
-              )}
-            </div>
-          </footer>
+          {/* The banner above stays wide; text below is held to a readable measure. */}
+          <div className="mx-auto max-w-[70ch]">
+            <div className="prose dark:prose-invert max-w-none py-4">{children}</div>
+            {siteMetadata.comments && (
+              <div className="pt-6 pb-6 text-center text-gray-700 dark:text-gray-300" id="comment">
+                <Comments slug={slug} />
+              </div>
+            )}
+            <footer>
+              <div className="flex flex-col text-sm font-medium sm:flex-row sm:justify-between sm:text-base">
+                {prev && prev.path && (
+                  <div className="pt-4 xl:pt-8">
+                    <Link
+                      href={`/${prev.path}`}
+                      className="text-primary-700 hover:text-primary-800 dark:text-primary-500 dark:hover:text-primary-400"
+                      aria-label={`Previous post: ${prev.title}`}
+                    >
+                      &larr; {prev.title}
+                    </Link>
+                  </div>
+                )}
+                {next && next.path && (
+                  <div className="pt-4 xl:pt-8">
+                    <Link
+                      href={`/${next.path}`}
+                      className="text-primary-700 hover:text-primary-800 dark:text-primary-500 dark:hover:text-primary-400"
+                      aria-label={`Next post: ${next.title}`}
+                    >
+                      {next.title} &rarr;
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </footer>
+          </div>
         </div>
       </article>
     </SectionContainer>

@@ -7,7 +7,7 @@ import tagData from 'app/tag-data.json'
 import { genPageMetadata } from 'app/seo'
 import { Metadata } from 'next'
 
-const POSTS_PER_PAGE = 5
+const POSTS_PER_PAGE = 12
 
 export async function generateMetadata(props: {
   params: Promise<{ tag: string }>
@@ -17,8 +17,8 @@ export async function generateMetadata(props: {
   return genPageMetadata({
     title: tag,
     description: `${siteMetadata.title} ${tag} tagged content`,
+    path: `/tags/${tag}`,
     alternates: {
-      canonical: './',
       types: {
         'application/rss+xml': `${siteMetadata.siteUrl}/tags/${tag}/feed.xml`,
       },

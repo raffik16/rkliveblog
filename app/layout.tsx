@@ -12,7 +12,9 @@ import Footer from '@/components/Footer'
 import siteMetadata from '@/data/siteMetadata'
 import { ThemeProviders } from './theme-providers'
 import { Metadata } from 'next'
+import { twitterHandle } from './seo'
 import { ScrollProgress } from '@/components/animations'
+import WebMCPTools from '@/components/WebMCPTools'
 
 const space_grotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -24,7 +26,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteMetadata.siteUrl),
   title: {
     default: siteMetadata.title,
-    template: `%s | ${siteMetadata.title}`,
+    template: `%s | ${siteMetadata.headerTitle}`,
   },
   description: siteMetadata.description,
   openGraph: {
@@ -43,8 +45,9 @@ export const metadata: Metadata = {
     locale: 'en_US',
     type: 'website',
   },
+  // No root canonical: it would be inherited by every page that doesn't set its own and point
+  // them all at the homepage. Pages declare their canonical via genPageMetadata({ path }).
   alternates: {
-    canonical: siteMetadata.siteUrl,
     types: {
       'application/rss+xml': `${siteMetadata.siteUrl}/feed.xml`,
     },
@@ -63,6 +66,8 @@ export const metadata: Metadata = {
   twitter: {
     title: siteMetadata.title,
     card: 'summary_large_image',
+    site: twitterHandle,
+    creator: twitterHandle,
     images: [siteMetadata.socialBanner],
   },
 }
@@ -73,12 +78,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang={siteMetadata.language}
-      className={`${space_grotesk.variable} scroll-smooth`}
+      className={`${space_grotesk.variable} motion-safe:scroll-smooth`}
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <link
         rel="apple-touch-icon"
-        sizes="76x76"
+        sizes="180x180"
         href={`${basePath}/static/favicons/apple-touch-icon.png`}
       />
       <link
@@ -134,11 +140,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
                 name: siteMetadata.author,
                 url: siteMetadata.siteUrl,
               },
-              potentialAction: {
-                '@type': 'SearchAction',
-                target: `${siteMetadata.siteUrl}/blog?q={search_term_string}`,
-                'query-input': 'required name=search_term_string',
-              },
             }),
           }}
         />
@@ -156,6 +157,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <ThemeProviders>
           <ScrollProgress color="#FF5B04" height={4} position="top" />
           <Analytics analyticsConfig={siteMetadata.analytics as AnalyticsConfig} />
+          {/* Registers a read-only search_posts WebMCP tool where the browser supports it */}
+          <WebMCPTools />
           <SectionContainer>
             <SearchProvider searchConfig={siteMetadata.search as SearchConfig}>
               <Header />

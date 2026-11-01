@@ -1,0 +1,507 @@
+---
+title: 'The JavaScript You Can Delete: CSS and HTML in Late 2026'
+date: '2026-11-01'
+lastmod: '2026-11-01'
+tags: ['css', 'html', 'web-platform', 'javascript', 'animation', 'frontend']
+draft: false
+summary: 'Firefox 159 just brought scroll-driven animations to every engine. A field guide to the JS patterns CSS and HTML now replace, which need a fallback, and which are still Chromium-only.'
+images: ['/static/images/og/javascript-you-can-delete.jpg']
+authors: ['default']
+layout: PostLayout
+---
+
+On October 27, [Firefox 159](https://developer.mozilla.org/en-US/docs/Mozilla/Firefox/Releases/159) turned on CSS scroll-driven animations by default. That was the last holdout. MDN's [browser-compat-data](https://github.com/mdn/browser-compat-data/blob/0efedff8c8b6f131ad029443056bc74e00b1aca2/css/properties/animation-timeline.json) now lists `animation-timeline` in Chrome 115, Safari 26 and Firefox 159.
+
+You'd expect that to make it Baseline. Officially, it isn't yet.
+
+[web-features](https://github.com/web-platform-dx/web-features/blob/f8963c8ebf20d47143bf30fe545fa99ae1a8b884/features/scroll-driven-animations.yml.dist), the project that computes Baseline status, still said `baseline: false` on October 30. It [pins](https://github.com/web-platform-dx/web-features/blob/f8963c8ebf20d47143bf30fe545fa99ae1a8b884/package.json) browser-compat-data 8.1.7, which was [released on October 22](https://github.com/mdn/browser-compat-data/releases/tag/v8.1.7), five days before Firefox 159 shipped.
+
+The badge will catch up. The browsers already have.
+
+Baseline is a label computed from data, and the label trails the data. This post is a field guide to the JavaScript patterns CSS and HTML can now replace: minimal code, current support, and the gotcha that will bite you. At the end, I hold this blog's own components up against it.
+
+---
+
+## The Three-Tier Rule
+
+Every feature in this post goes into one of three buckets:
+
+1. **Baseline: delete the JavaScript, once the fallback is acceptable.** It works in current Chrome, Edge, Firefox and Safari, desktop and mobile. Features that became Baseline this year still miss iPhones on iOS 18 and [Firefox ESR 153](https://github.com/mdn/browser-compat-data/blob/0efedff8c8b6f131ad029443056bc74e00b1aca2/browsers/firefox.json) (no `sibling-index()`, no scroll-driven animations), so check what those users get. Once a feature is Widely available, the JS version is legacy code.
+2. **Two of three engines: ship it as an enhancement.** Make sure the third engine gets something acceptable, usually the plain, unanimated version.
+3. **Chromium-only: purely additive.** Feature-detect it (`@supports` for CSS) and never let anything depend on it.
+
+At a glance:
+
+| Pattern                             | Replaces                       | Tier                         |
+| ----------------------------------- | ------------------------------ | ---------------------------- |
+| `popover` + `commandfor`            | menu toggles, click-outside JS | 1                            |
+| `<dialog>` + `command="show-modal"` | modal and focus-trap code      | 1 (`closedby`: 2)            |
+| `<details name>`                    | accordion state                | 1                            |
+| Anchor positioning                  | Floating UI, Popper            | 1                            |
+| `field-sizing: content`             | autosize scripts               | 1                            |
+| Scroll-driven animations            | scroll listeners, `useScroll`  | 1 decorative, 2 load-bearing |
+| `@starting-style`                   | next-frame class toggles       | 1 (exits: 2)                 |
+| `sibling-index()`                   | per-item `--i` styles          | 1                            |
+| `light-dark()`                      | duplicated dark-mode blocks    | 1                            |
+| `appearance: base-select`           | custom listboxes               | 2                            |
+| `@view-transition`                  | MPA page-transition libraries  | 2                            |
+| `interpolate-size`                  | `scrollHeight` measuring       | 3                            |
+
+---
+
+## Tier 1: Delete the JavaScript
+
+### Menus: `popover` plus invoker commands
+
+**Replaces:** a click handler, a click-outside listener, an Escape listener, and the code that stops two menus opening at once.
+
+```html
+<button commandfor="share-menu" command="toggle-popover">Share</button>
+
+<div id="share-menu" popover>
+  <a href="/feed.xml">RSS feed</a>
+  <button commandfor="share-menu" command="hide-popover">Close</button>
+</div>
+```
+
+That's a working menu. A bare `popover` attribute means `popover="auto"`. It renders in the top layer, closes on Escape or an outside click, and opening it closes any other auto popover that isn't its ancestor. `popovertarget` does the same job; the gotcha below is why you might prefer it.
+
+**Support:** `popover` has been [Baseline since 2025-01-27](https://github.com/web-platform-dx/web-features/blob/f8963c8ebf20d47143bf30fe545fa99ae1a8b884/features/popover.yml.dist) (Chrome 116, Firefox 125, Safari 17, iOS Safari 18.3). [Invoker commands](https://developer.mozilla.org/en-US/docs/Web/API/Invoker_Commands_API) (`commandfor` and `command`) have been Baseline since 2025-12-12 (Chrome 135, Firefox 144, Safari 26.2).
+
+**Gotcha:** [MDN](https://developer.mozilla.org/en-US/docs/Web/API/Popover_API/Using) documents the focus-order fix and the implicit `aria-expanded`/`aria-details` wiring for the older `popovertarget` attribute specifically. If the accessibility tree matters to you, and it should, `popovertarget` is the conservative choice, and it has worked since Safari 17.
+
+### Modals: `<dialog>` with `command="show-modal"`
+
+**Replaces:** `showModal()` click handlers, focus-trap libraries, and most of a headless dialog component.
+
+```html
+<button commandfor="nav" command="show-modal">Menu</button>
+
+<dialog id="nav" closedby="any" aria-label="Site navigation">
+  <button commandfor="nav" command="close">Close</button>
+  <nav><a href="/blog">Blog</a> <a href="/projects">Projects</a></nav>
+</dialog>
+```
+
+`command="show-modal"` is the declarative version of `showModal()`. The page behind goes inert, focus moves inside, and Escape closes it. `closedby="any"` adds light dismiss, so a click on the backdrop closes it too.
+
+For scroll locking, MDN [describes](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/overscroll-behavior) the trick: a scroll container with no scrollable overflow is always at its boundary, so `overscroll-behavior: contain` on it blocks scroll chaining.
+
+```css
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+```
+
+**Support:** `<dialog>` is Baseline Widely available. [`closedby`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/dialog) is the odd one out: Chrome 134 and Firefox 141, but only Technology Preview in Safari. That makes it a tier 2 feature hiding inside a tier 1 pattern.
+
+**Gotchas:**
+
+- **No `closedby` in Safari.** Without a valid `closedby`, a dialog opened with `showModal()` behaves like `closedby="closerequest"`: Escape works, backdrop clicks don't. That's a fine fallback.
+- **The scroll lock is shakier.** BCD says `overscroll-behavior` only fully works on non-scrollable containers in Chrome 144+ and Firefox 150+, and Safari is still partial. Test on an iPhone before you delete your scroll-lock library.
+
+### Accordions: `<details name>` and `::details-content`
+
+**Replaces:** the accordion component that keeps `openIndex` in state.
+
+```html
+<details name="faq" open>
+  <summary>Does this need JavaScript?</summary>
+  <p>No. Opening one closes the others in the same group.</p>
+</details>
+<details name="faq">
+  <summary>Can I animate it?</summary>
+  <p>Partly. Read on.</p>
+</details>
+```
+
+```css
+details::details-content {
+  opacity: 0;
+  transition:
+    opacity 300ms,
+    content-visibility 300ms allow-discrete;
+}
+
+details[open]::details-content {
+  opacity: 1;
+}
+```
+
+**Support:** exclusive `<details name>` has been [Baseline since 2024-09-03](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/details) (Chrome 120, Firefox 130, Safari 17.2). [`::details-content`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/::details-content) since 2025-09-16 (Chrome 131, Firefox 143, Safari 18.4).
+
+**Gotchas:**
+
+- **Firefox can't animate the close.** The fade-out depends on transitioning `content-visibility`, which Firefox doesn't support yet, so the panel fades in and closes instantly.
+- **One `open` per group.** If several grouped elements carry `open`, only the first in source order renders open.
+
+### Tooltips and dropdowns: anchor positioning
+
+**Replaces:** Floating UI, Popper, and the `getBoundingClientRect()` plus resize-and-scroll-listener routine.
+
+The menu from earlier already has an anchor. Per MDN's [anchor positioning guide](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Anchor_positioning/Using), `commandfor` and `popovertarget` create an implicit anchor reference to the button. Tethering the menu is pure CSS:
+
+```css
+@supports (position-area: block-end) {
+  #share-menu {
+    margin: 0;
+    position-anchor: auto;
+    position-area: block-end span-inline-end;
+    position-try-fallbacks: flip-block, flip-inline;
+  }
+}
+```
+
+`position-area` drops the menu below the button, lined up with its start edge. [`position-try-fallbacks`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/position-try-fallbacks) flips it above, or to the other side, when it would overflow. That's Floating UI's `flip()` middleware in one line.
+
+Keep the margin reset inside `@supports`. Without anchor positioning, the UA's centred box is a fine fallback, but an unconditional `margin: 0` pins the menu to the top-left corner.
+
+**Support:** [Firefox 147](https://developer.mozilla.org/en-US/docs/Mozilla/Firefox/Releases/147) enabled anchor positioning on January 13, 2026, and the core properties became Baseline that day (Chrome 125, Safari 26; `position-area` itself needs Chrome 129). The [umbrella web-features entry](https://github.com/web-platform-dx/web-features/blob/f8963c8ebf20d47143bf30fe545fa99ae1a8b884/features/anchor-positioning.yml.dist) still reads "not Baseline", but only because of `position-visibility: anchor-valid` and `anchor-visible`. Those ship only in Safari 27 today; BCD lists them for Chrome 157, due November 3, and Firefox has neither.
+
+**Gotchas:**
+
+- **The default popover margin.** Popovers get `margin: auto` from the UA stylesheet so they centre in the viewport. When you position with `anchor()` or `anchor-center`, [MDN](https://developer.mozilla.org/en-US/docs/Web/API/Popover_API/Using) advises setting it to `0`. `position-area` is meant to zero auto margins on its own, but BCD lists gaps (Chrome 130 to 142, Firefox 147, Safari before 26.2), so the snippet sets `margin: 0` anyway.
+- **Set `position-anchor` explicitly.** Its initial value has changed more than once across engines (BCD tracks `auto`, then `none`, then the spec's `normal`). `position-anchor: auto` gives the same result in all of them.
+- **Hover tooltips still need a little JS.** `interestfor` is Chromium-only, and `popover="hint"` is still Technology Preview-only in Safari. Cross-browser, make the tooltip `popover="manual"` so showing it doesn't close an open menu, then call `showPopover({ source: button })` on `mouseenter` and `focus`, and `hidePopover()` on `mouseleave` and `blur`. The positioning stays in CSS.
+
+### Auto-growing textareas: `field-sizing`
+
+**Replaces:** autosize libraries and the "measure `scrollHeight` on every input event" trick.
+
+```css
+textarea {
+  field-sizing: content;
+  inline-size: 100%;
+  min-block-size: 3lh;
+  max-block-size: 15lh;
+}
+```
+
+**Support:** Baseline since 2026-06-16, when [Firefox 152](https://developer.mozilla.org/en-US/docs/Mozilla/Firefox/Releases/152) shipped it (Chrome 123, Safari 26.2).
+
+**Gotcha:** per [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/field-sizing), `rows` and `cols` are ignored under `field-sizing: content`, so set the minimum with `min-block-size` in `lh` units instead. Give it a width too. Without one, the textarea starts as wide as the caret and grows sideways before it grows down. It looks like a bug until you remember you asked for it. And skip a fixed `height`, which overrides the auto-sizing.
+
+### Reading progress and scroll reveals: scroll-driven animations
+
+**Replaces:** scroll listeners with `requestAnimationFrame`, `IntersectionObserver` reveal scripts, framer-motion's `useScroll`, and GSAP ScrollTrigger with `scrub`.
+
+The headline act. A reading-progress bar:
+
+```css
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.progress {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 4px;
+  background: #ff5b04;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
+
+@supports (animation-timeline: scroll()) {
+  .progress {
+    animation: grow 1ms linear both;
+    animation-timeline: scroll(root);
+  }
+}
+```
+
+And reveal-on-scroll, which needs the reduced-motion guard more than the bar does:
+
+```css
+@keyframes reveal {
+  from {
+    opacity: 0;
+    translate: 0 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: reveal 1ms linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 30%;
+    }
+  }
+}
+```
+
+**Support:** Chrome 115, Safari 26, Firefox 159. Not yet Baseline (see the top). In the Interop 2026 tests, Firefox's stable score for this area went from 9.2% to 70.1% on the first Firefox 159 run (full table below).
+
+Where I land: tier 1 for decorative effects like these, tier 2 for anything load-bearing until Firefox's pass rate catches up.
+
+**Gotchas:**
+
+- **The shorthand resets the timeline.** Per [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/animation-timeline), `animation` resets `animation-timeline` to `auto`. Declare `animation-timeline` after the shorthand, or it silently does nothing.
+- **Use a 1ms duration.** Duration doesn't drive a scroll timeline, but the [timelines guide](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Scroll-driven_animations/Timelines) notes that Firefox needs a non-zero `animation-duration`, and `1ms` is the convention.
+- **`overflow: hidden` steals your timeline.** [`view()`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/animation-timeline/view) tracks the nearest ancestor scroll container, and `overflow: hidden` makes an element one. A clipping wrapper becomes the "scroller", so the animation ignores page scroll. Use `overflow: clip` instead.
+- **It's scrubbed, not triggered.** Scroll back up and the reveal plays in reverse. Play-once needs scroll-triggered animations (`animation-trigger`), which BCD lists as Chrome 146 only, and experimental.
+
+### Entry and exit animations: `@starting-style`
+
+**Replaces:** the "add a class on the next frame" trick and much of what Transition components do.
+
+```css
+#share-menu {
+  opacity: 0;
+  translate: 0 -0.5rem;
+  transition:
+    opacity 150ms ease-out,
+    translate 150ms ease-out,
+    display 150ms allow-discrete,
+    overlay 150ms allow-discrete;
+}
+
+#share-menu:popover-open {
+  opacity: 1;
+  translate: 0 0;
+}
+
+@starting-style {
+  #share-menu:popover-open {
+    opacity: 0;
+    translate: 0 -0.5rem;
+  }
+}
+```
+
+**Support:** [`@starting-style`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@starting-style) has been Baseline since 2024-08-06 (Chrome 117, Firefox 129, Safari 17.5). The `allow-discrete` keyword in the `transition` shorthand became Baseline the same day.
+
+**Gotchas:**
+
+- **Entry works everywhere, exit doesn't.** Transitioning `display` works in Chrome 117 and Safari 18 but not Firefox ([bug 1882408](https://bugzilla.mozilla.org/show_bug.cgi?id=1882408)), and `overlay` is Chromium-only. In Firefox the menu fades in and simply vanishes on close. Safari fades it out after it has left the top layer, so it can briefly slip under other content.
+- **Order matters.** `@starting-style` has the same specificity as the rule it overrides, so it has to come after that rule or be nested inside it.
+
+### Staggered lists: `sibling-index()`
+
+**Replaces:** GSAP's `stagger` and the `style={{ '--i': index }}` pattern for simple cases.
+
+```css
+.card {
+  transition:
+    opacity 300ms ease-out,
+    translate 300ms ease-out;
+  transition-delay: calc((sibling-index() - 1) * 50ms);
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 1rem;
+  }
+}
+```
+
+**Support:** Baseline since 2026-08-18, when [Firefox 154](https://developer.mozilla.org/en-US/docs/Mozilla/Firefox/Releases/154) shipped it (Chrome 138, Safari 26.2).
+
+**Gotcha:** [`sibling-index()`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/sibling-index) counts every element sibling in DOM order, starting at 1, like `:nth-child()`. A heading in the same container shifts every card by one. In an older browser the whole declaration is invalid and gets dropped, so you lose the stagger and keep the layout. That's exactly the failure mode you want.
+
+### Theme tokens: `light-dark()`
+
+**Replaces:** duplicated dark-mode override blocks and a `prefers-color-scheme` query per colour.
+
+```css
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#ffffff, #0b1116);
+  --text: light-dark(#111827, #f3f4f6);
+  --accent: light-dark(#c2410c, #ff5b04);
+}
+```
+
+**Support:** Baseline since 2024-05-13 (Chrome 123, Firefox 120, Safari 17.5). By web-features' [30-month rule](https://github.com/web-platform-dx/web-features/blob/main/docs/baseline.md), that makes it Widely available around November 13, 2026. That's my arithmetic, not an official date.
+
+**Gotcha:** per [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/color_value/light-dark), without `color-scheme` you only ever get the light value. Colours have always worked; two images (gradients, say) only became [Baseline on 2026-09-14](https://github.com/web-platform-dx/web-features/blob/f8963c8ebf20d47143bf30fe545fa99ae1a8b884/features/light-dark-image.yml.dist) (Chrome 150, Firefox 150, Safari 27).
+
+The nice part: [next-themes](https://github.com/pacocoursey/next-themes), which this blog uses, writes `color-scheme` onto `<html>` as an inline style by default. That inline value beats the `:root` declaration, so `light-dark()` tokens follow the theme toggle with no extra code.
+
+---
+
+## Tier 2: Two Engines, Ship It With a Fallback
+
+### Styled selects: `appearance: base-select`
+
+**Replaces:** custom listbox components whose main job was making the dropdown match the rest of the site.
+
+```html
+<select name="engine">
+  <button><selectedcontent></selectedcontent></button>
+  <option value="canvas">Canvas</option>
+  <option value="webgl">WebGL</option>
+</select>
+```
+
+```css
+@supports (appearance: base-select) {
+  select,
+  ::picker(select) {
+    appearance: base-select;
+  }
+
+  select:open::picker-icon {
+    rotate: 180deg;
+  }
+}
+```
+
+**Support:** Chrome 135 and Safari 27 (released September 14, 2026). Firefox has it only behind prefs, since 149.
+
+**Gotcha:** both the `select` and its `::picker(select)` need the opt-in. Per MDN's [customizable select guide](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms/Customizable_select), browsers without support ignore the `<button>` and `<selectedcontent>` structure and strip non-text option content, so Firefox users get an ordinary, working select. Keep custom styles inside `@supports`.
+
+### Page transitions: `@view-transition`
+
+**Replaces:** page-transition libraries on multi-page sites.
+
+```css
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+```
+
+Both pages need the rule, and per [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@view-transition) the navigation has to be same-origin.
+
+**Support:** Chrome 126 and Safari 18.2. Firefox doesn't have it yet ([bug 1860854](https://bugzilla.mozilla.org/show_bug.cgi?id=1860854)), though same-document view transitions (`document.startViewTransition()`) have been Baseline since 2025-10-14. Firefox just navigates normally, which is a fine fallback.
+
+**Gotcha, and it's a big one for this blog:** Next.js App Router [`<Link>`](https://nextjs.org/docs/app/api-reference/components/link) navigations are client-side. The document never changes, so `@view-transition` never fires for them.
+
+Client-side routes need same-document view transitions, through `document.startViewTransition()` or whatever your framework wraps around it. This blog's route-change animation lives in `app/template.tsx`, and this at-rule never sees those navigations.
+
+---
+
+## Tier 3: Chromium-Only, Purely Additive
+
+### Animating to `height: auto` with `interpolate-size`
+
+**Replaces:** measuring `scrollHeight` in JS, or the `max-height: 1000px` hack.
+
+```css
+@supports (interpolate-size: allow-keywords) {
+  :root {
+    interpolate-size: allow-keywords;
+  }
+
+  details::details-content {
+    block-size: 0;
+    overflow: clip;
+    transition:
+      block-size 300ms ease,
+      content-visibility 300ms allow-discrete;
+  }
+
+  details[open]::details-content {
+    block-size: auto;
+  }
+}
+```
+
+**Support:** Chrome 129 only, marked experimental in BCD.
+
+**Gotcha:** it's opt-in because, per [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/interpolate-size), turning it on by default would break existing sites. It's inherited, so `:root` covers the page. It can't interpolate between two keywords; one end must be a length. If you need maths, [`calc-size()`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/calc-size) does the same thing per property, as in `calc-size(auto, size + 1rem)`.
+
+Also Chromium-only, per BCD: `interestfor` hover invokers (Chrome 142), scroll-triggered animations (Chrome 146), `if()` (Chrome 137) and CSS carousels via `::scroll-marker` (Chrome 135). Fun on a demo page. Your layout shouldn't depend on any of them.
+
+---
+
+## What CSS Still Can't Do
+
+The list is shorter than it was. Not empty, though.
+
+- **Exit animations on DOM removal.** `@starting-style` handles arrival. When React unmounts a node, it's gone. That's still `AnimatePresence`, or a class plus `transitionend` plus `remove()`.
+- **Spring physics.** `linear()` easing (Chrome 113, Firefox 112, Safari 17.2) can fake a spring's shape. Interrupt a transition and it retargets from the current value, but with no memory of how fast it was moving. Keeping that velocity is what a spring library actually buys you.
+- **Play-once scroll triggers outside Chromium.** `IntersectionObserver` keeps its job.
+- **Hover tooltips and client-side route transitions**, cross-browser, without a few lines of JS.
+- **Imperative timelines.** The [alien spacecraft simulator](/blog/alien-spacecraft-simulator) on this blog runs on Canvas and GSAP. CSS animates styles. It doesn't run a game loop.
+
+---
+
+## Interop 2026: Where the Gaps Are Closing
+
+[Interop 2026](https://github.com/web-platform-tests/interop/blob/main/2026/README.md) has 20 focus areas. Four matter here: CSS anchor positioning (carried over from 2025), dialogs and popovers (`closedby`, `:open` and `popover="hint"`), scroll-driven animations, and view transitions, including cross-document.
+
+I took these numbers from the latest row (October 31) of the [results-analysis CSV](https://github.com/web-platform-tests/results-analysis/blob/gh-pages/data/interop-2026/interop-2026-stable-v2.csv) behind the [wpt.fyi dashboard](https://wpt.fyi/interop-2026). That run used Chrome 156, Edge 156, Firefox 159 and Safari 27.2 stable. The CSV stores scores out of 1,000, which I divided by 10. "All browsers" is the CSV's interop column: the share of tests that pass in every browser at once.
+
+| Focus area               | Chrome | Firefox | Safari | All browsers |
+| ------------------------ | ------ | ------- | ------ | ------------ |
+| Anchor positioning       | 100    | 100     | 99.4   | 99.4         |
+| Scroll-driven animations | 97.5   | 70.1    | 96.5   | 67.8         |
+| View transitions         | 100    | 79.8    | 99.0   | 78.4         |
+| Dialogs and popovers     | 100    | 100     | 55.3   | 55.3         |
+
+Edge tracks Chrome within a point in all four.
+
+Read it as a to-do list. Firefox owns the scroll-driven and view-transition gaps. Safari owns `closedby` and `popover="hint"`.
+
+---
+
+## Candidates on This Very Blog
+
+None of these are done. This is the list.
+
+**`ScrollProgress.tsx`** is the 4px orange bar at the top of this page. It's rendered in `app/layout.tsx` and uses framer-motion's `useScroll()` piped through `useSpring()`.
+
+The CSS version is the `scroll(root)` snippet above, and it could be a plain server-rendered `div` with no `'use client'`. The trade-off: the spring smoothing goes, and the bar tracks scroll exactly. It wouldn't remove framer-motion either, since the [clocks page](/clocks), the [WebMCP Toolkit](/webmcp) and most of `components/animations` use it.
+
+**`ParallaxScroll.tsx`** uses `useScroll` with `offset: ['start end', 'end start']` and maps progress to a 50px-to-minus-50px vertical shift. That offset pair is exactly the `cover` range, and parallax is decorative motion, so it gets both guards:
+
+```css
+@keyframes parallax {
+  from {
+    translate: 0 50px;
+  }
+  to {
+    translate: 0 -50px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .parallax {
+      animation: parallax 1ms linear both;
+      animation-timeline: view();
+      animation-range: cover;
+    }
+  }
+}
+```
+
+The honest part: it's exported from `components/animations/index.ts` and imported nowhere. The cheapest JavaScript to delete is the JavaScript nobody runs.
+
+**`MobileNav.tsx`** uses Headless UI's `Dialog` and `Transition` plus `body-scroll-lock`. The platform version is `<dialog>` with `command="show-modal"`, `closedby="any"`, a `@starting-style` slide-in and `overscroll-behavior` for the scroll lock. Three things keep it a candidate, not a quick win:
+
+- The menu links are Next.js `<Link>`s and `Header` lives in the root layout, so a client-side navigation would leave the dialog open. A small close-on-click handler stays.
+- Safari has no `closedby` yet and only partial `overscroll-behavior`, so `body-scroll-lock` needs an iOS test before it goes.
+- `@headlessui/react` would stay anyway, because `ThemeSwitch.tsx` uses it.
+
+**Theme colours** are the easy one. next-themes already sets `color-scheme`, so `light-dark()` tokens would work today alongside the existing Tailwind `dark:` classes.
+
+---
+
+## Just Landing: HTML in Canvas
+
+One teaser for the creative-coding crowd. Per [Chrome's announcement](https://developer.chrome.com/blog/html-in-canvas), Chrome 157, due on stable November 3, ships an HTML-in-Canvas API after an origin trial. `drawElementImage()` draws real, styled DOM into a 2D canvas, and the announcement covers WebGL and WebGPU too. Real text layout, composited with your own pixels.
+
+It's Chromium-only. BCD marks it experimental and off the standards track, and the API [changed shape during the trial](https://developer.chrome.com/blog/html-in-canvas-ot-changes). Tier 3, firmly.
+
+---
+
+## The Rule, Once More
+
+- **Baseline: delete the JS**, after checking the fallback. Popover, invoker commands, `<details name>`, anchor positioning, `field-sizing`, `@starting-style`, `sibling-index()` and `light-dark()`. Decorative scroll-driven animations too, as of October 27, badge pending.
+- **Two of three engines: ship it with a fallback**, and let the fallback be the unanimated version. Customizable select, cross-document view transitions, `closedby` and exit animations.
+- **Chromium-only: additive.** `interpolate-size`, `interestfor`, scroll-triggered animations and `if()`. Feature-detect them and never make them load-bearing.
+
+Check the data, not the badge. Your bundle doesn't have to wait for a label.

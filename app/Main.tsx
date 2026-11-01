@@ -4,21 +4,10 @@ import { useState, useMemo, useCallback } from 'react'
 import Link from '@/components/Link'
 import siteMetadata from '@/data/siteMetadata'
 import NewsletterForm from '@/components/NewsletterForm'
-import { Hero6 } from '@/components/heroes'
 import BlogFilters, { FilterState } from '@/components/BlogFilters'
+import PostCard from '@/components/PostCard'
 
 const MAX_DISPLAY = 10
-
-// Fix timezone issue by parsing date as local time
-function formatDateLocal(dateString: string, locale: string) {
-  const [year, month, day] = dateString.split('T')[0].split('-').map(Number)
-  const date = new Date(year, month - 1, day)
-  return date.toLocaleDateString(locale, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
 
 interface Post {
   slug: string
@@ -27,6 +16,8 @@ interface Post {
   summary?: string
   tags: string[]
   path: string
+  /** contentlayer computed field; optional so partial post objects still type-check */
+  readingTime?: { minutes?: number } | null
 }
 
 interface HomeProps {
@@ -107,20 +98,23 @@ export default function Home({ posts, tagData }: HomeProps) {
 
   return (
     <>
-      <Hero6 />
-      <div>
+      {/* The hero (with the page's only h1) and the lab row are rendered by app/page.tsx */}
+      <section aria-labelledby="latest-heading">
         <div className="space-y-2 pt-6 pb-8 md:space-y-5">
-          <h1 className="text-3xl leading-9 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14 dark:text-gray-100">
+          <h2
+            id="latest-heading"
+            className="text-3xl leading-9 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14 dark:text-gray-100"
+          >
             Latest
-          </h1>
+          </h2>
           <p className="text-lg leading-7 text-gray-500 dark:text-gray-400">
-            {siteMetadata.description}
+            The newest writing first. Search, sort or filter by topic to dig further back.
           </p>
         </div>
 
         {/* Smart Filter System */}
         <div className="mb-6">
-          <BlogFilters allTags={tagData} onFiltersChange={handleFiltersChange} />
+          <BlogFilters allTags={tagData} value={filters} onFiltersChange={handleFiltersChange} />
 
           {/* Results count when filtering */}
           {hasActiveFilters && (
@@ -130,14 +124,17 @@ export default function Home({ posts, tagData }: HomeProps) {
           )}
         </div>
 
-        <div className="flex sm:space-x-24">
-          {/* Left Sidebar - Tags */}
-          <div className="hidden h-full max-w-[280px] min-w-[280px] flex-wrap rounded-sm bg-gray-50 pt-5 shadow-md sm:flex dark:bg-gray-900/70 dark:shadow-gray-800/40">
-            <div className="w-full px-6 py-4">
+        <div className="flex lg:gap-8 xl:gap-10">
+          {/* Left Sidebar - Tags (from lg, so the card grid keeps its width on tablets) */}
+          <div className="hidden h-full w-64 shrink-0 flex-wrap rounded-sm bg-gray-50 pt-5 shadow-md lg:flex dark:bg-gray-900/70 dark:shadow-gray-800/40">
+            <div className="w-full px-5 py-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-primary-500 font-bold uppercase">Filter by Tag</h3>
+                <h3 className="text-primary-700 dark:text-primary-500 font-bold uppercase">
+                  Filter by Tag
+                </h3>
                 {filters.selectedTags.length > 0 && (
                   <button
+                    type="button"
                     onClick={() => setFilters((prev) => ({ ...prev, selectedTags: [] }))}
                     className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                   >
@@ -151,6 +148,7 @@ export default function Home({ posts, tagData }: HomeProps) {
                   return (
                     <li key={t} className="my-2">
                       <button
+                        type="button"
                         onClick={() => toggleTag(t)}
                         className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium uppercase transition-all duration-200 ${
                           isSelected
@@ -174,8 +172,9 @@ export default function Home({ posts, tagData }: HomeProps) {
               </ul>
               {hasMoreTags && (
                 <button
+                  type="button"
                   onClick={() => setShowAllTags(!showAllTags)}
-                  className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 mt-2 px-3 text-sm font-medium transition-colors"
+                  className="text-primary-700 hover:text-primary-800 dark:text-primary-500 dark:hover:text-primary-400 mt-2 px-3 text-sm font-medium transition-colors"
                 >
                   {showAllTags ? '← Show less' : `See more (${sortedTags.length - 8})`}
                 </button>
@@ -184,11 +183,12 @@ export default function Home({ posts, tagData }: HomeProps) {
           </div>
 
           {/* Main Content - Grid Posts */}
-          <div className="w-full">
+          <div className="min-w-0 flex-1">
             {!displayPosts.length && (
               <div className="py-12 text-center">
                 <div className="text-gray-500 dark:text-gray-400">
                   <svg
+                    aria-hidden="true"
                     className="mx-auto mb-4 h-12 w-12 text-gray-400"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -206,31 +206,18 @@ export default function Home({ posts, tagData }: HomeProps) {
                 </div>
               </div>
             )}
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {displayPosts.map((post) => {
-                const { slug: postSlug, date, title } = post
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {displayPosts.map((post, index) => {
+                // Highlight the newest post only in the default (unfiltered) view
+                const featured = !hasActiveFilters && index === 0
                 return (
-                  <article
-                    key={postSlug}
-                    className="group relative flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-gray-700 dark:bg-gray-800/50"
-                  >
-                    {/* Animated gradient border on hover */}
-                    <div className="from-primary-500 absolute inset-0 rounded-lg bg-gradient-to-r via-purple-500 to-cyan-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                    <div className="absolute inset-[2px] rounded-lg bg-white dark:bg-gray-800/95" />
-
-                    <Link href={`/blog/${postSlug}`} className="relative flex flex-1 flex-col p-5">
-                      <h2 className="mb-3 text-lg leading-6 font-bold tracking-tight">
-                        <span className="group-hover:from-primary-500 relative text-gray-900 transition-colors duration-300 group-hover:bg-gradient-to-r group-hover:via-purple-500 group-hover:to-cyan-500 group-hover:bg-clip-text group-hover:text-transparent dark:text-gray-100">
-                          {title}
-                        </span>
-                      </h2>
-                      <div className="mt-auto border-t border-gray-100 pt-3 dark:border-gray-700">
-                        <time dateTime={date} className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatDateLocal(date, siteMetadata.locale)}
-                        </time>
-                      </div>
-                    </Link>
-                  </article>
+                  <PostCard
+                    key={post.slug}
+                    post={post}
+                    headingLevel="h3"
+                    featured={featured}
+                    className={featured ? 'md:col-span-2' : ''}
+                  />
                 )
               })}
             </div>
@@ -239,7 +226,7 @@ export default function Home({ posts, tagData }: HomeProps) {
               <div className="mt-8 flex justify-end text-base leading-6 font-medium">
                 <Link
                   href="/blog"
-                  className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
+                  className="text-primary-700 hover:text-primary-800 dark:text-primary-500 dark:hover:text-primary-400"
                   aria-label="All posts"
                 >
                   All Posts &rarr;
@@ -248,7 +235,7 @@ export default function Home({ posts, tagData }: HomeProps) {
             )}
           </div>
         </div>
-      </div>
+      </section>
       {siteMetadata.newsletter?.provider && (
         <div className="flex items-center justify-center pt-4">
           <NewsletterForm />

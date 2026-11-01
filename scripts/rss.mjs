@@ -9,15 +9,19 @@ import { sortPosts } from 'pliny/utils/contentlayer.js'
 
 const outputFolder = process.env.EXPORT ? 'out' : 'public'
 
+// RSS 2.0 author fields must start with an email address, so only emit them when one is configured
+const contactTag = (config, tag) =>
+  config.email ? `<${tag}>${config.email} (${escape(config.author)})</${tag}>` : ''
+
 const generateRssItem = (config, post) => `
   <item>
     <guid>${config.siteUrl}/blog/${post.slug}</guid>
     <title>${escape(post.title)}</title>
     <link>${config.siteUrl}/blog/${post.slug}</link>
-    ${post.summary && `<description>${escape(post.summary)}</description>`}
+    ${post.summary ? `<description>${escape(post.summary)}</description>` : ''}
     <pubDate>${new Date(post.date).toUTCString()}</pubDate>
-    <author>${config.email} (${config.author})</author>
-    ${post.tags && post.tags.map((t) => `<category>${t}</category>`).join('')}
+    ${contactTag(config, 'author')}
+    ${post.tags ? post.tags.map((t) => `<category>${t}</category>`).join('') : ''}
   </item>
 `
 
@@ -28,8 +32,8 @@ const generateRss = (config, posts, page = 'feed.xml') => `
       <link>${config.siteUrl}/blog</link>
       <description>${escape(config.description)}</description>
       <language>${config.language}</language>
-      <managingEditor>${config.email} (${config.author})</managingEditor>
-      <webMaster>${config.email} (${config.author})</webMaster>
+      ${contactTag(config, 'managingEditor')}
+      ${contactTag(config, 'webMaster')}
       <lastBuildDate>${new Date(posts[0].date).toUTCString()}</lastBuildDate>
       <atom:link href="${config.siteUrl}/${page}" rel="self" type="application/rss+xml"/>
       ${posts.map((post) => generateRssItem(config, post)).join('')}
@@ -38,16 +42,21 @@ const generateRss = (config, posts, page = 'feed.xml') => `
 `
 
 async function generateRSS(config, allBlogs, page = 'feed.xml') {
-  const publishPosts = allBlogs.filter((post) => post.draft !== true)
+  // Published posts only, newest first; tag feeds are filtered from this same list
+  const publishPosts = sortPosts(allBlogs.filter((post) => post.draft !== true))
   // RSS for blog post
   if (publishPosts.length > 0) {
-    const rss = generateRss(config, sortPosts(publishPosts))
+    const rss = generateRss(config, publishPosts)
     writeFileSync(`./${outputFolder}/${page}`, rss)
   }
 
   if (publishPosts.length > 0) {
     for (const tag of Object.keys(tagData)) {
-      const filteredPosts = allBlogs.filter((post) => post.tags.map((t) => slug(t)).includes(tag))
+      const filteredPosts = publishPosts.filter(
+        (post) => post.tags && post.tags.map((t) => slug(t)).includes(tag)
+      )
+      // A tag used only by drafts has no published posts to list
+      if (filteredPosts.length === 0) continue
       const rss = generateRss(config, filteredPosts, `tags/${tag}/${page}`)
       const rssPath = path.join(outputFolder, 'tags', tag)
       mkdirSync(rssPath, { recursive: true })

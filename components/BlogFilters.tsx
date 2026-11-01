@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
-import { slug } from 'github-slugger'
+import { useState, useMemo, useId } from 'react'
 
 interface BlogFiltersProps {
   allTags: Record<string, number>
+  /** Current filters. The parent owns this state so other controls (e.g. a tag sidebar) stay in sync. */
+  value: FilterState
   onFiltersChange: (filters: FilterState) => void
 }
 
@@ -14,11 +15,12 @@ export interface FilterState {
   sortBy: 'newest' | 'oldest' | 'title'
 }
 
-export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersProps) {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title'>('newest')
+export default function BlogFilters({ allTags, value, onFiltersChange }: BlogFiltersProps) {
+  const { searchQuery, selectedTags, sortBy } = value
+  // Only UI state lives here; the filter values themselves are controlled by the parent
   const [isExpanded, setIsExpanded] = useState(false)
+  const panelId = useId()
+  const sortId = useId()
 
   const sortedTags = useMemo(() => {
     return Object.entries(allTags).sort((a, b) => b[1] - a[1])
@@ -28,40 +30,26 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
   const activeFilterCount =
     (searchQuery ? 1 : 0) + selectedTags.length + (sortBy !== 'newest' ? 1 : 0)
 
-  const updateFilters = useCallback(
-    (updates: Partial<FilterState>) => {
-      const newState = {
-        searchQuery: updates.searchQuery ?? searchQuery,
-        selectedTags: updates.selectedTags ?? selectedTags,
-        sortBy: updates.sortBy ?? sortBy,
-      }
-      onFiltersChange(newState)
-    },
-    [searchQuery, selectedTags, sortBy, onFiltersChange]
-  )
+  const updateFilters = (updates: Partial<FilterState>) => {
+    onFiltersChange({ ...value, ...updates })
+  }
 
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value)
-    updateFilters({ searchQuery: value })
+  const handleSearchChange = (query: string) => {
+    updateFilters({ searchQuery: query })
   }
 
   const toggleTag = (tag: string) => {
     const newTags = selectedTags.includes(tag)
       ? selectedTags.filter((t) => t !== tag)
       : [...selectedTags, tag]
-    setSelectedTags(newTags)
     updateFilters({ selectedTags: newTags })
   }
 
-  const handleSortChange = (value: 'newest' | 'oldest' | 'title') => {
-    setSortBy(value)
-    updateFilters({ sortBy: value })
+  const handleSortChange = (sort: FilterState['sortBy']) => {
+    updateFilters({ sortBy: sort })
   }
 
   const clearAllFilters = () => {
-    setSearchQuery('')
-    setSelectedTags([])
-    setSortBy('newest')
     onFiltersChange({ searchQuery: '', selectedTags: [], sortBy: 'newest' })
   }
 
@@ -83,7 +71,8 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
             />
           </label>
           <svg
-            className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2 text-gray-400 sm:left-3"
+            aria-hidden="true"
+            className="pointer-events-none absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2 text-gray-400 sm:left-3"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -98,11 +87,18 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
           </svg>
           {searchQuery && (
             <button
+              type="button"
               onClick={() => handleSearchChange('')}
               className="absolute top-1/2 right-2 -translate-y-1/2 text-gray-400 hover:text-gray-600 sm:right-3 dark:hover:text-gray-300"
               aria-label="Clear search"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg
+                aria-hidden="true"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -117,15 +113,15 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
         {/* Sort Dropdown */}
         <div className="flex shrink-0 items-center">
           <label
-            htmlFor="sort-select"
+            htmlFor={sortId}
             className="sr-only sm:not-sr-only sm:mr-2 sm:text-sm sm:text-gray-600 sm:dark:text-gray-400"
           >
             Sort:
           </label>
           <select
-            id="sort-select"
+            id={sortId}
             value={sortBy}
-            onChange={(e) => handleSortChange(e.target.value as 'newest' | 'oldest' | 'title')}
+            onChange={(e) => handleSortChange(e.target.value as FilterState['sortBy'])}
             className="focus:border-primary-500 focus:ring-primary-500/20 rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900 transition-colors focus:ring-2 sm:px-3 sm:py-2.5 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
           >
             <option value="newest">Newest</option>
@@ -136,14 +132,23 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
 
         {/* Filter Toggle Button */}
         <button
+          type="button"
           onClick={() => setIsExpanded(!isExpanded)}
+          aria-expanded={isExpanded}
+          aria-controls={panelId}
           className={`flex shrink-0 items-center gap-1 rounded-lg border px-2 py-2 text-sm font-medium transition-all sm:gap-2 sm:px-4 sm:py-2.5 ${
             isExpanded || selectedTags.length > 0
               ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400'
               : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-500'
           }`}
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg
+            aria-hidden="true"
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -151,13 +156,16 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
               d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
             />
           </svg>
-          <span className="hidden sm:inline">Tags</span>
+          {/* Visible from sm; still announced on mobile so the icon-only button has a name */}
+          <span className="sr-only sm:not-sr-only">Tags</span>
           {selectedTags.length > 0 && (
             <span className="bg-primary-500 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white">
-              {selectedTags.length}
+              <span aria-hidden="true">{selectedTags.length}</span>
+              <span className="sr-only">, {selectedTags.length} selected</span>
             </span>
           )}
           <svg
+            aria-hidden="true"
             className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
             fill="none"
             viewBox="0 0 24 24"
@@ -168,10 +176,14 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
         </button>
       </div>
 
-      {/* Expandable Tags Section */}
+      {/* Expandable Tags Section (inert while collapsed so hidden buttons can't take focus) */}
       <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isExpanded ? 'mt-4 max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        id={panelId}
+        inert={!isExpanded}
+        className={`transition-all duration-300 ease-in-out motion-reduce:transition-none ${
+          isExpanded
+            ? 'mt-4 max-h-[min(24rem,60vh)] overflow-y-auto opacity-100'
+            : 'max-h-0 overflow-hidden opacity-0'
         }`}
       >
         <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
@@ -181,10 +193,8 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
             </span>
             {selectedTags.length > 0 && (
               <button
-                onClick={() => {
-                  setSelectedTags([])
-                  updateFilters({ selectedTags: [] })
-                }}
+                type="button"
+                onClick={() => updateFilters({ selectedTags: [] })}
                 className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 text-xs"
               >
                 Clear tags
@@ -197,7 +207,9 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
               return (
                 <button
                   key={tag}
+                  type="button"
                   onClick={() => toggleTag(tag)}
+                  aria-pressed={isSelected}
                   className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
                     isSelected
                       ? 'bg-primary-500 hover:bg-primary-600 text-white shadow-sm'
@@ -226,10 +238,18 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
               <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                 Search: "{searchQuery}"
                 <button
+                  type="button"
                   onClick={() => handleSearchChange('')}
                   className="ml-0.5 hover:text-blue-600 dark:hover:text-blue-200"
+                  aria-label="Remove search filter"
                 >
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg
+                    aria-hidden="true"
+                    className="h-3 w-3"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -244,10 +264,18 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
               <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-1 text-xs font-medium text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
                 {sortBy === 'oldest' ? 'Oldest First' : 'Title A-Z'}
                 <button
+                  type="button"
                   onClick={() => handleSortChange('newest')}
                   className="ml-0.5 hover:text-purple-600 dark:hover:text-purple-200"
+                  aria-label="Reset sort to newest first"
                 >
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg
+                    aria-hidden="true"
+                    className="h-3 w-3"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -265,10 +293,18 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
               >
                 {tag}
                 <button
+                  type="button"
                   onClick={() => toggleTag(tag)}
                   className="hover:text-primary-600 dark:hover:text-primary-200 ml-0.5"
+                  aria-label={`Remove ${tag} tag filter`}
                 >
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg
+                    aria-hidden="true"
+                    className="h-3 w-3"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -281,6 +317,7 @@ export default function BlogFilters({ allTags, onFiltersChange }: BlogFiltersPro
             ))}
           </div>
           <button
+            type="button"
             onClick={clearAllFilters}
             className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
           >

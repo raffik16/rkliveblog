@@ -1,20 +1,34 @@
 import type { Metadata } from 'next'
+import siteMetadata from '@/data/siteMetadata'
+import { twitterHandle } from '../seo'
 import WebMCPToolkit from './WebMCPToolkit'
 
+const description =
+  'Generate and check WebMCP tools against the current spec draft: document.modelContext.registerTool(), AbortSignal cleanup and experimental declarative forms.'
+
 export const metadata: Metadata = {
-  title: 'WebMCP Toolkit - Generate & Validate WebMCP Integrations',
-  description:
-    'Build agent-ready websites with the WebMCP standard. Generate declarative HTML or imperative JavaScript, then validate your implementation against the spec.',
+  title: 'WebMCP Toolkit - Generate & Validate WebMCP Tools',
+  description,
+  alternates: {
+    canonical: '/webmcp',
+  },
   openGraph: {
     title: 'WebMCP Toolkit',
     description:
-      'Generate and validate WebMCP integrations. Make your website agent-ready in minutes.',
+      'Generate and validate WebMCP tools for document.modelContext. Updated for the October 2026 spec draft.',
+    url: '/webmcp',
+    siteName: siteMetadata.title,
+    locale: 'en_US',
     type: 'website',
+    images: [siteMetadata.socialBanner],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'WebMCP Toolkit',
-    description: 'Generate and validate WebMCP integrations for AI browser agents.',
+    description: 'Generate and validate WebMCP tools for document.modelContext and AI agents.',
+    site: twitterHandle,
+    creator: twitterHandle,
+    images: [siteMetadata.socialBanner],
   },
 }
 

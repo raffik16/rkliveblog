@@ -114,16 +114,22 @@ export const Blog = defineDocumentType(() => ({
     ...computedFields,
     structuredData: {
       type: 'json',
-      resolve: (doc) => ({
-        '@context': 'https://schema.org',
-        '@type': 'BlogPosting',
-        headline: doc.title,
-        datePublished: doc.date,
-        dateModified: doc.lastmod || doc.date,
-        description: doc.summary,
-        image: doc.images ? doc.images[0] : siteMetadata.socialBanner,
-        url: `${siteMetadata.siteUrl}/${doc._raw.flattenedPath}`,
-      }),
+      resolve: (doc) => {
+        // `images` is free-form json: usually an array, but a single string is also accepted
+        const image: string =
+          (Array.isArray(doc.images) ? doc.images[0] : doc.images) || siteMetadata.socialBanner
+        return {
+          '@context': 'https://schema.org',
+          '@type': 'BlogPosting',
+          headline: doc.title,
+          datePublished: doc.date,
+          dateModified: doc.lastmod || doc.date,
+          description: doc.summary,
+          // schema.org image must be an absolute URL
+          image: image.startsWith('/') ? `${siteMetadata.siteUrl}${image}` : image,
+          url: `${siteMetadata.siteUrl}/${doc._raw.flattenedPath}`,
+        }
+      },
     },
   },
 }))
