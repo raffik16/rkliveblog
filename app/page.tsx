@@ -1,10 +1,23 @@
+import type { Metadata } from 'next'
 import { sortPosts, allCoreContent } from 'pliny/utils/contentlayer'
 import { allBlogs } from 'contentlayer/generated'
 import Link from '@/components/Link'
+import siteMetadata from '@/data/siteMetadata'
 import { Hero6, type HeroStats } from '@/components/heroes'
 import demosData from '@/data/demosData'
 import Main from './Main'
 import tagData from './tag-data.json'
+
+// The root layout no longer sets a canonical (it was inherited by every page), so the
+// homepage declares its own. Setting `alternates` here replaces the root's, so keep RSS.
+export const metadata: Metadata = {
+  alternates: {
+    canonical: '/',
+    types: {
+      'application/rss+xml': `${siteMetadata.siteUrl}/feed.xml`,
+    },
+  },
+}
 
 export default async function Page() {
   const sortedPosts = sortPosts(allBlogs)
