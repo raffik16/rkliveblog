@@ -1,0 +1,272 @@
+---
+title: 'The Phase Shift, Revisited: Scoring My January Predictions'
+date: '2026-11-01'
+lastmod: '2026-11-01'
+tags: ['ai', 'coding', 'workflow', 'claude-code', 'software-engineering', 'llm']
+draft: false
+summary: 'I pulled ten claims from my January post on agent-first coding and scored each against public evidence: what held up, what was just extrapolation, and the review bottleneck I missed.'
+images: ['/static/images/og/phase-shift-revisited.jpg']
+authors: ['default']
+layout: PostLayout
+---
+
+In late January I published [The Phase Shift](/blog/llm-coding-workflow-phase-shift), notes from a few weeks of agent-first coding. It ended on a line I'd like to check: "The gap won't last forever. But right now, it's real."
+
+Those notes didn't come out of nowhere. Many of their framings, from the 80/20 flip to the "slopacolypse" to generation versus discrimination, echoed [Andrej Karpathy's widely shared notes](https://x.com/karpathy/status/2015883857489522876) from two days earlier. So this is less a check on my private crystal ball than on a set of predictions a lot of people were nodding along to in January.
+
+Nine months on, I'm grading it. I pulled ten claims from the post. Each gets a verdict (**Held up**, **Partly**, **Too early to tell** or **Wrong**) and the strongest evidence I could find on each side.
+
+One ground rule: I'm not re-measuring my own 80/20 split. A self-reported number from the person who made the prediction is exactly the evidence this post is trying to avoid. Everything below is public and linked, and when the only source is the company selling the tool, I say so.
+
+## The Scorecard
+
+| #   | January claim                                        | Verdict           | Strongest evidence                                        |
+| --- | ---------------------------------------------------- | ----------------- | --------------------------------------------------------- |
+| 1   | Agents crossed a coherence threshold around Dec 2025 | Partly            | Behavior shifted, but not on a December schedule          |
+| 2   | Mistakes became subtle and conceptual                | Held up           | About half of test-passing agent PRs wouldn't be merged   |
+| 3   | Tenacity is the unlock                               | Partly            | Stamina got cheap; checking didn't                        |
+| 4   | The main effect is expansion, not speedup            | Held up           | Anthropic staff: 27% of AI work was net-new (self-report) |
+| 5   | Leverage comes from success criteria and loops       | Held up           | It became the 2026 product roadmap                        |
+| 6   | More fun for builders than for coders                | Too early to tell | Nobody measures fun; sentiment lagged usage               |
+| 7   | Manual coding skill atrophies                        | Too early to tell | The nearest RCT is about learning, not erosion            |
+| 8   | 2026 is the slopacolypse, plus productivity theater  | Held up           | GitHub shipped a switch to turn off pull requests         |
+| 9   | Open questions: 10x gap, generalists, feel, ceiling  | Too early to tell | The entry level is being squeezed                         |
+| 10  | Capability arrived before integrations and processes | Held up           | Rival vendors converged on the same primitives            |
+
+There's no "Wrong" verdict. That should make you suspicious. It makes me suspicious too, and I'll come back to it.
+
+---
+
+## 1. The Coherence Threshold
+
+> LLM agent capabilities - Claude and Codex especially - crossed some threshold of coherence around December 2025. It caused a phase shift in software engineering and adjacent fields.
+
+**For:** The best evidence came from a study that broke. METR's [July 2025 trial](https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/) found experienced open-source developers were 19% _slower_ with AI tools. Its follow-up began in August 2025, and in February METR [changed the study design](https://metr.org/blog/2026-02-24-uplift-update/) because "developers are increasingly choosing not to participate because they do not wish to work without AI."
+
+Between 30% and 50% said they had held back some tasks they didn't want to do without AI. METR thinks developers are probably more sped up than in early 2025, but calls its data "only very weak evidence for the size of this increase."
+
+A study that can't get people to work without AI is a strange adoption metric. It's also a hard one to fake.
+
+GitHub's [Octoverse 2026](https://github.blog/news-insights/octoverse/octoverse-commits-pushes-reach-new-highs-in-2026-as-developers-build-with-agents/) points the same way. By September, it estimates, more than 40% of pull requests started with an agent, up from 17% in March. That's GitHub's own estimate, and "started with an agent" isn't "written by one."
+
+**Against:** "Threshold" is doing a lot of unearned work. From where I sat, I couldn't tell a December discontinuity from a smooth curve I happened to notice in December. METR's selection effect showed up in a study that began in August, and GitHub's climb from 17% to 40% came after my post.
+
+The benchmark of the moment didn't help. In February OpenAI [dropped SWE-bench Verified](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/): of the 138 problems models most often failed, at least 59.4% had tests that rejected correct solutions, and contamination was growing. Contamination inflates scores and broken tests deflate them, so it can't settle this either way.
+
+**Verdict: Partly.** Behavior did shift. "Threshold" and "December" are the parts I can't defend.
+
+---
+
+## 2. Subtle Conceptual Errors
+
+> But the nature of mistakes has changed. These aren't simple syntax errors anymore. They're subtle conceptual errors - the kind a slightly sloppy, hasty junior developer might make.
+
+Under that I listed the usual suspects: no clarifying questions, no pushback, sycophancy, over-engineering.
+
+**For:** In March, METR asked four maintainers of scikit-learn, Sphinx and pytest to review 296 AI-generated PRs that had passed SWE-bench's automated tests. [Roughly half would not have been merged](https://metr.org/notes/2026-03-10-many-swe-bench-passing-prs-would-not-be-merged-into-main/), even after adjusting for the maintainers merging only about 68% of the original human-written fixes.
+
+Some rejections were about code quality, but code that passes the tests and still breaks things is a fair definition of a subtle error.
+
+Developers act like they've noticed. In the [2026 Stack Overflow survey](https://survey.stackoverflow.co/2026/ai), nearly half trust AI output when they can easily verify it. Only 6.6% would trust it with an important decision.
+
+**Against:** METR's PRs came from agents released between mid-2024 and mid/late 2025, before my supposed threshold. That supports "subtle, not syntactic," but undercuts "changed."
+
+**Verdict: Held up**, though "changed" was older news than I thought.
+
+---
+
+## 3. Tenacity as the Unlock
+
+> You realize that stamina is a core bottleneck to work. With LLMs, that bottleneck has been dramatically expanded.
+
+**For:** The industry spent 2026 removing the things that made agents stop, starting with the per-action permission prompt. Claude Code's [auto mode](https://claude.com/blog/auto-mode) (March) sends each action through a classifier that lets safe ones run and stops risky ones. GitHub's [assisted permissions](https://github.blog/changelog/2026-10-26-github-copilot-assisted-permissions-generally-available/) (October) does the same for Copilot.
+
+**Against:** Stamina without verification is just a longer road to a confident wrong answer. Anthropic says auto mode reduces risk rather than eliminating it, and GitHub shipped [local sandboxing](https://github.blog/changelog/2026-10-07-local-sandboxing-for-github-copilot-now-generally-available/) as a separate feature three weeks before assisted permissions.
+
+The binding constraint didn't stay at stamina. It moved to checking.
+
+**Verdict: Partly.** The stamina was real. It just wasn't the last bottleneck.
+
+---
+
+## 4. Expansion, Not Speedup
+
+> So yes, it's speedup. But it's possibly much more an _expansion_ of what's possible.
+
+**For:** This is the claim I'd defend hardest, and the awkward part is that Anthropic wrote it down first. In a [December 2025 study of its own engineers](https://www.anthropic.com/research/how-ai-is-transforming-work-at-anthropic), they estimated that 27% of their Claude-assisted work wouldn't have been done otherwise. That's my "things that weren't worth coding before," though it's the vendor's staff reporting on themselves.
+
+A [study in _Science_](https://www.science.org/doi/10.1126/science.adz9311) of about 160,000 GitHub developers found the productivity and exploration gains went to experienced developers, with exploration meaning work in areas of software new to them. For the agent era, a [preprint](https://arxiv.org/abs/2605.25438) tracking about 5,300 developers found they used more programming languages after adopting Claude Code, an association rather than a proven effect.
+
+**Against:** Expansion is also a polite word for "more stuff," and more stuff is how you get item 8. The measured effects are modest: the _Science_ paper estimates a 3.6% rise in quarterly code output, from mostly pre-agent data, and commits aren't value.
+
+**Verdict: Held up**, though the best evidence is self-reported.
+
+---
+
+## 5. Success Criteria and Loops
+
+> Don't tell it _what to do_. Give it _success criteria_ and watch it go.
+
+**For:** This was 2026's product roadmap: agents that loop until CI is green, cloud agents that wake up on a PR event, and agentic code review as a pipeline step. By March, GitHub said [Copilot code review](https://github.blog/ai-and-ml/github-copilot/60-million-copilot-code-reviews-and-counting/) was involved in more than one in five code reviews on the platform.
+
+**Against:** A loop is only as good as its exit condition. SWE-bench showed tests failing both ways: OpenAI found tests that rejected correct solutions, and METR found tests that accepted patches maintainers wouldn't merge.
+
+"Give it success criteria" quietly assumes you can write good ones. That's the hard part, and I skipped it.
+
+**Verdict: Held up**, with an asterisk. Writing the criteria is now the job.
+
+---
+
+## 6. The Fun Factor
+
+> LLM coding seems to be splitting engineers into two camps: those who primarily liked _coding_ (and may feel something's been taken away) versus those who primarily liked _building_ (and feel liberated).
+
+**For:** Very little measures fun directly. Stack Overflow's numbers are at least consistent with a split: [positive sentiment fell to 60% in 2025](https://survey.stackoverflow.co/2025/ai), from above 70% in the two years before, and sat at [62% in 2026](https://survey.stackoverflow.co/2026/ai) while usage kept climbing (71% among daily users).
+
+**Against:** "Using it more without liking it more" fits my two-camps story. It also fits "my employer wants me to use it" and "the tools got better and more annoying." A survey can't tell coders from builders.
+
+**Verdict: Too early to tell.** I still believe it. I can't show it.
+
+---
+
+## 7. The Atrophy
+
+> I've already noticed it: I'm slowly losing my ability to write code manually.
+
+That section ended with "This is probably fine. Probably."
+
+**For:** The day after my post, Anthropic published a [randomized trial](https://www.anthropic.com/research/AI-assistance-coding-skills) on a neighboring question. In it, 52 developers learned an unfamiliar Python library, Trio, with or without AI help. The AI group scored 17 percentage points lower on a quiz about the concepts they'd just used (roughly 50% against 67%), and saved no statistically significant time.
+
+How people used it mattered: asking conceptual questions held up well, and handing over the whole task did badly.
+
+**Against:** That's a study of _learning_ with a chat assistant, over a short task. My claim was about _losing_ fluency I already had, with agents doing the typing. I couldn't find a study of that, so my generation-versus-discrimination distinction is still a hunch.
+
+**Verdict: Too early to tell.** But "probably fine" deserves a downgrade for anyone still learning. Skipping the struggle seems to skip the learning too.
+
+---
+
+## 8. The Slopacolypse
+
+> I'm bracing for 2026 as the year of the slopacolypse. It's coming for GitHub. It's coming for Substack. It's coming for arXiv.
+
+The same section predicted "a lot more AI productivity theater on top of the actual, real improvements."
+
+**For:** GitHub got hit on schedule. In early February it [publicly weighed a "kill switch"](https://www.theregister.com/2026/02/03/github_kill_switch_pull_requests_ai/) for pull requests over low-quality, often AI-generated contributions. On February 13 it shipped [repository settings](https://github.blog/changelog/2026-02-13-new-repository-settings-for-configuring-pull-request-access/) that let maintainers turn off pull requests or restrict them to collaborators.
+
+In June came [caps on open PRs](https://github.blog/changelog/2026-06-17-limit-open-pull-requests-for-users-without-write-access/) from people without write access, with PRs opened by Copilot or another AI agent counting toward the cap, then [collaborator-only issues](https://visualstudiomagazine.com/articles/2026/06/30/github-extends-contribution-controls-from-prs-to-issues.aspx). A platform built on pull requests shipped a way to switch them off. That's the signal.
+
+Productivity theater got a name too: "tokenmaxxing," ranking employees on internal leaderboards by how many AI tokens they burn. In June, Google's DORA team [called token counts](https://dora.dev/insights/finding-balance-in-the-era-of-tokenmaxxing/) a "vanity metric."
+
+**Against:** This was the easiest call on the list, because it had already started.
+
+curl announced on January 21, a week _before_ my post, that it was [ending its bug bounty](https://daniel.haxx.se/blog/2026/01/26/the-end-of-the-curl-bug-bounty/) over AI slop. In October 2025, arXiv's CS category [stopped accepting review and position papers](https://blog.arxiv.org/2025/10/31/attention-authors-updated-practice-for-review-articles-and-position-papers-in-arxiv-cs-category/) that hadn't passed peer review. HBR named "[workslop](https://hbr.org/2025/09/ai-generated-workslop-is-destroying-productivity)" in September 2025.
+
+METR's finding that developers felt faster while measuring slower dates from July 2025. I wasn't forecasting. I was extending a line that was already on the chart.
+
+Substack and social media stay ungraded. I don't have data I trust.
+
+**Verdict: Held up**, for GitHub and productivity theater. Low degree of difficulty.
+
+---
+
+## 9. The Open Questions
+
+These were questions, not predictions. Here's where they lean.
+
+**The mean-versus-max gap.** Leaning toward "widening," at least at the bottom.
+
+The _Science_ paper found early-career developers got no statistically significant benefit, though they used AI in more of their code (37% against 27% for experienced developers). Stanford's [August update](https://digitaleconomy.stanford.edu/news/canariesaug26/) puts employment for 22-to-25-year-olds in highly AI-exposed jobs about 19% below where it would be had it kept pace with less-exposed peers, up from 15% in the 2025 data. Most of that is fewer hires, and Erik Brynjolfsson still sees no widespread displacement.
+
+Both are descriptive, and the _Science_ data predates agents.
+
+**Generalists versus specialists.** Inconclusive. Experienced developers moving into new domains suggests depth is what lets you go broad, which isn't quite the generalist win I had in mind.
+
+**The feel.** In January I wondered whether it would feel like StarCraft, Factorio or playing music. StarCraft won the product meetings: OpenAI's [Codex app](https://openai.com/index/introducing-the-codex-app/) launched in February, built around parallel agents, each on its own isolated copy of the code.
+
+But Stack Overflow's April pulse survey, published in May as "[Agents on a leash](https://stackoverflow.blog/2026/05/27/agents-on-a-leash-agentic-ai-remains-mostly-monitored-at-work/)," found agent use at work mostly single-agent and monitored. The StarCraft interface exists. Most people are still controlling one unit.
+
+**The ceiling.** No answer. More commits on GitHub is not the same as society being less bottlenecked.
+
+**Verdict: Too early to tell.** The 10x question leans toward a wider spread, but by squeezing the bottom, not stretching the top.
+
+---
+
+## 10. Capability Before Integrations
+
+> The intelligence part suddenly feels quite a bit ahead of everything else: the integrations, the tools, the organizational workflows, the processes, the broader diffusion.
+
+**For:** 2026 was when the integrations caught up, in a strangely uniform way:
+
+- **Parallel agents in isolated copies of the repo**, managed from one window (the Codex app, February)
+- **Model-gated permissions** instead of per-action prompts (auto mode in March, assisted permissions in October)
+- **Scheduled and event-triggered cloud agents** that run with the laptop closed (Claude Code's [routines](https://claude.com/blog/introducing-routines-in-claude-code), April)
+- **Agentic code review in the pipeline** (Anthropic's Code Review in March, alongside Copilot code review)
+
+To be fair to 2025, most of these existed somewhere already. [Cursor 2.0](https://www.techzine.eu/news/devops/135916/cursor-2-0-introduces-parallel-agents-and-new-model/) ran parallel agents in isolated copies of the code in October 2025, Copilot code review launched in April 2025, and the January post itself described running "a few Claude Code sessions" side by side. What 2026 added was convergence: every major vendor shipped the same set within months.
+
+**Against:** The tooling caught up faster than the organizations. Agents kept "on a leash," a shrinking entry-level pipeline and strained review queues all say the process side is still behind.
+
+**Verdict: Held up**, as a description of January. "The gap won't last forever" looks right for tools. For organizations, check back next year.
+
+---
+
+## What I Missed: Review Became the Bottleneck
+
+The January post had the pieces: "watch them like a hawk," and a whole section on generation versus discrimination. I just filed discrimination under "the skill I'll keep" rather than "the resource everyone is about to run out of."
+
+That's the real story of 2026, as I read it. Generating code got cheap. Reviewing it didn't.
+
+- **Maintainers** got switches to turn off pull requests (item 8).
+- **Vendors** started selling review. Launching [Code Review](https://claude.com/blog/code-review), Anthropic said code output per Anthropic engineer had grown 200% in a year, by its own internal count.
+- **Benchmarks** failed at the review step too: SWE-bench's tests were wrong in both directions (items 1 and 5).
+- **Individuals** hit it in miniature: handing everything off weakens the understanding you need to review well (item 7).
+
+Not everything fits. [GitHub says](https://github.blog/news-insights/octoverse/octoverse-commits-pushes-reach-new-highs-in-2026-as-developers-build-with-agents/) agent-started PRs now merge within two weeks slightly more often than others (90% against about 86%). Either review kept up or it got thinner.
+
+My atrophy section and my slop section were the same observation at two scales, and I didn't connect them. That's the miss.
+
+---
+
+## Why Nothing Scored "Wrong"
+
+Five "Held up" verdicts and no "Wrong" ones don't mean I'm good at this. Some honest reasons:
+
+- **Several claims were observations, not forecasts.** Expansion, slop and productivity theater were documented before January, and the integration gap described January itself.
+- **The language was loose.** "Phase shift," "slopacolypse," "probably fine." Vague claims are hard to fail.
+- **Questions can't be wrong.** A good chunk of the post was open questions.
+- **I'm grading my own homework.** Even with public sources, I chose the sources.
+
+One claim I left out comes closest to a "Wrong": that the "agent swarm" hype was premature. Vendors shipped fan-out to many subagents, like the dynamic workflows that came with [Opus 4.8](https://www.anthropic.com/news/claude-opus-4-8), while most developers in the pulse survey ran a single agent. Call it contested.
+
+If I'd written "by September, more than a third of GitHub PRs will start with an agent," I could have lost. Octoverse says I'd have won, but I didn't write it, so I don't get the credit.
+
+So here are three I can actually lose. By November 2027:
+
+1. **SWE-bench Pro goes the way of Verified**: Anthropic, OpenAI or Google DeepMind publicly stops reporting the harder benchmark OpenAI recommended in Verified's place, citing flawed tests or contamination.
+2. **A randomized trial of agentic tools and skill formation** finds a mastery gap larger than the 17 points in item 7. Its authors expect that too, so it isn't a brave call.
+3. **METR's redesigned study reports a speedup** whose confidence interval excludes zero.
+
+If no such trial or METR estimate appears by then, I count it as a loss.
+
+---
+
+## Where This Leaves Me
+
+The January post got the direction right and was vague about almost everything else. The behavior shift was real. Expansion beat speedup. The integrations converged quickly, and once they did, the scarce thing turned out to be careful reading, not code.
+
+If I rewrote that closing line today, I'd keep the first gap and add a second one. The gap between people paying attention and people who aren't won't last forever. The gap between what we can generate and what we can review is just getting started.
+
+---
+
+## Sources
+
+- **This blog:** [The Phase Shift](/blog/llm-coding-workflow-phase-shift) (January 2026)
+- **Andrej Karpathy:** [notes on agent-first coding](https://x.com/karpathy/status/2015883857489522876) (X, January 26, 2026)
+- **METR:** [uplift study redesign](https://metr.org/blog/2026-02-24-uplift-update/) (Feb 2026); [early-2025 developer RCT](https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/) (Jul 2025); [SWE-bench-passing PRs vs. maintainers](https://metr.org/notes/2026-03-10-many-swe-bench-passing-prs-would-not-be-merged-into-main/) (Mar 2026)
+- **OpenAI:** [Why we no longer evaluate SWE-bench Verified](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/) (Feb 2026); [Codex app](https://openai.com/index/introducing-the-codex-app/) (Feb 2026)
+- **GitHub:** [Octoverse 2026](https://github.blog/news-insights/octoverse/octoverse-commits-pushes-reach-new-highs-in-2026-as-developers-build-with-agents/); [60 million Copilot code reviews](https://github.blog/ai-and-ml/github-copilot/60-million-copilot-code-reviews-and-counting/) (Mar 2026); [PR access settings](https://github.blog/changelog/2026-02-13-new-repository-settings-for-configuring-pull-request-access/) (Feb 2026); [open-PR limits](https://github.blog/changelog/2026-06-17-limit-open-pull-requests-for-users-without-write-access/) (Jun 2026); [local sandboxing](https://github.blog/changelog/2026-10-07-local-sandboxing-for-github-copilot-now-generally-available/) and [assisted permissions](https://github.blog/changelog/2026-10-26-github-copilot-assisted-permissions-generally-available/) (Oct 2026)
+- **Stack Overflow:** [2026 survey, AI](https://survey.stackoverflow.co/2026/ai); [2025 survey, AI](https://survey.stackoverflow.co/2025/ai); [Agents on a leash](https://stackoverflow.blog/2026/05/27/agents-on-a-leash-agentic-ai-remains-mostly-monitored-at-work/) (May 2026)
+- **Anthropic:** [skill-formation RCT](https://www.anthropic.com/research/AI-assistance-coding-skills) (Jan 2026); [How AI is transforming work at Anthropic](https://www.anthropic.com/research/how-ai-is-transforming-work-at-anthropic) (Dec 2025); [Code Review](https://claude.com/blog/code-review), [auto mode](https://claude.com/blog/auto-mode) and [routines](https://claude.com/blog/introducing-routines-in-claude-code) (Mar-Apr 2026); [Opus 4.8](https://www.anthropic.com/news/claude-opus-4-8) (May 2026)
+- **Research:** Daniotti et al., [Who is using AI to code?](https://www.science.org/doi/10.1126/science.adz9311), _Science_ (2026); Quispe and Xu, [Claude Code and developers' languages](https://arxiv.org/abs/2605.25438) (arXiv preprint, 2026); Stanford Digital Economy Lab, [Canaries in the Coal Mine, August 2026 update](https://digitaleconomy.stanford.edu/news/canariesaug26/)
+- **Slop and theater:** [The end of the curl bug-bounty](https://daniel.haxx.se/blog/2026/01/26/the-end-of-the-curl-bug-bounty/) (Daniel Stenberg, Jan 2026) and [The Register's coverage](https://www.theregister.com/2026/01/21/curl_ends_bug_bounty/); [GitHub's PR kill-switch discussion](https://www.theregister.com/2026/02/03/github_kill_switch_pull_requests_ai/) (The Register, Feb 2026); [collaborator-only issues](https://visualstudiomagazine.com/articles/2026/06/30/github-extends-contribution-controls-from-prs-to-issues.aspx) (Visual Studio Magazine, Jun 2026); [arXiv CS policy](https://blog.arxiv.org/2025/10/31/attention-authors-updated-practice-for-review-articles-and-position-papers-in-arxiv-cs-category/) (Oct 2025); [workslop](https://hbr.org/2025/09/ai-generated-workslop-is-destroying-productivity) (HBR, Sep 2025); [tokenmaxxing](https://dora.dev/insights/finding-balance-in-the-era-of-tokenmaxxing/) (DORA, Jun 2026)
+- **Tools:** [Cursor 2.0](https://www.techzine.eu/news/devops/135916/cursor-2-0-introduces-parallel-agents-and-new-model/) (Techzine, Oct 2025)
