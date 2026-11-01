@@ -18,7 +18,8 @@ interface ModelContextTool {
   title?: string
   description: string
   inputSchema?: object
-  execute: (input: Record<string, unknown>, options: ToolExecuteOptions) => Promise<unknown>
+  // Chromium before 153 called execute() with only the input, so options may be missing.
+  execute: (input: Record<string, unknown>, options?: ToolExecuteOptions) => Promise<unknown>
   annotations?: {
     readOnlyHint?: boolean
     untrustedContentHint?: boolean
@@ -100,7 +101,7 @@ function toPostResult(post: IndexedPost): PostResult | null {
   }
 }
 
-async function loadPosts(signal: AbortSignal): Promise<PostResult[] | { error: string }> {
+async function loadPosts(signal?: AbortSignal): Promise<PostResult[] | { error: string }> {
   if (cachedPosts) return cachedPosts
   const response = await fetch(searchIndexPath(), { signal })
   if (!response.ok) {
@@ -182,7 +183,8 @@ const searchPostsTool: ModelContextTool = {
     },
     required: ['query'],
   },
-  async execute(input, { signal }) {
+  async execute(input, options) {
+    const signal = options?.signal
     // The browser does not check input against inputSchema, so validate it here.
     const query = input?.query
     if (typeof query !== 'string' || !query.trim()) {
@@ -212,7 +214,7 @@ const searchPostsTool: ModelContextTool = {
       return { results: matches.slice(0, limit).map((entry) => entry.post), total: matches.length }
     } catch (error) {
       // Cancelled by the agent or the user: let the call end.
-      if (signal.aborted) throw error
+      if (signal?.aborted) throw error
       // Anything thrown reaches the agent as a bare OperationError, so return the reason instead.
       return {
         error: `Search failed: ${error instanceof Error ? error.message : String(error)}`,

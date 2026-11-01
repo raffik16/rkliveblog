@@ -249,16 +249,17 @@ export function generateImperativeJS(tool: ToolDefinition): string {
   const endpoint = js(`/api/${encodeURIComponent(tool.name.trim() || 'tool')}`)
   const label = js(`WebMCP: could not register ${tool.name}`)
 
-  return `// WebMCP imperative API, current spec draft (October 2026). HTTPS only.
-// Chrome 152+ exposes it on document.modelContext only.
+  return `// WebMCP imperative API, spec draft webmachinelearning/webmcp@6838130
+// (Oct 27, 2026). HTTPS only. Chrome 152+ exposes it on document.modelContext only.
 ${nameWarning(tool, 'registerTool() rejects this name.', '//')}if ("modelContext" in document) {
   const controller = new AbortController();
 
-  document.modelContext.registerTool({
+  const tool = {
     name: ${js(tool.name)},${title ? `\n    title: ${js(title)},` : ''}
     description: ${js(tool.description)},
     inputSchema: ${schema},
-    async execute(input, { signal }) {
+    // "= {}": Chromium before 153 called execute() with only the input.
+    async execute(input, { signal } = {}) {
 ${checks ? `      // The browser doesn't check input against inputSchema, so validate here.\n${checks}\n` : ''}      try {
         const response = await fetch(${endpoint}, {
           method: "POST",
@@ -272,17 +273,25 @@ ${checks ? `      // The browser doesn't check input against inputSchema, so val
         return await response.json();
       } catch (err) {
         // Cancelled by the agent or the user: let the call end.
-        if (signal.aborted) throw err;
+        if (signal?.aborted) throw err;
         // A thrown error reaches the agent as an OperationError with no
         // message, so return errors as values the agent can read.
         return { error: err instanceof Error ? err.message : String(err) };
       }
     }${annotations}${annotationsNote}
-  }, { signal: controller.signal }).catch((err) => {
-    // Rejects on an invalid or duplicate name, or an inputSchema that
-    // can't be serialized.
-    console.warn(${label}, err);
-  });
+  };
+
+  // await inside try/catch also covers Chromium 149-150, where registerTool()
+  // threw synchronously instead of returning a Promise.
+  (async () => {
+    try {
+      await document.modelContext.registerTool(tool, { signal: controller.signal });
+    } catch (err) {
+      // Rejects on an invalid or duplicate name, or an inputSchema that
+      // can't be serialized.
+      console.warn(${label}, err);
+    }
+  })();
 
   // There is no unregisterTool(). To remove the tool (route change,
   // component unmount), abort the signal it was registered with:
