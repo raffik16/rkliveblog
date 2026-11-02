@@ -1,0 +1,315 @@
+---
+title: 'Rolling My Own A/B Tests: Variants Picked at the Edge, Results in SQL'
+date: '2026-11-01'
+lastmod: '2026-11-01'
+tags: ['ab-testing', 'analytics', 'web-development', 'marketing', 'javascript']
+draft: false
+summary: 'This year I built my own A/B testing for the law firm sites I look after. The version is picked at the edge before the page renders, and results go into a database the firm owns. Why I built it, how it works, and what I gave up.'
+images: ['/static/images/og/rolling-my-own-ab-testing.jpg']
+authors: ['default']
+layout: PostLayout
+---
+
+At Design Pickle I ran A/B tests with Mutiny and Stellar. That's the usual hosted setup: you add the vendor's script to your site, build the variants in their editor, and read the results in their dashboard.
+
+This year I built my own, for the law firm sites I look after at my day job. A small function at the edge decides which version of a page each visitor gets before the page renders, and a cookie makes sure they keep getting it. Every page view in a test and every lead that follows gets written to a database the firm owns, so the results are one SQL query away.
+
+This post covers why I built it, how the pieces fit together, and what I gave up. There are no test results in it. It's about how the thing works.
+
+## Why I didn't reach for a hosted tool
+
+Hosted tools are a good deal for a lot of teams. A marketer can change a headline without waiting on a developer, the statistics are done for you, and the dashboard works on day one.
+
+Three things about these sites pointed the other way.
+
+**The conversion is a lead.** On a law firm site, the number that matters is how many people send the intake form. If the variant a visitor saw is recorded in our own database along with the form they sent, "which version brought in more leads" is a single query. I don't have to export numbers from a vendor's dashboard and match them against our own records.
+
+**Picking the version on the server leaves nothing to do in the browser.** Client-side testing tools change the page after it starts loading. That's where flicker comes from: the visitor sees the original for a moment, then the variant. The common fix is a snippet that hides the page until the testing script is ready. When the edge picks the version, the browser gets the right HTML in the first response. There's no testing script, nothing to swap, and nothing hidden.
+
+To be fair, most of the big vendors also sell server-side SDKs now. But once the decision happens on your own server, what's left for the vendor is storing the config and drawing the charts. For a two-version test on one form, both of those are small.
+
+**The data stays with the firm.** People type personal details into a law firm's intake form. With this setup, the test data stays in a database the firm controls, and no testing vendor gets a copy of who saw which page.
+
+## How it works
+
+> [!NOTE]
+> The code in this post is a stripped-down sketch of the pattern, written for this post. The version on the firm's sites is tied to their setup. I wrote the sketch as a Cloudflare Worker because that makes a short, complete example. Apart from `ctx.waitUntil`, it only uses the web-standard `Request`, `Response` and `crypto` APIs, so it moves to other edge runtimes with small changes. In Next.js middleware, for example, step 3 becomes `NextResponse.rewrite()`.
+
+The pattern has four parts:
+
+1. **A visitor ID.** The first time someone lands on a page that's being tested, they get a cookie holding a random ID.
+2. **Assignment at the edge.** A function in front of the site hashes that ID with the experiment's name and turns the hash into a variant. The same visitor gets the same answer on every request, with nothing to look up.
+3. **Serving the variant.** Each variant is its own page on the origin server. The edge function fetches the right one and returns it at the original URL.
+4. **Logging.** The edge function records who saw what, the intake form records the visitor ID with each lead, and both go into a database you own. Reading the results is SQL plus a few lines of statistics.
+
+### The experiment
+
+An experiment is a name, the URL being tested, and the variants with their weights:
+
+```js:experiments.js
+// A made-up example: a long intake form against a short one
+export const experiments = [
+  {
+    id: 'case-review-form-length',
+    path: '/free-case-review',
+    variants: [
+      { name: 'control', weight: 50 },
+      { name: 'short-form', weight: 50 },
+    ],
+  },
+]
+```
+
+The control is the page that already lives at `/free-case-review`. The short-form version is a separate page at `/free-case-review/short-form`. Visitors never see that second URL.
+
+### Picking a variant
+
+```js:assign.js
+export async function assignVariant(experiment, visitorId) {
+  const input = new TextEncoder().encode(`${experiment.id}:${visitorId}`)
+  const digest = await crypto.subtle.digest('SHA-256', input)
+
+  // First 4 bytes of the hash as a number from 0 up to (not including) 1
+  const bucket = new DataView(digest).getUint32(0) / 2 ** 32
+
+  const total = experiment.variants.reduce((sum, v) => sum + v.weight, 0)
+  let point = bucket * total
+  for (const variant of experiment.variants) {
+    if (point < variant.weight) return variant.name
+    point -= variant.weight
+  }
+  return experiment.variants.at(-1).name
+}
+```
+
+The hash turns the visitor ID into a number between 0 and 1, and the weights split that range into slices. With weights of 50 and 50, everything below 0.5 is the control and everything above it is the short form.
+
+Hashing instead of rolling a random number and storing the answer has two benefits. First, it's deterministic: the same ID gives the same variant on every request and on every edge server, so there's no lookup table to keep in sync. Second, because the experiment ID is part of the hash, each experiment splits visitors on its own. Someone in the short-form group of one test isn't automatically in the second group of every other test. In a quick check with 20,000 random IDs and two experiments, 49.7% of visitors landed on the same side of both, which is what you'd expect from two independent coin flips.
+
+One rule follows from this: **don't change the weights of a running experiment.** Moving the cut point moves some visitors to the other side partway through. To change the split, end the experiment and start a new one with a new ID.
+
+### The edge function
+
+```js:worker.js
+import { experiments } from './experiments.js'
+import { assignVariant } from './assign.js'
+
+const COOKIE = 'vid'
+const ONE_YEAR = 60 * 60 * 24 * 365
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const BOT = /bot|crawl|spider|slurp|preview/i
+
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url)
+    const experiment = experiments.find((e) => e.path === url.pathname)
+    if (!experiment || request.method !== 'GET') return fetch(request)
+
+    // 1. Who is this? Reuse the visitor ID from the cookie, or mint one.
+    let visitorId = readCookie(request, COOKIE)
+    const isNew = !visitorId || !UUID.test(visitorId)
+    if (isNew) visitorId = crypto.randomUUID()
+
+    // 2. Which version do they get? Same ID in, same answer out.
+    const variant = await assignVariant(experiment, visitorId)
+
+    // 3. Fetch that version. Each variant is its own page at the origin.
+    const originUrl = new URL(url)
+    if (variant !== 'control') originUrl.pathname = `${url.pathname}/${variant}`
+    const originResponse = await fetch(new Request(originUrl, request))
+
+    const response = new Response(originResponse.body, originResponse)
+    response.headers.set('Cache-Control', 'private, no-cache')
+    if (isNew) {
+      response.headers.append(
+        'Set-Cookie',
+        `${COOKIE}=${visitorId}; Path=/; Max-Age=${ONE_YEAR}; Secure; HttpOnly; SameSite=Lax`
+      )
+    }
+
+    // 4. Record the exposure without making the visitor wait for it.
+    if (!BOT.test(request.headers.get('User-Agent') || '')) {
+      ctx.waitUntil(
+        logEvent(env, {
+          type: 'exposure',
+          experiment: experiment.id,
+          variant,
+          visitorId,
+          path: url.pathname,
+        })
+      )
+    }
+
+    return response
+  },
+}
+
+function readCookie(request, name) {
+  const header = request.headers.get('Cookie') || ''
+  for (const part of header.split(';')) {
+    const [key, ...rest] = part.trim().split('=')
+    if (key === name) return rest.join('=')
+  }
+  return null
+}
+
+async function logEvent(env, event) {
+  await fetch(env.EVENTS_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${env.EVENTS_TOKEN}`,
+    },
+    body: JSON.stringify(event),
+  })
+}
+```
+
+Most of this is plumbing, but a few lines carry the design.
+
+**The cookie is boring on purpose.** It holds a random UUID and nothing else, so it never contains anything personal. It's `HttpOnly` because only servers read it. A value that doesn't look like a UUID gets replaced, so junk from a browser extension or a hand-edited cookie never reaches the database.
+
+**Each variant gets its own URL at the origin, because caches key on the URL.** If both versions came back from `/free-case-review`, a CDN could cache the short form and serve it to everyone, and your 50/50 test would quietly turn into 100/0. Fetching `/free-case-review/short-form` from the origin gives each version its own cache entry. The response that goes back to the browser is marked `private`, so no shared cache downstream stores one visitor's version under the public URL.
+
+**The variant pages need a canonical link.** Anyone who guesses `/free-case-review/short-form` can open it directly, and so can a search engine that finds it. Point each variant page's canonical link at the original URL. That's what [Google's guidance on A/B testing](https://developers.google.com/search/docs/crawling-indexing/website-testing) recommends, and it tells search engines the variant is a copy of the original page.
+
+**Logging happens after the response.** `ctx.waitUntil` keeps the Worker alive long enough to send the event once the response has gone out, so the visitor never waits on the database. Requests from obvious bots are still served, but they aren't counted. The user-agent check is a rough filter, which is fine, because the results query counts visitors, not requests.
+
+### Recording the lead
+
+The other half is on the intake form. The server code that handles the form reads the same cookie and saves the visitor ID with the lead:
+
+```js
+// Wherever the intake form is handled on the server (sketch)
+const visitorId = readCookie(request, 'vid')
+await saveLead({ ...formFields, visitorId })
+```
+
+That's the only change to the form. It doesn't need to know which experiments are running. The visitor ID is enough to connect the lead to everything they saw.
+
+### The tables
+
+Exposures get their own table, and the leads table gains one column:
+
+```sql
+create table experiment_exposures (
+  id          bigint generated always as identity primary key,
+  experiment  text        not null,
+  variant     text        not null,
+  visitor_id  uuid        not null,
+  path        text        not null,
+  seen_at     timestamptz not null default now()
+);
+
+create index on experiment_exposures (experiment, visitor_id);
+
+-- The leads table already exists. It gains one column.
+alter table leads add column visitor_id uuid;
+```
+
+That's Postgres syntax. Any database that can join two tables will do.
+
+## Reading the results
+
+The results query turns raw events into two numbers per variant: how many people saw it, and how many of them sent a lead afterwards.
+
+```sql
+with exposed as (
+  -- One row per visitor: their variant and when they first saw it
+  select visitor_id, variant, min(seen_at) as first_seen
+  from experiment_exposures
+  where experiment = 'case-review-form-length'
+  group by visitor_id, variant
+),
+converted as (
+  -- Visitors who sent a lead after they saw the page
+  select distinct e.visitor_id
+  from exposed e
+  join leads l
+    on l.visitor_id = e.visitor_id
+   and l.created_at >= e.first_seen
+)
+select
+  e.variant,
+  count(*)            as visitors,
+  count(c.visitor_id) as converted
+from exposed e
+left join converted c on c.visitor_id = e.visitor_id
+group by e.variant
+order by e.variant;
+```
+
+A visitor who loads the page five times counts once. A visitor who sends two forms counts as one conversion. A lead that came in before the visitor ever saw the test doesn't count at all.
+
+### Is the difference worth anything?
+
+With visitors and conversions for each side, the standard check for a two-version test on a conversion rate is a two-proportion z-test. It's the same math many testing dashboards use for a simple conversion test, and it fits in a few lines:
+
+```js:stats.js
+// Standard normal CDF (Abramowitz & Stegun 7.1.26, error < 1.5e-7)
+function normalCdf(z) {
+  const x = Math.abs(z) / Math.SQRT2
+  const t = 1 / (1 + 0.3275911 * x)
+  const coefficients = [0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429]
+  const poly = t * coefficients.reduceRight((sum, c) => c + t * sum, 0)
+  const erf = 1 - poly * Math.exp(-x * x)
+  return z >= 0 ? (1 + erf) / 2 : (1 - erf) / 2
+}
+
+// Two-proportion z-test: is B's conversion rate different from A's?
+export function compare(a, b) {
+  const rateA = a.converted / a.visitors
+  const rateB = b.converted / b.visitors
+  const pooled = (a.converted + b.converted) / (a.visitors + b.visitors)
+  const se = Math.sqrt(pooled * (1 - pooled) * (1 / a.visitors + 1 / b.visitors))
+  const z = (rateB - rateA) / se
+  return { rateA, rateB, z, pValue: 2 * (1 - normalCdf(Math.abs(z))) }
+}
+```
+
+As an example with made-up numbers: 4,000 visitors on each side, with 200 leads (5.0%) against 250 (6.25%), gives a p-value of about 0.015. That's under the usual 0.05 line.
+
+### Check the split before the result
+
+Before looking at conversions, check that the split came out the way it was set up. A lopsided split almost always means a bug: a cache serving one version to everyone, bots landing in one group, or a redirect somewhere that drops the cookie. If the split is broken, the conversion numbers are too.
+
+```js:stats.js
+// Sample ratio mismatch: did a 50/50 split come out 50/50?
+export function splitCheck(visitorsA, visitorsB) {
+  const expected = (visitorsA + visitorsB) / 2
+  const chiSquare = ((visitorsA - expected) ** 2 + (visitorsB - expected) ** 2) / expected
+  return 2 * (1 - normalCdf(Math.sqrt(chiSquare))) // p-value, 1 degree of freedom
+}
+```
+
+10,000 visitors against 10,500 looks close enough. It isn't: the p-value is about 0.0005, so a fair 50/50 coin would almost never produce it. A common rule is to treat anything under 0.001 as a broken test and go find the bug.
+
+### Decide the sample size first
+
+The z-test above only means what it says if you pick the sample size before the test starts and look once at the end. Checking every morning and stopping the first time the p-value dips under 0.05 raises the odds of declaring a winner that isn't one.
+
+A quick way to pick the number is Lehr's rule:
+
+```js:stats.js
+// Visitors needed per variant to detect an absolute change of `delta`
+// from a baseline rate `p` (two-sided 5% significance, 80% power)
+export function visitorsPerVariant(p, delta) {
+  return Math.ceil((16 * p * (1 - p)) / delta ** 2)
+}
+```
+
+From a 5% baseline, spotting a jump to 6% takes 7,600 visitors per variant. Spotting a jump to 5.5% takes 30,400. A jump to 7.5% takes 1,216. Small changes need far more traffic than most single landing pages get. If a page gets modest traffic, test big changes: a different form, a different offer, a different page.
+
+## What I gave up
+
+**The visual editor.** In this setup every variant is a page someone builds and deploys. A marketer can't start a headline test without a developer. On a team where marketers run their own tests, that cost alone can decide it.
+
+**The fancier statistics.** Hosted tools offer sequential testing (which lets you look early without inflating false positives), variance reduction and multi-armed bandits. A fixed-sample z-test is simpler, and it only works if you stick to the sample size you picked.
+
+**Someone else's on-call.** Bot filtering, cache rules, cookie edge cases and the split check are all mine now. If any of them breaks, there's no vendor to notice. That's why the split check comes first.
+
+## When I'd still use a hosted tool
+
+If marketers need to launch tests on their own, if you're running many tests across many pages at once, or if nobody on the team wants to own the statistics code, a hosted tool is the better choice.
+
+Rolling your own makes sense when the conversion already ends up in a database you control and you already run code at the edge in front of the site. Both are true for the firm's sites. The core of it is a cookie, a hash, two tables and about a hundred lines of code.
