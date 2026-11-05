@@ -1,0 +1,160 @@
+---
+title: 'Super X-Ped Teardown: Pull Start a Two-Stroke in Your Browser'
+date: '2026-11-05'
+lastmod: '2026-11-05'
+tags: ['webgl', 'threejs', 'simulation', 'two-stroke', 'go-ped', 'javascript']
+draft: false
+summary: 'A working 3D teardown of a Go-Ped Super X-Ped. Prime it, choke it, pull the cord, then slow the two-stroke cycle to 1/1000 speed, cut the engine open and watch the tuned pipe push escaping charge back into the cylinder.'
+images: ['/static/images/og/super-x-ped-teardown.jpg']
+authors: ['default']
+layout: PostLayout
+---
+
+**[Open the Super X-Ped Teardown](https://goped.raffi.website/)**. It's best on a desktop, and it works on a phone.
+
+The Go-Ped Super X-Ped is about as simple as a motor vehicle gets. A 22.5 cc two-stroke sits over the back wheel, and a knurled steel roller on the end of the crank presses straight onto the tyre. There's no clutch, no gearbox, no valves and no battery. That simplicity is what makes it a good teaching engine: every part does something you can see, and there are few enough parts to show them all.
+
+[goped.raffi.website](https://goped.raffi.website/) is a working model of one: a Super X-Ped with a Zenoah G230RC engine, in 3D. You start it the way you'd start the real thing. Then you can slow time down, cut the engine in half, and watch the pressure waves in the exhaust do their job.
+
+## What's on the Bench
+
+The scooter sits on a PVC stand in the middle of the screen, with the rear wheel off the ground. Around it:
+
+- **Start it.** A pull cord you drag, a primer bulb, a choke, a throttle and a kill switch you have to hold. A six-step checklist ticks itself off as you go.
+- **Eight views.** Scooter, Engine, Cutaway, Starter, Carb, Pipe, Drive and Brake. Each one flies the camera to a part of the machine and labels what's there.
+- **Three looks.** Solid, X-ray and Section, plus an Explode button for an exploded view.
+- **Four speeds.** Real time, 1/10, 1/100 and 1/1000, plus Pause. When paused, you turn the crank 10° at a time.
+- **Stock or Built.** One switch swaps the carb, air intake, exhaust, cylinder porting and drive spindle.
+- **Five analysis tabs.** Cycle, Pipe, Pull, Dyno and Spec, all updating live.
+
+Click any part, from the spark plug to the barrel adjuster on the front brake, and a card opens. It explains in plain English what the part does and shows its specs and live readings. It also links to related parts, so you can follow the charge from the carb to the stinger one click at a time.
+
+When the page loads, an auto tour drives all of this for you: it primes, chokes and pull-starts the engine, slows the cutaway to 1/100 speed, opens it up in the Pipe view, rides off the stand and uses the kill switch as a brake. Tap anywhere to take over. If your system asks for reduced motion, the tour stays off.
+
+## Pull the Cord
+
+![The scooter running on its stand, with the Pull tab showing the recorded first pull](/static/images/super-x-ped/scooter-first-pull.jpg)
+
+The starting procedure is the real one:
+
+1. Squeeze the primer until the return line runs wet.
+2. Close the choke on a cold engine.
+3. Crack the throttle to the start position.
+4. Pull until it fires.
+5. Open the choke once it runs.
+6. Let it settle to idle.
+
+Skip a step and the engine tells you about it. The mixture readout runs from _dry_ through _lean_ and _good_ to _rich_ and _flooded_, and the hints are what someone standing next to you would say: "Carb is dry: squeeze the primer bulb a few times." "It popped: open the choke and pull again." Forget to open the choke and it starts _loading up_. Flood it and the advice is the old one: choke off, throttle wide open, pull to clear it.
+
+The recoil starter has 62 cm of rope on a 44 mm pulley. At a 22 mm radius, 200 N on the rope puts 4.4 N·m on the crank. That's enough, with the flywheel's help, to roll it over compression. Every pull is recorded at 2,000 samples a second: rope force, crank speed, every spark and every cycle that lit. The pull in the screenshot peaked at 147 N (33 lbf) on the compression strokes and first fired at 0.067 seconds. You can replay a pull at 1/10 speed, or drag across the chart to put the engine back at any moment of it.
+
+The ignition is modelled too. Zenoah specifies a TCI magneto firing at 30° before top dead centre at 8,000 rpm. Below 1,000 rpm the model retards that to 12°, so a slow pull fires late instead of kicking the rope back out of your hand. Below 340 rpm there's no spark at all.
+
+## Slow It Down
+
+![The cutaway in Section mode at 1/100 speed, with the port timing ring on the right](/static/images/super-x-ped/cutaway-section.jpg)
+
+Switch to Cutaway, set the look to Section and the speed to 1/100, and the two-stroke cycle plays out slowly enough to follow.
+
+There are no valves. The piston is the valve gear: its crown uncovers the exhaust and transfer ports near the bottom of the stroke, and its skirt uncovers the intake near the top. The sealed crankcase underneath works as a pump. When the piston rises, the case pulls fuel and air in through the carb. When it falls, the case squeezes that charge up the transfer ducts into the cylinder. The engine fires once every turn. At 12,000 rpm the piston stops dead 400 times a second and averages 11.2 m/s in between.
+
+The Cycle tab follows along. A timing ring shows where the crank is against each port window. A log-scale pressure chart tracks the cylinder, the crankcase and the exhaust port. Underneath, a running caption says what's happening right now:
+
+> **Transfers open.** Fresh charge loops up out of the case and pushes the exhaust out.
+
+> **Spark, but no fire.** The mixture is too lean to light this cycle.
+
+The numbers behind the ring:
+
+| Port                 | Stock                      | Built                     |
+| -------------------- | -------------------------- | ------------------------- |
+| Exhaust              | opens 100° ATDC, 160° long | opens 92° ATDC, 176° long |
+| Transfers            | open 122° ATDC, 116° long  | open 118° ATDC, 124° long |
+| Intake (piston port) | 75° either side of TDC     | 80° either side of TDC    |
+
+"Porting is the cheapest power a two-stroke has," as the cylinder's part card puts it. Raising the exhaust port so it opens at 92° instead of 100° gives the cylinder longer to blow down before the transfers open. The price is a shorter power stroke and a peakier engine, and that engine needs the pipe.
+
+## Get It on the Pipe
+
+![The Pipe view in X-ray at 12,090 rpm: the pipe is shaded by pressure, and the Pipe tab shows the plugging wave at the port](/static/images/super-x-ped/pipe-on-the-pipe.jpg)
+
+The Built scooter's snail pipe is a tuned expansion chamber, coiled up behind the deck. Laid straight, it's 685 mm long on the centreline:
+
+| Section  | Length | Diameter   |
+| -------- | ------ | ---------- |
+| Header   | 85 mm  | 21 mm      |
+| Diffuser | 220 mm | 21 → 50 mm |
+| Belly    | 165 mm | 50 mm      |
+| Baffle   | 100 mm | 50 → 13 mm |
+| Stinger  | 115 mm | 13 mm      |
+
+Every time the exhaust port opens, a pressure pulse runs down the pipe. Where the pipe widens, at the diffuser, part of that pulse comes back as a _suction_ wave. It pulls the cylinder empty and draws fresh charge up the transfers. Where the pipe narrows, at the baffle, part of the pulse comes back as a _pressure_ wave. Timed right, that wave reaches the port just before the piston shuts it and pushes the fresh charge that was escaping back into the cylinder. That plugging wave is the tuned pipe's extra power.
+
+In X-ray mode you can watch it happen: the pipe is shaded orange where the gas is pushing and blue where it's pulling, along its whole length.
+
+The timing comes down to arithmetic you can do on a napkin. The speed of sound in a gas is √(γRT), and the model uses γ = 1.35 and R = 287 J/(kg·K) for the exhaust. At the 246 °C (519 K) in the screenshot, that's about 448 m/s. At 12,000 rpm the crank turns 72,000° a second, and the exhaust opens at 92° after top dead centre, so:
+
+- **The suction wave** reflects from the middle of the diffuser, 195 mm down the pipe. The 0.39 m round trip takes 0.87 ms, or 63° of crank. It gets back to the port at about 155°, right in the middle of the transfer window (118° to 242°).
+- **The plugging wave** reflects from the middle of the baffle, 520 mm down. The 1.04 m round trip takes 2.32 ms, or 167° of crank. It gets back at about 259°, 9° before the exhaust shuts at 268°.
+
+At 12,100 rpm the Pipe tab reported the plugging wave peaking 8° before the port closes, with 97% of it there as the port shut. That's _on the pipe_. Off the band, the wave arrives early or late and the engine falls flat.
+
+The pipe also tunes itself. Sound travels faster in hotter gas, so a hot pipe tunes higher: the model's speed of sound runs from 430 m/s to 540 m/s as the pipe heats up, and the band moves with it as the pipe-gas readout climbs.
+
+![The Baffle cone part card open over the X-ray pipe, showing the plugging wave arriving 5° before the port shuts](/static/images/super-x-ped/baffle-cone-card.jpg)
+
+One thing to try: hold it on the pipe while it's on the stand. It won't stay there. With nothing to push against, even 40% throttle carries it straight through 12,000 rpm and on into the red _over-rev_ zone. That's what an unloaded two-stroke does. The screenshots above were caught on the way through, by dropping to 1/100 speed as the revs crossed the band. Switch to Riding and the road gives it a load.
+
+## Stock vs Built
+
+![The Engine view with the Dyno tab: Stock and Built power curves](/static/images/super-x-ped/dyno.jpg)
+
+The Build switch changes five things at once:
+
+|               | Stock                          | Built                                 |
+| ------------- | ------------------------------ | ------------------------------------- |
+| Carb          | Walbro WT-603B                 | Walbro WT-813                         |
+| Air           | Stock filter box               | Velocity stack + foam                 |
+| Exhaust       | Stock muffler                  | Snail pipe (coiled expansion chamber) |
+| Cylinder      | Stock ports                    | Raised exhaust, widened transfers     |
+| Drive spindle | 0.675 in                       | 0.750 in                              |
+| Peak power    | 1.79 kW (2.4 PS) at 12,500 rpm | 3.06 kW (4.2 PS) at 15,000 rpm        |
+| Top speed     | 26 mph                         | 33 mph                                |
+
+The Dyno tab plots both curves, with a dot for where the engine is right now. They track each other up to about 10,000 rpm. Then the pipe comes in, and the built curve climbs to its peak at 15,000 rpm while the stock one, with a muffler that sends nothing useful back to the port, rolls over at 12,500.
+
+The site is upfront about where its numbers come from. The engine dimensions, carb, ignition and plug are Zenoah's published figures. The port angles, pipe lengths, rod length and power curves are the model's own. Treat the dyno as a well-behaved simulation, not a test sheet.
+
+## No Clutch, No Gears, No Rear Brake
+
+The Drive view shows the whole transmission: one roller pressed on one tyre. The ratio is the tyre's diameter over the spindle's. With 152 mm tyres and the built 0.750 in (19.05 mm) spindle, that's 7.98 : 1, so 12,000 rpm at the crank is about 27 mph on the road. A bigger spindle means taller gearing: more top speed, less pull from a standstill.
+
+With no clutch, the engine and the rear wheel always turn together. That has consequences, and the model includes all of them:
+
+- **You start it on the stand,** or you kick off and bump start it through the spindle. In Riding mode, the pull cord politely tells you so.
+- **The kill switch is the rear brake.** Hold it and the spark stops, but the engine keeps turning with the wheel, pumping against its own compression, and that slows you down. Let go and it fires again without a restart.
+- **The front brake grabs the tyre.** It's a side-pull caliper like a bicycle's, but there's no rim, so the arms squeeze the tyre's sidewalls. The barrel adjuster on the arm takes up cable stretch and tyre wear without tools.
+
+## Under the Hood
+
+The whole site is one self-contained HTML file of about 1 MB:
+
+- **three.js r186**, bundled inline, with an EffectComposer pipeline and GTAO ambient occlusion for the soft contact shadows around the fins and frame.
+- **Custom shaders** for the X-ray glass and for shading the pipe by pressure along its centreline.
+- **Hand-built SVG charts** for the timing ring, pressure trace, pipe wave, pull recorder and dyno, redrawn as the simulation runs.
+- **Embedded fonts.** Barlow, Barlow Condensed and JetBrains Mono ship as base64 WOFF2 inside the file.
+- **No other requests.** Once the HTML arrives, nothing else loads: no CDN, no API, no analytics.
+
+It follows your light or dark system theme. On a phone, the 3D view pins to the top of the screen and the controls scroll underneath. The throttle and pull cord work with arrow keys, and R resets the camera.
+
+## Go Pull the Cord
+
+Start with the auto tour, then take over:
+
+1. Prime it until the return line runs wet, close the choke and pull.
+2. Open the choke once it fires.
+3. Switch to Cutaway, Section, 1/100, and watch a cycle.
+4. Switch to Pipe and X-ray, open the throttle, and catch it on the pipe.
+5. Flip Built back to Stock and watch the dyno curve fall flat.
+
+**[goped.raffi.website](https://goped.raffi.website/)**
