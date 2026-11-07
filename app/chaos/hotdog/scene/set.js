@@ -1,9 +1,9 @@
 // Chaos is an art form: Roller Grill Sessions. A VJ backdrop with no controls. Three hot dogs (a Chicago dog, a ballpark
 // dog and a New York dog) come apart into exploded views and go back together inside the five strange attractors of
 // /chaos, while the storm carries flying parts and notes, a ring of stave plays a melody round the whole room, more
-// dogs drift in the space beyond, and Hot Dog City spreads out under a night sky, the set's name crawling round it on a
-// ribbon board and a giant roller grill turning at the plaza's edge (hot dogs spin on the roller grill, DJs spin
-// records). Everything counts in bars at the
+// dogs drift in the space beyond, and Hot Dog City spreads out under a night sky: the plaza under the storm is a record
+// whose label carries the set's name, alternating with the night's other names, and a giant roller grill turns at
+// its edge (hot dogs spin on the roller grill, DJs spin records). Everything counts in bars at the
 // set's tempo (124 bpm, or ?bpm=), so the teardowns, camera moves and pulses land on the downbeat, and everything
 // eases: there are no cuts and no steps. It plays itself, tunes its own quality to the GPU behind the loader, and
 // stops when the page goes away.
@@ -22,7 +22,7 @@ import { buildStave, STAVE } from './stave.js'
 import { buildCity, CITY } from './city.js'
 import { buildDrifters } from './drifters.js'
 import { buildGrill } from './grill.js'
-import { buildMarquee, DEFAULT_TITLE } from './marquee.js'
+import { DEFAULT_TITLE } from './label.js'
 import { attractorAt, beatAt, clock, fxAt, shotAt, teardownAt } from './director.js'
 
 // one palette per attractor (slow, mid, fast): ketchup, relish, club ice, mustard, magenta
@@ -172,11 +172,11 @@ export function tempoFrom(search) {
  *
  * Hooks for reviewing stills (not controls): ?t=<seconds> or ?bar=<bar> starts there, ?pause renders one frame and
  * waits for window.__hotdog.renderAt(t), ?tier=<0-5> fixes the quality tier. Settings a DJ may want (not controls
- * either): ?bpm=<60-200> sets the tempo, ?title=<name> the set's name on the board.
+ * either): ?bpm=<60-200> sets the tempo, ?title=<name> the set's name on the record's label.
  *
  * @param {HTMLElement} host
  * @param {{onReady?: () => void, onUnsupported?: () => void, onProgress?: (label: string, k: number) => void,
- *   font?: string}} [options] font: a CSS font family for the set's name (the board and the record's label)
+ *   font?: string}} [options] font: a CSS font family for the set's name on the record's label
  * @returns {() => void}
  */
 export function startHotDogSet(host, options = {}) {
@@ -313,8 +313,6 @@ export function startHotDogSet(host, options = {}) {
     if (!alive) return
     const grill = buildGrill(parts.frank, CITY.ground)
     scene.add(grill.group)
-    const marquee = buildMarquee(title, font)
-    scene.add(marquee.group)
 
     progress('LAUNCHING THE BLIMPS', 0.67)
     await yieldNow()
@@ -548,9 +546,8 @@ export function startHotDogSet(host, options = {}) {
       flyers.update(t, at.a, at.b, at.m, fx.chaos, 1.15, partShare, bt, camera.position)
       stave.update(bt.beats, kick)
       horizon.copy(pal[at.a][1]).lerp(pal[at.b][1], mm)
-      city.update(t, bt.beats, horizon, T.pr)
+      city.update(t, bt.beats, horizon, T.pr, camera.position)
       grill.update(bt.beats)
-      marquee.update(bt.beats, kick)
       drifters.update(t, bt.beats, camera.position)
 
       // passes

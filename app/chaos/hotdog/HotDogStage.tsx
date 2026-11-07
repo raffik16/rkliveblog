@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Bungee, JetBrains_Mono } from 'next/font/google'
 
 const mono = JetBrains_Mono({ subsets: ['latin'], weight: ['400', '600'], display: 'swap' })
-// the set's name, on the loader, the ribbon board and the record's label: flyer type
+// the set's name, on the loader and the record's label: flyer type
 const display = Bungee({ subsets: ['latin'], weight: '400', display: 'swap' })
 
 // The loader's drawing, traced as the set builds: the bun, the frank, the mustard, then the notes above it.
@@ -135,7 +135,7 @@ export default function HotDogStage() {
     <div
       ref={rootRef}
       role="img"
-      aria-label="Chaos is an art form, Roller Grill Sessions: hot dogs come apart into exploded views and back together inside glowing strange attractors, while music notes fly, a ring of stave plays a melody, more hot dogs drift over a neon city of hot dog towers under a night sky, the set's name crawls round a ribbon board, and franks roll on a giant roller grill."
+      aria-label="Chaos is an art form, Roller Grill Sessions: hot dogs come apart into exploded views and back together inside glowing strange attractors, while music notes fly, a ring of stave plays a melody, more hot dogs drift over a neon city of hot dog towers under a night sky, franks roll on a giant roller grill, and the set's name alternates with others on the label of a giant record."
       className={`${mono.className} fixed inset-0 z-[200] overflow-hidden bg-[#030304] select-none`}
       style={{ cursor: idle ? 'none' : 'default' }}
     >

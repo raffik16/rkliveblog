@@ -1,15 +1,17 @@
 // Hot Dog City: the land the set plays over. A night sky with stars and a moon that is a slice of frank; a city of
 // about a thousand towers round the storm, their windows lit by a shader rather than textures; hot dog skyscrapers,
 // mustard and ketchup bottle towers and neon hot dog signs on its skyline; and at its heart, under the storm, a plaza
-// that is a record, spinning once every sixteen bars. Fog melts the far side of town into the glow on the horizon.
+// that is a record, its label turned to whoever is looking, the set's names alternating on it under a hot dog. Fog
+// melts the far side of town into the glow on the horizon.
 //
-// Everything that moves is a smooth function of time: the record turns, the stars twinkle, the neon breathes and the
-// aviation lights fade up and down on the bar.
+// Everything that moves is a smooth function of time: the label's names fade, the stars twinkle, the neon breathes
+// and the aviation lights fade up and down on the bar.
 import * as THREE from 'three'
 import { rng } from '../../teardown/kit/util.js'
 import { trebleClef } from './notes.js'
 import { selfLit } from './mesher.js'
 import { GRILL } from './grill.js'
+import { buildLabelNames } from './label.js'
 
 export const CITY = {
   ground: -16,
@@ -88,7 +90,7 @@ function radialSprite(inner, outer) {
 }
 
 // ------------------------------------------------------------------ the record
-function recordTexture(title, font) {
+function recordTexture() {
   const S = 2048
   const cv = document.createElement('canvas')
   cv.width = cv.height = S
@@ -137,17 +139,11 @@ function recordTexture(title, font) {
   for (let i = 0; i <= 14; i++) g.lineTo(-80 + i * 11.4, i % 2 ? -4 : 6)
   g.stroke()
   g.restore()
+  // the set's name goes under the hot dog as its own layer (label.js), so it can change; the small print stays
   g.fillStyle = '#ffd21f'
-  // the set's name, shrunk to fit the label
   g.textAlign = 'center'
-  let px = Math.round(R * 0.03)
-  g.font = `${px}px ${font}`
-  const fit = (R * 0.3) / Math.max(1, g.measureText(title).width)
-  if (fit < 1) px = Math.floor(px * fit)
-  g.font = `${px}px ${font}`
-  g.fillText(title, c, c + R * 0.075)
-  g.font = `${Math.round(R * 0.018)}px monospace`
-  g.fillText('SIDE A · 33⅓', c, c + R * 0.115)
+  g.font = `${Math.round(R * 0.016)}px monospace`
+  g.fillText('SIDE A · 33⅓', c, c + R * 0.168)
   g.fillStyle = '#050507'
   g.beginPath()
   g.arc(c, c, R * 0.012, 0, Math.PI * 2)
@@ -429,7 +425,7 @@ export function buildCity({ coin, dogs, title, font = 'sans-serif' }) {
   const record = new THREE.Mesh(
     recordGeo,
     new THREE.MeshStandardMaterial({
-      map: recordTexture(title, font),
+      map: recordTexture(),
       roughness: 0.3,
       metalness: 0.15,
       envMapIntensity: 0.9,
@@ -440,6 +436,10 @@ export function buildCity({ coin, dogs, title, font = 'sans-serif' }) {
   )
   record.position.y = ground + 0.05
   group.add(record)
+  // the names, under the hot dog (toward the label's bottom edge, +z in the record's own frame)
+  const names = buildLabelNames(title, font, plaza * 0.29)
+  names.group.position.set(0, 0.03, plaza * 0.088)
+  record.add(names.group)
 
   // landmarks, placed first so the blocks keep clear of them ------------------------
   // the roller grill's lot stays clear
@@ -587,9 +587,14 @@ export function buildCity({ coin, dogs, title, font = 'sans-serif' }) {
   group.add(beacons)
 
   const glowBase = new THREE.Color('#5a1e4a')
-  /** t: seconds; beats: the beat clock; glow: a colour to lean the horizon toward (the storm's); pr: pixel ratio */
-  const update = (t, beats, glow, pr = 1) => {
-    record.rotation.y = (-2 * Math.PI * beats) / 64
+  /**
+   * t: seconds; beats: the beat clock; glow: a colour to lean the horizon toward (the storm's); pr: pixel ratio;
+   * eye: the camera's position (the label turns to it)
+   */
+  const update = (t, beats, glow, pr = 1, eye = null) => {
+    // the label turns to the camera, its text upright from where the camera stands
+    if (eye) record.rotation.y = Math.PI / 2 - Math.atan2(eye.z, eye.x)
+    names.update(beats)
     starMat.uniforms.uTime.value = t % 3600
     starMat.uniforms.uPr.value = pr
     skyU.uGlow.value.copy(glowBase).lerp(glow, 0.22)
