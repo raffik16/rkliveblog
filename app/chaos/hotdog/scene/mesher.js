@@ -162,17 +162,43 @@ export class Mesher {
 export const col = (hex, k = 1) => new THREE.Color(hex).multiplyScalar(k)
 export const mix = (a, b, k) => a.clone().lerp(b, Math.min(1, Math.max(0, k)))
 
-/** A material that also glows in its own vertex colours, by `amount` (a {value} uniform you can change). */
-export function selfLit(mat, amount) {
+// LEDs ride in the vertex colours: a colour of 2 or more in every channel is an LED, and what it has above 2 is the
+// light it gives off. Everything else is paint (a sauce brightened past 1 to read across a room stays paint).
+/** A vertex colour that marks an LED glowing `hex` at `k` times its colour (for a selfLit material). */
+export const ledCol = (hex, k = 3) => col(hex, k).addScalar(2)
+/** The LEDs' brightness, shared by every selfLit material: set once a frame, it throbs with the kick. */
+export const LED = { value: 1 }
+
+/**
+ * A material that also glows in its own vertex colours, by `amount` (a {value} uniform you can change), and lights
+ * the LEDs baked into them (ledCol), times LED. An LED's own surface is dark: only its light shows.
+ */
+export function selfLit(mat, amount = { value: 0 }) {
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uSelfLit = amount
+    sh.uniforms.uLed = LED
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform float uSelfLit;')
+      .replace(
+        '#include <common>',
+        '#include <common>\nuniform float uSelfLit;\nuniform float uLed;'
+      )
+      .replace(
+        '#include <color_fragment>',
+        `float ledK = 0.0;
+        #if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA )
+          ledK = step(1.99, min(vColor.r, min(vColor.g, vColor.b)));
+          diffuseColor.rgb *= mix(vColor.rgb, vec3(0.04), ledK);
+          diffuseColor.a *= vColor.a;
+        #endif`
+      )
       .replace(
         '#include <emissivemap_fragment>',
-        '#include <emissivemap_fragment>\n#ifdef USE_COLOR\n totalEmissiveRadiance += vColor.rgb * uSelfLit;\n#endif'
+        `#include <emissivemap_fragment>
+        #if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA )
+          totalEmissiveRadiance += mix(vColor.rgb * uSelfLit, (vColor.rgb - 2.0) * uLed, ledK);
+        #endif`
       )
   }
-  mat.customProgramCacheKey = () => 'self-lit'
+  mat.customProgramCacheKey = () => 'self-lit-led'
   return mat
 }

@@ -3,7 +3,8 @@
 // tall, a stem three and a half, as engravers set them. Each glyph is centred on its notehead (the clef on its G line),
 // so a glyph placed at a staff position sits on the right line.
 //
-// The material is black lacquer that glows in its own instance colour, and a shared uniform pulses the glow on the beat.
+// The material is gunmetal, machined and polished, that glows in its own instance colour, and a shared uniform pulses
+// the glow on the beat.
 import * as THREE from 'three'
 
 const HEAD_RX = 0.66 // notehead half-width, in staff spaces
@@ -198,16 +199,16 @@ export function trebleClef() {
 }
 
 /**
- * The notes' material: black lacquer that emits its instance colour times uGlow. Returns the material and its glow
- * uniform (shared: set it once per frame).
+ * The notes' material: polished gunmetal that emits its instance colour times uGlow (glow: a shared {value} uniform,
+ * set once per frame).
  */
 export function noteMaterial(glow) {
   const m = new THREE.MeshPhysicalMaterial({
-    color: '#0b0b10',
-    roughness: 0.28,
-    metalness: 0.1,
+    color: '#2a2d34',
+    roughness: 0.26,
+    metalness: 0.85,
     clearcoat: 1,
-    clearcoatRoughness: 0.18,
+    clearcoatRoughness: 0.15,
     envMapIntensity: 0.9,
   })
   m.onBeforeCompile = (sh) => {

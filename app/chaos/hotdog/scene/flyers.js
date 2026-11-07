@@ -1,12 +1,16 @@
-// The flyers: what a hot dog teardown leaves in the air, and the notes of the set, caught in the storm. Small whole
-// dogs, franks, coins of frank with their cut faces showing, bun halves, pickle spears, sport peppers, tomato wedges,
-// and every kind of note, each riding the same attractor curve as the points by the same formula, on the CPU: a few
-// hundred instanced meshes, every matrix recomposed per frame, a pure function of t.
+// The flyers: what a robot hot dog teardown leaves in the air, and the notes of the set, caught in the storm. Small
+// whole robot dogs, franks on their chrome collars, segments with the machine inside showing, bun halves, pickle
+// spears, sport peppers, tomato wedges; the hardware, spur gears turning, hex nuts, bolts, coil springs and hobby
+// servos; and every kind of note. Each rides the same attractor curve as the points by the same formula, on the CPU:
+// a few hundred instanced meshes, every matrix recomposed per frame, a pure function of t. They also report where
+// they are and how fast they are going (bodies), for the fur to feel them pass.
 import * as THREE from 'three'
 import { sampleAt } from '../../scene/attractors.js'
 import { FLOW, swirl } from '../../scene/storm.js'
 import { rng } from '../../teardown/kit/util.js'
 import { noteGlyphs, noteMaterial, NEON } from './notes.js'
+import { selfLit } from './mesher.js'
+import { gear, hexNut, bolt, spring, servo, METAL } from './robot.js'
 
 const V3 = THREE.Vector3
 
@@ -23,28 +27,52 @@ const unit = (g) => {
 
 /** parts: partGeometries(); food: foodMaterials(); glow: the shared {value} uniform for the notes. */
 export function buildFlyers(attractors, parts, food, glow, { seed = 37 } = {}) {
-  const colored = new THREE.MeshPhysicalMaterial({
-    vertexColors: true,
-    roughness: 0.48,
-    clearcoat: 0.6,
-    clearcoatRoughness: 0.3,
-  })
+  // food and painted parts (their LEDs light themselves), and bare metal
+  const colored = selfLit(
+    new THREE.MeshPhysicalMaterial({
+      vertexColors: true,
+      roughness: 0.48,
+      clearcoat: 0.6,
+      clearcoatRoughness: 0.3,
+    })
+  )
+  const metal = selfLit(
+    new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.24,
+      metalness: 1,
+      envMapIntensity: 1.1,
+    })
+  )
   const glyphs = noteGlyphs()
   const noteMat = noteMaterial(glow)
   const KINDS = [
-    { geo: unit(parts.dog), mat: colored, n: 30, size: [0.9, 1.35] },
-    { geo: unit(parts.frank), mat: colored, n: 26, size: [0.8, 1.2] },
-    { geo: unit(parts.coin), mat: colored, n: 44, size: [0.22, 0.34], spin: 2 },
-    { geo: unit(parts.bun), mat: colored, n: 18, size: [0.8, 1.1] },
-    { geo: unit(parts.pickle), mat: colored, n: 22, size: [0.7, 1] },
-    { geo: unit(parts.pepper), mat: colored, n: 26, size: [0.32, 0.48], spin: 1 },
+    { geo: unit(parts.dog), mat: colored, n: 26, size: [0.9, 1.35] },
+    { geo: unit(parts.frank), mat: colored, n: 22, size: [0.8, 1.2] },
+    { geo: unit(parts.coin), mat: colored, n: 40, size: [0.22, 0.34], spin: 2 },
+    { geo: unit(parts.bun), mat: colored, n: 14, size: [0.8, 1.1] },
+    { geo: unit(parts.pickle), mat: colored, n: 16, size: [0.7, 1] },
+    { geo: unit(parts.pepper), mat: colored, n: 20, size: [0.32, 0.48], spin: 1 },
     {
       geo: unit(parts.tomato),
       mat: [food.tomatoFace, food.tomatoSkin],
-      n: 20,
+      n: 16,
       size: [0.36, 0.5],
       spin: 1,
     },
+    // the hardware: gears turn on their own axles as they fly
+    { geo: unit(gear()), mat: metal, n: 22, size: [0.5, 0.8], spin: 2.5 },
+    {
+      geo: unit(gear({ teeth: 20, windows: 6, color: METAL.steel })),
+      mat: metal,
+      n: 12,
+      size: [0.8, 1.1],
+      spin: 1.6,
+    },
+    { geo: unit(hexNut()), mat: metal, n: 26, size: [0.2, 0.32], spin: 1 },
+    { geo: unit(bolt()), mat: metal, n: 22, size: [0.36, 0.56] },
+    { geo: unit(spring()), mat: metal, n: 14, size: [0.38, 0.55] },
+    { geo: unit(servo()), mat: colored, n: 14, size: [0.42, 0.6] },
     { geo: unit(glyphs.quarter.geo), mat: noteMat, n: 40, size: [0.6, 1], note: true },
     { geo: unit(glyphs.eighth.geo), mat: noteMat, n: 40, size: [0.6, 1], note: true },
     { geo: unit(glyphs.pair.geo), mat: noteMat, n: 30, size: [0.8, 1.2], note: true },
@@ -95,6 +123,10 @@ export function buildFlyers(attractors, parts, food, glow, { seed = 37 } = {}) {
     }
   }
 
+  // where each one is, its velocity and its size: x y z, vx vy vz, radius (0 while it is not drawn)
+  const bodies = new Float32Array(items.length * 7)
+  let lastT = null
+
   const pa = [0, 0, 0]
   const pb = [0, 0, 0]
   const sw = [0, 0, 0]
@@ -123,7 +155,11 @@ export function buildFlyers(attractors, parts, food, glow, { seed = 37 } = {}) {
     const A = attractors[a]
     const B = attractors[b]
     const beatInBar = ((beat.n % 4) + 4) % 4
-    for (const it of items) {
+    const dt = lastT === null ? 0 : t - lastT
+    const moving = dt > 1e-4 && dt < 0.2
+    lastT = t
+    for (let n = 0; n < items.length; n++) {
+      const it = items[n]
       const x = it.u0 + it.rate * t
       const u = x - Math.floor(x)
       let m = Math.min(1, Math.max(0, (morph - it.delay * 0.45) / 0.55))
@@ -151,8 +187,14 @@ export function buildFlyers(attractors, parts, food, glow, { seed = 37 } = {}) {
       sc.set(s, s, s)
       M4.compose(pos, q, sc)
       it.mesh.setMatrixAt(it.i, M4)
+      const o = n * 7
+      for (let k = 0; k < 3; k++) {
+        bodies[o + 3 + k] = moving ? (pos.getComponent(k) - bodies[o + k]) / dt : 0
+        bodies[o + k] = pos.getComponent(k)
+      }
+      bodies[o + 6] = s * 0.5
     }
     for (const k of KINDS) k.mesh.instanceMatrix.needsUpdate = true
   }
-  return { group, update }
+  return { group, update, bodies }
 }
