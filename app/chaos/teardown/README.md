@@ -2,7 +2,8 @@
 
 These files come from [elvarofficial/teardown](https://github.com/elvarofficial/teardown) (MIT, see `LICENSE`) at
 commit `a91262ac1109051e014662d42ecb0b7bc1f113b1`. The `/chaos` page runs the three example machines whole, from
-their own math, inside its strange attractors.
+their own math, inside its strange attractors. `/chaos/hotdog` builds its hot dogs the same way and uses the kit
+(`util.js`, `warm.js`).
 
 | Here | Upstream |
 |---|---|

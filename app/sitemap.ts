@@ -26,6 +26,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     'clocks',
     'climb',
     'chaos',
+    'chaos/hotdog',
   ].map((route) => ({
     url: `${siteUrl}/${route}`,
     lastModified: new Date().toISOString().split('T')[0],

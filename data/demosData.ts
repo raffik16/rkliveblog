@@ -9,6 +9,14 @@ export interface Demo {
 
 const demosData: Demo[] = [
   {
+    slug: 'chaos-hotdog',
+    title: 'Chaos Is an Art Form: The Hot Dog Set',
+    href: '/chaos/hotdog',
+    description:
+      'A full-screen VJ backdrop for a DJ set, no controls. A Chicago dog, a ballpark dog and a New York dog come apart into exploded views on the downbeat inside five strange attractors, while notes fly and a ring of stave plays a melody at 124 bpm (set your own with ?bpm=).',
+    tech: ['three.js', 'WebGL 2', 'GLSL', 'teardown'],
+  },
+  {
     slug: 'chaos',
     title: 'Chaos Is an Art Form',
     href: '/chaos',
