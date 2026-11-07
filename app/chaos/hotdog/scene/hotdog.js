@@ -799,29 +799,65 @@ export function buildHotDogs() {
   return { dogs, materials: M, shared }
 }
 
-/** Geometry for the flying parts: the same parts at a lower detail, each one draw call with its colours baked in. */
-export function partGeometries() {
+/**
+ * A whole dog at low detail, one draw call with its colours baked in: both bun halves opened, the frank, and its
+ * toppings. kind: 'mustard' (a yellow zigzag), 'ballpark' (mustard and a line of ketchup) or 'garden' (mustard,
+ * neon relish and onions). Sauces are brightened so they read from across a room.
+ */
+export function lowDog(kind = 'mustard', seed = 7) {
   const A = SPEC.bun.open
   const L = SPEC.frank.length
+  const r = rng(seed)
   const posed = (geo, p, q) =>
     geo.clone().applyMatrix4(new THREE.Matrix4().compose(p, q, new V3(1, 1, 1)))
-  const lowFrank = frankSlice(-L / 2, L / 2, { step: 0.006, radial: 14 })
-  const lowBack = bunHalf(-1, 3, { nu: 22, nv: 10, seeds: 0 })
-  const lowFront = bunHalf(1, 4, { nu: 22, nv: 10, seeds: 0 })
-  // a whole small dog: both bun halves opened, the frank, a mustard zigzag bright enough to read at a distance
-  const mustard = C.mustard.clone().multiplyScalar(1.6)
-  const dog = new Mesher()
-  dog.append(posed(lowBack, new V3(0, -HINGE, 0), Q(-A, 0, 0)))
-  dog.append(posed(lowFront, new V3(0, -HINGE, 0), Q(A, 0, 0)))
-  dog.append(lowFrank)
-  dog.append(
-    bead(zigzag({ amp: 0.0068, period: 0.021, lift: 0.0022 }), 0.0032, mustard, {
-      seg: 1.2,
-      radial: 5,
-    })
+  const m = new Mesher()
+  m.append(posed(bunHalf(-1, 3, { nu: 22, nv: 10, seeds: 0 }), new V3(0, -HINGE, 0), Q(-A, 0, 0)))
+  m.append(posed(bunHalf(1, 4, { nu: 22, nv: 10, seeds: 0 }), new V3(0, -HINGE, 0), Q(A, 0, 0)))
+  m.append(frankSlice(-L / 2, L / 2, { step: 0.006, radial: 14 }))
+  const low = { seg: 1.2, radial: 5 }
+  m.append(
+    bead(
+      zigzag({ amp: 0.0068, period: 0.021, lift: 0.0022 }),
+      0.0032,
+      C.mustard.clone().multiplyScalar(1.6),
+      low
+    )
   )
+  if (kind === 'ballpark')
+    m.append(
+      bead(
+        zigzag({ amp: 0.0016, period: 0.05, lift: 0.0045, zOff: -0.0035, from: -0.058, to: 0.058 }),
+        0.0028,
+        C.ketchup.clone().multiplyScalar(1.4),
+        low
+      )
+    )
+  if (kind === 'garden') {
+    const cube = new THREE.BoxGeometry(1, 1, 1)
+    const M = new THREE.Matrix4()
+    for (let i = 0; i < 70; i++) {
+      const x = (r() - 0.5) * 0.12
+      const z = (r() - 0.5) * 0.02
+      const relish = i % 2 === 0
+      const s = relish ? 0.0028 : 0.0034
+      M.compose(
+        new V3(x, frankTop(x, Math.min(R * 0.9, Math.abs(z)) * Math.sign(z)) + 0.005, z),
+        Q(r() * 6, r() * 6, r() * 6),
+        new V3(s, s * (0.6 + r() * 0.6), s)
+      )
+      m.add(cube.clone().applyMatrix4(M), relish ? C.relish.clone().multiplyScalar(1.5) : C.onion)
+    }
+  }
+  return m.build()
+}
+
+/** Geometry for the flying parts: the same parts at a lower detail, each one draw call with its colours baked in. */
+export function partGeometries() {
+  const L = SPEC.frank.length
+  const lowFrank = frankSlice(-L / 2, L / 2, { step: 0.006, radial: 14 })
+  const lowFront = bunHalf(1, 4, { nu: 22, nv: 10, seeds: 0 })
   return {
-    dog: dog.build(),
+    dog: lowDog('mustard'),
     frank: lowFrank,
     // a single coin of frank, both cut faces showing
     coin: frankSlice(-0.0065, 0.0065, { step: 0.004, radial: 18 }),

@@ -1,13 +1,27 @@
-// The director: a 64-bar loop at the set's tempo, everything a function of time. Eight phrases of eight bars, each a
-// camera move written as a function of time and of where the dogs are; smooth blends between most of them and hard
-// cuts on the bar where a VJ would cut (into the drop, and every two bars inside it). The attractor schedule, the
-// teardown schedule (explode, slice) per dog, and the passes all count in bars, so they land on the downbeat.
+// The director: a 64-bar loop at the set's tempo, everything a function of time. Eleven shots, each a camera move
+// written as a function of time and of where the dogs are, and every change between them a blend: the camera travels
+// from one to the next, it never cuts. The attractor schedule, the teardown schedule (explode, slice) per dog, and the
+// passes all count in bars, so they land on the downbeat; every one of them eases in and out, with no step anywhere
+// in the loop (the loop's own seam included), so nothing on screen jumps.
 import * as THREE from 'three'
-import { easeInOutCubic, clamp01, easeOutExpo } from '../../teardown/kit/util.js'
+import { clamp01 } from '../../teardown/kit/util.js'
 
 export const BARS = 64
 const V3 = THREE.Vector3
-const ease = easeInOutCubic
+
+// smoothstep and smootherstep: zero speed at both ends (smootherstep: zero acceleration too)
+const smooth = (x) => {
+  const k = clamp01(x)
+  return k * k * (3 - 2 * k)
+}
+export const smoother = (x) => {
+  const k = clamp01(x)
+  return k * k * k * (k * (k * 6 - 15) + 10)
+}
+// an explosion: leaves quickly but from rest, then settles
+const burst = (x) => 1 - Math.pow(1 - smooth(x), 3)
+// 0 before a, up to 1 by b, held, down to 0 between c and d
+const envelope = (x, a, b, c, d) => smoother((x - a) / (b - a)) * (1 - smoother((x - c) / (d - c)))
 
 /** The beat clock for a tempo: seconds per beat and per bar, and the loop's length. */
 export function clock(bpm) {
@@ -15,13 +29,16 @@ export function clock(bpm) {
   return { bpm, beat, bar: beat * 4, loop: beat * 4 * BARS }
 }
 
-/** Where in the music time t is: bars into the loop, whole beats, and the kick, a 0..1 swell and decay on each beat. */
+// The kick: a swell over the first tenth of the beat and a decay that reaches exactly zero as the next beat starts, so
+// the pulse is continuous from beat to beat.
+const KICK_DECAY = 3.4
+const KICK_TAIL = Math.exp(-KICK_DECAY)
+/** Where in the music time t is: bars into the loop, beats so far, and the kick (0..1) of this beat. */
 export function beatAt(t, ck) {
   const b = t / ck.beat
   const n = Math.floor(b)
   const ph = b - n
-  // a short attack (a sixtieth of a second at 124 bpm) so nothing pops, then the decay
-  const kick = Math.min(1, ph / 0.035) * Math.exp(-ph * 4.2)
+  const kick = smooth(ph / 0.1) * ((Math.exp(-ph * KICK_DECAY) - KICK_TAIL) / (1 - KICK_TAIL))
   const bars = (((b / 4) % BARS) + BARS) % BARS
   return { beats: b, n, ph, kick, bars }
 }
@@ -49,20 +66,20 @@ export function attractorAt(bars) {
 }
 
 // ------------------------------------------------------------------ teardowns (bars)
-// [bar, value]; a rise is an explosion (fast out, easeOutExpo), a fall a reassembly (eased both ways). Each dog comes
-// apart in its own phrase, all three on the drop (bar 32), and all three again in the last phrase.
+// [bar, value]; a rise is an explosion (burst), a fall a reassembly (smootherstep). Each dog comes apart in its own
+// phrase, all three on the drop (bar 32), and all three again in the last phrase.
 // prettier-ignore
 const TEARDOWN = {
   chicago: {
-    explode: [[0, 0], [9, 0], [10, 1], [14.5, 1], [16, 0], [32, 0], [32.5, 1], [38, 1], [40, 0], [57, 0], [58, 1], [62, 1], [63.5, 0]],
+    explode: [[0, 0], [9, 0], [10, 1], [14.5, 1], [16, 0], [32, 0], [33, 1], [38, 1], [40, 0], [57, 0], [58, 1], [62, 1], [63.5, 0]],
     slice: [[0, 0], [33, 0], [34.5, 1], [37.5, 1], [39, 0]],
   },
   ballpark: {
-    explode: [[0, 0], [25, 0], [26, 1], [30.5, 1], [32, 0], [32.5, 1], [38, 1], [40, 0], [57, 0], [58, 1], [62, 1], [63.5, 0]],
+    explode: [[0, 0], [25, 0], [26, 1], [30.5, 1], [32, 0], [33, 1], [38, 1], [40, 0], [57, 0], [58, 1], [62, 1], [63.5, 0]],
     slice: [[0, 0], [25.5, 0], [27, 1], [30, 1], [31.5, 0], [57.5, 0], [59, 1], [61.5, 1], [63, 0]],
   },
   newyork: {
-    explode: [[0, 0], [32, 0], [32.5, 1], [38, 1], [40, 0], [49, 0], [50, 1], [54.5, 1], [56, 0], [57, 0], [58, 1], [62, 1], [63.5, 0]],
+    explode: [[0, 0], [32, 0], [33, 1], [38, 1], [40, 0], [49, 0], [50, 1], [54.5, 1], [56, 0], [57, 0], [58, 1], [62, 1], [63.5, 0]],
     slice: [[0, 0], [50, 0], [51.5, 1], [54, 1], [55.5, 0]],
   },
 }
@@ -74,8 +91,7 @@ function track(keys, x) {
     if (x <= x1) {
       if (x1 === x0) return v1
       const k = (x - x0) / (x1 - x0)
-      const e = v1 > v0 ? easeOutExpo(k) : ease(k)
-      return v0 + (v1 - v0) * e
+      return v0 + (v1 - v0) * (v1 > v0 ? burst(k) : smoother(k))
     }
   }
   return keys[keys.length - 1][1]
@@ -117,7 +133,8 @@ function dogShot(
   return { p: orbit(look, d, az, lift + 0.1 * e), l: look, fov }
 }
 
-// each shot starts on a bar; fn gets (seconds into the shot, state, clock)
+// Each shot starts on a bar; fn gets (seconds into the shot, state, clock), and reads negative seconds fine (a shot
+// is already moving while the camera blends into it). blend: seconds the camera takes to travel into this shot.
 const SHOTS = [
   {
     at: 0,
@@ -144,31 +161,56 @@ const SHOTS = [
     name: 'ballpark',
     fn: (t, s) => dogShot(s, 'ballpark', t, { side: -0.3, drift: 0.03, lift: 0.1 }),
   },
+  // the drop: four views two bars apart, the camera always sweeping on to the next
   {
     at: 32,
-    name: 'drop',
-    cut: true,
-    // four views, a hard cut every two bars
-    sub: [
-      (t, s) =>
-        dogShot(s, 'chicago', t, { side: 0.1, drift: 0.05, lift: -0.05, d0: 10, dE: 11, fov: 44 }),
-      (t) => ({ p: orbit(ORIGIN, 34, -2.2 + 0.09 * t, 0.5), l: new V3(0, -2, 0), fov: 50 }),
-      (t, s) =>
-        dogShot(s, 'newyork', t, { side: -0.5, drift: -0.05, lift: 0.3, d0: 10, dE: 11, fov: 44 }),
-      (t, s) =>
-        dogShot(s, 'ballpark', t, { side: 0.6, drift: 0.05, lift: 0.5, d0: 11, dE: 10, fov: 44 }),
-    ],
+    name: 'drop-chicago',
+    fn: (t, s) =>
+      dogShot(s, 'chicago', t + 2, {
+        side: 0.1,
+        drift: 0.05,
+        lift: -0.05,
+        d0: 10,
+        dE: 11,
+        fov: 44,
+      }),
+  },
+  {
+    at: 34,
+    name: 'drop-wide',
+    blend: 3.4,
+    fn: (t) => ({ p: orbit(ORIGIN, 34, -2.0 + 0.09 * t, 0.5), l: new V3(0, -2, 0), fov: 50 }),
+  },
+  {
+    at: 36,
+    name: 'drop-newyork',
+    blend: 3.4,
+    fn: (t, s) =>
+      dogShot(s, 'newyork', t + 2, {
+        side: -0.5,
+        drift: -0.05,
+        lift: 0.3,
+        d0: 10,
+        dE: 11,
+        fov: 44,
+      }),
+  },
+  {
+    at: 38,
+    name: 'drop-ballpark',
+    blend: 3.4,
+    fn: (t, s) =>
+      dogShot(s, 'ballpark', t + 2, { side: 0.6, drift: 0.05, lift: 0.5, d0: 11, dE: 10, fov: 44 }),
   },
   {
     at: 40,
     name: 'stave',
-    cut: true,
     // just inside the ring of the stave, down the line of notes as they come round to the playhead, then craning
     // up over the phrase until the storm stands beyond them. Worked out in the stave's own frame (its ring is level
     // there), then taken out into the world.
     fn: (t, s, ck) => {
       const st = s.stave
-      const k = ease(t / (8 * ck.bar))
+      const k = smoother(t / (8 * ck.bar))
       const a = st.playhead + 0.5 - 0.01 * t
       const r = st.radius - 2.2 - 1.2 * k
       const p = new V3(r * Math.cos(a), 1.1 + 3.2 * k + 0.25 * Math.sin(t * 0.4), r * Math.sin(a))
@@ -178,12 +220,7 @@ const SHOTS = [
       return { p: p.applyMatrix4(st.matrix), l: l.applyMatrix4(st.matrix), fov: 54 }
     },
   },
-  {
-    at: 48,
-    name: 'newyork',
-    cut: true,
-    fn: (t, s) => dogShot(s, 'newyork', t, { side: 0.25, drift: 0.035 }),
-  },
+  { at: 48, name: 'newyork', fn: (t, s) => dogShot(s, 'newyork', t, { side: 0.25, drift: 0.035 }) },
   {
     at: 56,
     name: 'kaleido',
@@ -201,7 +238,7 @@ const SHOTS = [
   },
 ]
 
-const BLEND = 3.2 // seconds
+const BLEND = 4.5 // seconds, unless a shot says otherwise
 const pick = (s) => ({ p: s.p, l: s.l, fov: s.fov, up: s.up || UP })
 // Between two shots the camera travels round the room, not across it: radius, bearing and height are blended (the
 // short way round), with a lift in the middle. A straight line from one side of the ring to the other runs through
@@ -225,58 +262,50 @@ const mixShot = (a, b, w) => ({
   up: a.up.clone().lerp(b.up, w).normalize(),
 })
 
-// a shot's frame at loop bars `bars` (shotIndex i), seconds into it from its own start
-function frameOf(i, bars, s, ck) {
-  const sh = SHOTS[i]
-  const t = (bars - sh.at) * ck.bar
-  if (sh.sub) {
-    const k = Math.max(0, Math.min(sh.sub.length - 1, Math.floor((bars - sh.at) / 2)))
-    const ts = (bars - sh.at - 2 * k) * ck.bar
-    return pick(sh.sub[k](ts + 2, s, ck))
-  }
-  return pick(sh.fn(t, s, ck))
-}
+const frameOf = (i, bars, s, ck) => pick(SHOTS[i].fn((bars - SHOTS[i].at) * ck.bar, s, ck))
 
-export function shotAt(bars, s, ck, reduced = false) {
+/** The camera at loop bars `bars`: {p, l, fov, up, name}. */
+export function shotAt(bars, s, ck) {
   let i = SHOTS.length - 1
   while (i > 0 && SHOTS[i].at > bars) i--
-  const cur = SHOTS[i]
   const ni = (i + 1) % SHOTS.length
   const next = SHOTS[ni]
   const nextAt = i + 1 < SHOTS.length ? next.at : BARS
   let out = frameOf(i, bars, s, ck)
-  let name = cur.name
-  // smooth blends start a little before the next shot's bar; cuts land on it (with reduced motion, cuts into a
-  // shot blend too)
-  const blendBars = BLEND / ck.bar
-  if (!(next.cut && !reduced) && !cur.sub && bars > nextAt - blendBars) {
-    const w = ease((bars - (nextAt - blendBars)) / blendBars)
+  let name = SHOTS[i].name
+  // the blend into the next shot runs over the last `blend` seconds before its bar, with smootherstep weights
+  const blendBars = (next.blend || BLEND) / ck.bar
+  if (bars > nextAt - blendBars) {
+    const w = smoother((bars - (nextAt - blendBars)) / blendBars)
+    // past the loop's end, the first shot is read a loop earlier
     const nb = i + 1 < SHOTS.length ? bars : bars - BARS
-    // the next shot as if it had already started (its fn reads negative seconds fine)
-    const nf = frameOf(ni, Math.max(nb, next.at - blendBars), s, ck)
-    out = mixShot(out, nf, w)
+    out = mixShot(out, frameOf(ni, nb, s, ck), w)
     if (w > 0.5) name = next.name
   }
   return { ...out, name }
 }
 
 // ------------------------------------------------------------------ passes
-const bump = (x, a, b, ramp) => clamp01(Math.min((x - a) / ramp, (b - x) / ramp))
 export function fxAt(bars, beat, reduced) {
   const morph = attractorAt(bars)
-  const drop = bars >= 32 && bars < 40 ? 1 - 0.5 * clamp01((bars - 38) / 2) : 0
+  // the drop's extra energy: rises over the bar before it, falls away over its last two bars
+  const drop = envelope(bars, 31.5, 32.5, 38, 40)
   const kick = reduced ? 0 : beat.kick
-  // a swell on the first beat of every eight-bar phrase
-  const phrase = reduced ? 0 : Math.floor(bars) % 8 === 0 ? Math.exp(-(bars % 1) * 4 * 1.6) : 0
-  // the kaleidoscope: the last phrase, and two bars in the middle of the drop
-  const kal = ease(bump(bars, 56.5, 63.2, 1.2)) + (bars >= 36 && bars < 38 ? 0.9 : 0)
+  // a swell at the top of every eight-bar phrase, eased in over a sixteenth note so it never flashes
+  const pb = bars % 8
+  const phrase = reduced ? 0 : smooth(pb / 0.06) * Math.exp(-pb * 2.2)
+  // the kaleidoscope blooms out from the middle of the frame and folds back into it: two bars in the drop, and the
+  // last phrase. kaleido is how far it has opened (0 closed, 1 covering the frame).
+  const kal = Math.max(
+    envelope(bars, 35.4, 36.6, 37.4, 38.8) * 0.85,
+    envelope(bars, 56, 58.5, 61, 63.6)
+  )
   return {
     chaos: 1.35 * morph.k + 0.7 * drop,
-    kaleido: reduced ? 0 : Math.min(1, kal),
-    seg: bars >= 36 && bars < 38 ? 8 : 6,
-    aberration: reduced ? 0 : 0.0012 * morph.k + 0.0016 * drop * (0.4 + 0.6 * kick),
-    bloom: 0.5 + 0.16 * kick + 0.14 * drop + 0.22 * phrase + 0.1 * morph.k,
-    exposure: 1 + 0.05 * kick + 0.12 * phrase,
+    kaleido: reduced ? 0 : kal,
+    aberration: reduced ? 0 : 0.0012 * morph.k + 0.0014 * drop * (0.6 + 0.4 * kick),
+    bloom: 0.5 + 0.1 * kick + 0.12 * drop + 0.15 * phrase + 0.1 * morph.k,
+    exposure: 1 + 0.03 * kick + 0.07 * phrase,
     // the dogs bounce to the kick
     bounce: kick * (0.6 + 0.4 * drop),
   }

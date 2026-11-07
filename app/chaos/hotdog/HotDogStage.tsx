@@ -130,7 +130,7 @@ export default function HotDogStage() {
     <div
       ref={rootRef}
       role="img"
-      aria-label="Chaos is an art form, the hot dog set: hot dogs come apart into exploded views and back together inside glowing strange attractors, while music notes fly and a ring of stave plays a melody."
+      aria-label="Chaos is an art form, the hot dog set: hot dogs come apart into exploded views and back together inside glowing strange attractors, while music notes fly, a ring of stave plays a melody, and more hot dogs drift over a neon city of hot dog towers under a night sky."
       className={`${mono.className} fixed inset-0 z-[200] overflow-hidden bg-[#030304] select-none`}
       style={{ cursor: idle ? 'none' : 'default' }}
     >

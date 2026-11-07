@@ -1,8 +1,10 @@
 // Chaos is an art form: the hot dog set. A VJ backdrop with no controls. Three hot dogs (a Chicago dog, a ballpark dog
 // and a New York dog) come apart into exploded views and go back together inside the five strange attractors of
-// /chaos, while the storm carries flying parts and notes and a ring of stave plays a melody round the whole room.
-// Everything counts in bars at the set's tempo (124 bpm, or ?bpm=), so the teardowns, cuts and pulses land on the
-// downbeat. It plays itself, tunes its own quality to the GPU behind the loader, and stops when the page goes away.
+// /chaos, while the storm carries flying parts and notes, a ring of stave plays a melody round the whole room, more
+// dogs drift in the space beyond, and Hot Dog City spreads out under a night sky. Everything counts in bars at the
+// set's tempo (124 bpm, or ?bpm=), so the teardowns, camera moves and pulses land on the downbeat, and everything
+// eases: there are no cuts and no steps. It plays itself, tunes its own quality to the GPU behind the loader, and
+// stops when the page goes away.
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
@@ -10,12 +12,13 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { warmComposer } from '../../teardown/kit/warm.js'
-import { rng } from '../../teardown/kit/util.js'
 import { ATTRACTOR_NAMES, buildAttractor } from '../../scene/attractors.js'
 import { buildStorm, flowPhases, FLOW } from '../../scene/storm.js'
-import { buildHotDogs, partGeometries } from './hotdog.js'
+import { buildHotDogs, lowDog, partGeometries } from './hotdog.js'
 import { buildFlyers } from './flyers.js'
 import { buildStave, STAVE } from './stave.js'
+import { buildCity } from './city.js'
+import { buildDrifters } from './drifters.js'
 import { attractorAt, beatAt, clock, fxAt, shotAt, teardownAt } from './director.js'
 
 // one palette per attractor (slow, mid, fast): ketchup, relish, club ice, mustard, magenta
@@ -88,8 +91,14 @@ const FINISH = {
     float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233)) + uTime) * 43758.5453); }
     void main() {
       vec3 c = grab(vUv);
-      if (uKal > 0.001) c = mix(c, grab(kal(vUv)), uKal);
       vec2 v = (vUv - 0.5) * vec2(uAspect, 1.0);
+      // the kaleidoscope opens as a disc from the middle of the frame (uKal 0 closed, 1 covering it), soft-edged
+      if (uKal > 0.001) {
+        float rr = length(v) / length(vec2(uAspect, 1.0) * 0.5);
+        float edge = uKal * 1.55 - 0.25;
+        float m = 1.0 - smoothstep(edge - 0.32, edge, rr);
+        c = mix(c, grab(kal(vUv)), m * smoothstep(0.0, 0.2, uKal));
+      }
       c *= 1.0 - 0.4 * smoothstep(0.35, 1.05, length(v) * 1.15);
       c += (hash(vUv * 731.0) - 0.5) * 0.0012;
       gl_FragColor = vec4(max(c, 0.0), 1.0);
@@ -128,33 +137,6 @@ function clubEnvironment(renderer) {
       m.material.dispose()
     }
   })
-  return tex
-}
-
-function backdrop() {
-  // a near-black radial falloff with a hint of club violet, dithered so it does not band at 8 bits
-  const S = 1024
-  const c = document.createElement('canvas')
-  c.width = S
-  c.height = S
-  const g = c.getContext('2d')
-  const gr = g.createRadialGradient(S / 2, S * 0.46, 8, S / 2, S / 2, S * 0.71)
-  gr.addColorStop(0, '#120b18')
-  gr.addColorStop(0.55, '#08060c')
-  gr.addColorStop(1, '#020203')
-  g.fillStyle = gr
-  g.fillRect(0, 0, S, S)
-  const img = g.getImageData(0, 0, S, S)
-  const r = rng(7)
-  for (let i = 0; i < img.data.length; i += 4) {
-    const d = Math.round((r() - 0.5) * 2.2)
-    img.data[i] = Math.max(0, img.data[i] + d)
-    img.data[i + 1] = Math.max(0, img.data[i + 1] + d)
-    img.data[i + 2] = Math.max(0, img.data[i + 2] + d)
-  }
-  g.putImageData(img, 0, 0)
-  const tex = new THREE.CanvasTexture(c)
-  tex.colorSpace = THREE.SRGBColorSpace
   return tex
 }
 
@@ -234,7 +216,7 @@ export function startHotDogSet(host, options = {}) {
     renderer.info.autoReset = false
 
     scene = new THREE.Scene()
-    const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 400)
+    const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 470)
     const hemi = new THREE.HemisphereLight('#3a3550', '#0a0806', 0.75)
     scene.add(hemi)
     const hemiBase = new THREE.Color('#3a3550')
@@ -297,13 +279,29 @@ export function startHotDogSet(host, options = {}) {
     progress('THROWING THE PARTS IN THE AIR', 0.63)
     await yieldNow()
     if (!alive) return
-    const flyers = buildFlyers(attractors, partGeometries(), food, glow)
+    const parts = partGeometries()
+    const flyers = buildFlyers(attractors, parts, food, glow)
     scene.add(flyers.group)
 
-    progress('LIGHTING THE CLUB', 0.68)
+    progress('ZONING HOT DOG CITY', 0.65)
     await yieldNow()
     if (!alive) return
-    scene.background = backdrop()
+    const wholeDogs = ['mustard', 'ballpark', 'garden'].map((k) => lowDog(k))
+    const city = buildCity({ coin: parts.coin, dogs: wholeDogs })
+    scene.add(city.group)
+
+    progress('LAUNCHING THE BLIMPS', 0.67)
+    await yieldNow()
+    if (!alive) return
+    const drifters = buildDrifters(wholeDogs)
+    scene.add(drifters.group)
+
+    progress('LIGHTING THE CLUB', 0.69)
+    await yieldNow()
+    if (!alive) return
+    // the sky dome covers the background; the fog takes the horizon's colour, so the far side of town melts into it
+    scene.background = new THREE.Color('#05040a')
+    scene.fog = new THREE.FogExp2('#1a0c2a', 0.005)
     scene.environment = clubEnvironment(renderer)
     scene.environmentIntensity = 0.75
 
@@ -368,7 +366,17 @@ export function startHotDogSet(host, options = {}) {
         streakBase = streakObj.material.uniforms.uBright.value
         finish.uniforms.uAspect.value = W / H
       }
-      storm.setDensity(T.density)
+    }
+    // the share of particles and parts drawn: set outright while tuning, then eased toward a new tier over a couple of
+    // seconds once the set plays, so a change of tier never pops
+    let density = TIERS[tier].density
+    let partShare = TIERS[tier].parts
+    let easeTiers = false
+    const easeToward = (dt) => {
+      const T = TIERS[tier]
+      const k = Math.min(1, dt * 1.2)
+      density += (T.density - density) * k
+      partShare += (T.parts - partShare) * k
     }
     ro = new ResizeObserver(() => {
       clearTimeout(resizeTimer)
@@ -431,10 +439,16 @@ export function startHotDogSet(host, options = {}) {
       return td
     }
 
+    const horizon = new THREE.Color()
     let frame = 0
     const render = (t) => {
       if (sizeDirty) applySize()
       const T = TIERS[tier]
+      if (!easeTiers) {
+        density = T.density
+        partShare = T.parts
+      }
+      storm.setDensity(density)
       const bt = beatAt(t, ck)
       const bars = bt.bars
       const tm = t % 3600
@@ -474,18 +488,18 @@ export function startHotDogSet(host, options = {}) {
         u.uPalB.value[i].copy(pal[at.b][i])
       }
       // the storm breathes with the kick
-      streakObj.material.uniforms.uBright.value = streakBase * (1 + 0.35 * kick)
-      sparkObj.material.uniforms.uBright.value = sparkBase * (1 + 0.6 * kick)
+      streakObj.material.uniforms.uBright.value = streakBase * (1 + 0.18 * kick)
+      sparkObj.material.uniforms.uBright.value = sparkBase * (1 + 0.3 * kick)
 
       const mm = at.m * at.m * (3 - 2 * at.m)
       hemi.color.copy(pal[at.a][1]).lerp(pal[at.b][1], mm).lerp(hemiBase, 0.5)
       washA.color.copy(washABase).lerp(pal[at.a][1], 0.35)
-      washA.intensity = 0.45 + 0.8 * kick
+      washA.intensity = 0.45 + 0.5 * kick
       washB.color.copy(washBBase).lerp(pal[at.b][2], 0.25)
-      washB.intensity = 0.55 + 0.6 * kick
+      washB.intensity = 0.55 + 0.4 * kick
 
       // camera
-      const shot = shotAt(bars, shotState, ck, reduced)
+      const shot = shotAt(bars, shotState, ck)
       portrait(shot.p, shot.l)
       shot.p.x += 0.05 * Math.sin(t * 0.71) + 0.025 * Math.sin(t * 1.93)
       shot.p.y += 0.04 * Math.sin(t * 0.53 + 1) + 0.02 * Math.sin(t * 2.3)
@@ -504,15 +518,17 @@ export function startHotDogSet(host, options = {}) {
       key.target.position.copy(shot.l)
       key.target.updateMatrixWorld()
 
-      glow.value = 1 + 0.9 * kick
-      flyers.update(t, at.a, at.b, at.m, fx.chaos, 1.15, T.parts, bt, camera.position)
+      glow.value = 1 + 0.6 * kick
+      flyers.update(t, at.a, at.b, at.m, fx.chaos, 1.15, partShare, bt, camera.position)
       stave.update(bt.beats, kick)
+      horizon.copy(pal[at.a][1]).lerp(pal[at.b][1], mm)
+      city.update(t, bt.beats, horizon, T.pr)
+      drifters.update(t, bt.beats, camera.position)
 
       // passes
       bloom.strength = fx.bloom
       renderer.toneMappingExposure = 1.05 * fx.exposure
       finish.uniforms.uKal.value = fx.kaleido
-      finish.uniforms.uSeg.value = fx.seg
       finish.uniforms.uRot.value = tm * 0.07
       finish.uniforms.uAb.value = fx.aberration
       finish.uniforms.uTime.value = (frame % 997) * 0.37
@@ -596,6 +612,7 @@ export function startHotDogSet(host, options = {}) {
       const dt = last ? Math.min(0.1, (now - last) / 1000) : 0
       last = now
       t += dt * speed
+      easeToward(dt)
       render(t)
       if (locked) return
       if (!watchFrom) watchFrom = now + 3000
@@ -634,6 +651,7 @@ export function startHotDogSet(host, options = {}) {
     }
     document.addEventListener('visibilitychange', onVisibility)
 
+    easeTiers = true
     options.onReady?.()
     if (!q.has('pause')) raf = requestAnimationFrame(loop)
   }

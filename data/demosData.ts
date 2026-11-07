@@ -13,7 +13,7 @@ const demosData: Demo[] = [
     title: 'Chaos Is an Art Form: The Hot Dog Set',
     href: '/chaos/hotdog',
     description:
-      'A full-screen VJ backdrop for a DJ set, no controls. A Chicago dog, a ballpark dog and a New York dog come apart into exploded views on the downbeat inside five strange attractors, while notes fly and a ring of stave plays a melody at 124 bpm (set your own with ?bpm=).',
+      'A full-screen VJ backdrop for a DJ set, no controls. A Chicago dog, a ballpark dog and a New York dog come apart into exploded views on the downbeat inside five strange attractors, over a neon Hot Dog City, while notes fly and a ring of stave plays a melody at 124 bpm (set your own with ?bpm=).',
     tech: ['three.js', 'WebGL 2', 'GLSL', 'teardown'],
   },
   {

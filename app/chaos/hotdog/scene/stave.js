@@ -162,32 +162,29 @@ export function buildStave(glow) {
   const update = (beats, kick) => {
     ring.rotation.y = (2 * Math.PI * beats) / S.beats
     for (const n of notes) {
-      // how many beats since this note last crossed the playhead
+      // beats from the moment this note crosses the playhead (negative: still coming), the short way round the ring
       let d = (beats - n.beat - 0.3) % S.beats
       if (d < 0) d += S.beats
-      const ring1 =
-        d < n.len + 1.5
-          ? Math.exp(-Math.max(0, d - n.len * 0.6) * 1.4) * (d < 0.02 ? d / 0.02 : 1)
-          : 0
-      const pre = d > S.beats - 0.5 ? (d - (S.beats - 0.5)) * 0.6 : 0
-      const k = 0.55 + 0.25 * kick + 3.4 * ring1 + pre
+      if (d > S.beats / 2) d -= S.beats
+      // it brightens quickly as it arrives and dies away over its own length: a smooth bell, no edges
+      const x = d < 0 ? d / 0.3 : d / (0.45 + 0.45 * n.len)
+      const ring1 = Math.exp(-x * x)
+      const k = 0.55 + 0.2 * kick + 3.2 * ring1
       tmp.copy(n.base).multiplyScalar(k)
       n.im.setColorAt(n.i, tmp)
       // the sounding note hops off the staff toward the middle of the ring
       M.copy(n.M)
-      if (ring1 > 0.001) {
-        hop.copy(n.radial).multiplyScalar(-0.5 * ring1)
-        M.elements[12] += hop.x
-        M.elements[13] += 0.12 * ring1
-        M.elements[14] += hop.z
-      }
+      hop.copy(n.radial).multiplyScalar(-0.5 * ring1)
+      M.elements[12] += hop.x
+      M.elements[13] += 0.12 * ring1
+      M.elements[14] += hop.z
       n.im.setMatrixAt(n.i, M)
     }
     for (const im of meshes) {
       im.instanceColor.needsUpdate = true
       im.instanceMatrix.needsUpdate = true
     }
-    beamMat.color.setRGB(1, 0.24, 0.94).multiplyScalar(1.4 + 1.2 * kick)
+    beamMat.color.setRGB(1, 0.24, 0.94).multiplyScalar(1.4 + 0.8 * kick)
   }
 
   return { group, update }
