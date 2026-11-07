@@ -192,21 +192,21 @@ export function buildDebris(attractors, { seed = 29 } = {}) {
   const M = {
     steel: new THREE.MeshStandardMaterial({
       color: '#cfd2d6',
-      roughness: 0.42,
+      roughness: 0.5,
       metalness: 1,
-      envMapIntensity: 0.6,
+      envMapIntensity: 0.45,
     }),
     brass: new THREE.MeshStandardMaterial({
       color: '#b98a55',
-      roughness: 0.4,
+      roughness: 0.48,
       metalness: 0.9,
-      envMapIntensity: 0.6,
+      envMapIntensity: 0.45,
     }),
     alu: new THREE.MeshStandardMaterial({
       color: '#d9dbdf',
-      roughness: 0.45,
+      roughness: 0.52,
       metalness: 0.85,
-      envMapIntensity: 0.55,
+      envMapIntensity: 0.45,
     }),
     black: new THREE.MeshPhysicalMaterial({
       color: '#141518',

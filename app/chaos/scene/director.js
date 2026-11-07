@@ -1,7 +1,7 @@
 // The director: one two-minute loop, everything a function of loop time. Eight shots, each a camera move written as
 // a function of time and of where the machines are, blended into each other over five seconds; the attractor
 // schedule (hold, then a six-second morph into the next); and the cues for the passes that only show up now and
-// then (the trails during a morph, the kaleidoscope before the finale).
+// then (the colour fringing during a morph, the kaleidoscope before the finale).
 import * as THREE from 'three'
 import { LOOP } from './machines.js'
 import { easeInOutCubic, clamp01 } from '../teardown/kit/util.js'
@@ -198,16 +198,13 @@ export function shotAt(tau, s) {
 // ------------------------------------------------------------------ passes
 export function fxAt(tau) {
   const morph = attractorAt(tau)
-  // trails only while the storm is loose
-  let trails = 0
-  for (const [a, b] of MORPHS) trails = Math.max(trails, bump(tau, a - 0.5, b + 0.5, 2.2))
   const kaleido = ease(bump(tau, 91, 103.5, 2.5))
   const finale = bump(tau, 103, 114, 3)
   return {
     chaos: 1.35 * morph.k,
-    trails: 0.8 * trails,
     kaleido,
-    aberration: 0.0035 * morph.k + 0.002 * finale,
+    // a trace of colour fringing toward the edges while the storm is loose, never enough to soften the frame
+    aberration: 0.0012 * morph.k + 0.0007 * finale,
     bloom: 0.55 + 0.2 * finale + 0.12 * morph.k,
   }
 }

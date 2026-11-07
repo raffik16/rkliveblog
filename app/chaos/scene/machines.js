@@ -75,6 +75,12 @@ const BEAST_PALETTE = {
   trace: '#e0662b',
 }
 
+/** How far apart each machine is at loop time tau (0 whole, 1 fully exploded). */
+export function explodeAt(tau) {
+  const t = ((tau % LOOP) + LOOP) % LOOP
+  return { v8: keyed(EXPLODE.v8, t), beast: keyed(EXPLODE.beast, t), gear: keyed(EXPLODE.gear, t) }
+}
+
 export function buildMachines() {
   const group = new THREE.Group()
 
@@ -137,11 +143,7 @@ export function buildMachines() {
 
   /** t: seconds since the start (continuous); tau: loop time. */
   const update = (t, tau) => {
-    const ex = {
-      v8: keyed(EXPLODE.v8, tau),
-      beast: keyed(EXPLODE.beast, tau),
-      gear: keyed(EXPLODE.gear, tau),
-    }
+    const ex = explodeAt(tau)
     state.explode = ex
 
     // V8: the crank turns slowly enough to follow one piston, and breathes a little faster now and then
@@ -208,6 +210,9 @@ export function buildMachines() {
       m.roughness = Math.max(m.roughness, 0.45)
       m.envMapIntensity = 0.55
     }
+    // the gloss-black clearcoat, back-lit by the rim light at a grazing angle, turns to a mirror line and blooms
+    if (m.isMeshPhysicalMaterial && m.clearcoat > 0)
+      m.clearcoatRoughness = Math.max(m.clearcoatRoughness, 0.34)
   }
 
   return { group, update, state, materials: [...materials] }

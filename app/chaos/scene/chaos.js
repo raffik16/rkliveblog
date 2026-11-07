@@ -5,15 +5,15 @@
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
-import { AfterimagePass } from 'three/addons/postprocessing/AfterimagePass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { warmComposer } from '../teardown/kit/warm.js'
+import { rng } from '../teardown/kit/util.js'
 import { buildAttractors } from './attractors.js'
-import { buildStorm, flowPhases } from './storm.js'
+import { buildStorm, flowPhases, FLOW } from './storm.js'
 import { buildDebris } from './debris.js'
-import { buildMachines, LOOP } from './machines.js'
+import { buildMachines, explodeAt, LOOP } from './machines.js'
 import { attractorAt, captionAt, fxAt, shotAt, titleAt } from './director.js'
 
 // one palette per attractor: slow, mid, fast
@@ -26,6 +26,22 @@ const PALETTES = [
 ]
 // what each machine's points burn with as they leave it: the V8's combustion, the beest's joints, the gear's legs
 const ACCENTS = ['#ff6a1f', '#d1322a', '#e8572a']
+
+// Before bloom: no pixel brighter than K times white, hue kept. A glossy face that lines up with a light can reach 50
+// times white; tone mapping shows 2.5 and 50 as the same white, but bloom would spread the 50 into a halo across the
+// frame. Capped, highlights stay sharp sparkles.
+const CLAMP = {
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    varying vec2 vUv;
+    void main() {
+      vec4 c = texture2D(tDiffuse, vUv);
+      float m = max(c.r, max(c.g, c.b));
+      gl_FragColor = vec4(c.rgb * min(1.0, 2.5 / max(m, 1e-4)), 1.0);
+    }`,
+}
 
 const FINISH = {
   uniforms: {
@@ -106,16 +122,27 @@ function studioEnvironment(renderer) {
 }
 
 function backdrop() {
+  // a near-black radial falloff; at 8 bits a gradient this dark bands, so each pixel gets a seeded ±1 level of dither
+  const S = 1024
   const c = document.createElement('canvas')
-  c.width = 256
-  c.height = 256
+  c.width = S
+  c.height = S
   const g = c.getContext('2d')
-  const gr = g.createRadialGradient(128, 118, 4, 128, 128, 182)
+  const gr = g.createRadialGradient(S / 2, S * 0.46, 8, S / 2, S / 2, S * 0.71)
   gr.addColorStop(0, '#0f0c14')
   gr.addColorStop(0.55, '#07060a')
   gr.addColorStop(1, '#020203')
   g.fillStyle = gr
-  g.fillRect(0, 0, 256, 256)
+  g.fillRect(0, 0, S, S)
+  const img = g.getImageData(0, 0, S, S)
+  const r = rng(7)
+  for (let i = 0; i < img.data.length; i += 4) {
+    const d = Math.round((r() - 0.5) * 2.2)
+    img.data[i] = Math.max(0, img.data[i] + d)
+    img.data[i + 1] = Math.max(0, img.data[i + 1] + d)
+    img.data[i + 2] = Math.max(0, img.data[i + 2] + d)
+  }
+  g.putImageData(img, 0, 0)
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.SRGBColorSpace
   return tex
@@ -135,7 +162,7 @@ const hasWebGL2 = () => {
  * may be missing. Returns a function that tears everything down.
  *
  * Hooks for reviewing stills (not controls): ?t=<seconds> starts there, ?pause renders one frame and waits for
- * window.__chaos.renderAt(t), ?tier=<0-4> fixes the quality tier.
+ * window.__chaos.renderAt(t), ?tier=<0-5> fixes the quality tier.
  *
  * @param {HTMLElement} host
  * @param {{title?: HTMLElement | null, leftBox?: HTMLElement | null, rightBox?: HTMLElement | null,
@@ -183,13 +210,13 @@ export function startChaos(host, overlay = {}, options = {}) {
   const key = new THREE.DirectionalLight('#ffe7cc', 2.5)
   key.position.set(6, 10, 8)
   scene.add(key)
-  const rim = new THREE.DirectionalLight('#9fc2ff', 1.7)
+  const rim = new THREE.DirectionalLight('#9fc2ff', 1.3)
   rim.position.set(-8, 3, -10)
   scene.add(rim)
 
   const attractors = buildAttractors()
-  const storm = buildStorm(attractors, { count: small ? 110000 : 200000 })
-  scene.add(storm.points)
+  const storm = buildStorm(attractors, { count: small ? 150000 : 280000 })
+  scene.add(storm.group)
   const debris = buildDebris(attractors)
   scene.add(debris.group)
   const machines = buildMachines()
@@ -199,30 +226,31 @@ export function startChaos(host, overlay = {}, options = {}) {
   storm.uniforms.uAcc.value.forEach((c, i) => c.set(ACCENTS[i]))
 
   // ------------------------------------------------------------ post
-  const target = new THREE.WebGLRenderTarget(4, 4, {
-    type: THREE.HalfFloatType,
-    samples: small ? 0 : 4,
-  })
+  // 4x MSAA on every device: the streaks are hairlines and the machines are thin tubes, both shimmer without it
+  const target = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 })
   const composer = new EffectComposer(renderer, target)
   composer.addPass(new RenderPass(scene, camera))
-  const trails = new AfterimagePass(0)
-  composer.addPass(trails)
-  const bloom = new UnrealBloomPass(new THREE.Vector2(4, 4), 0.6, 0.5, 1.0)
+  composer.addPass(new ShaderPass(CLAMP))
+  const bloom = new UnrealBloomPass(new THREE.Vector2(4, 4), 0.6, 0.4, 1.3)
   composer.addPass(bloom)
   const finish = new ShaderPass(FINISH)
   composer.addPass(finish)
   composer.addPass(new OutputPass())
 
   // ------------------------------------------------------------ quality tiers
+  // Resolution is the last thing to go: a slow GPU first draws fewer particles and parts, and only then fewer pixels.
+  // The pixel ratio is capped at 2 (a 3x phone at 2x is already sharp, and a third of the cost).
   const dpr = devicePixelRatio || 1
+  const cap = (x) => Math.min(dpr, x)
   const TIERS = [
-    { pr: Math.min(dpr, 2), density: 1, parts: 1, trails: true },
-    { pr: Math.min(dpr, 1.5), density: 0.8, parts: 1, trails: true },
-    { pr: Math.min(dpr, 1.2), density: 0.62, parts: 0.8, trails: true },
-    { pr: Math.min(dpr, 1), density: 0.46, parts: 0.65, trails: false },
-    { pr: Math.min(dpr, 0.75), density: 0.34, parts: 0.5, trails: false },
+    { pr: cap(2), density: 1, parts: 1 },
+    { pr: cap(2), density: 0.7, parts: 1 },
+    { pr: cap(1.75), density: 0.55, parts: 0.85 },
+    { pr: cap(1.5), density: 0.45, parts: 0.7 },
+    { pr: cap(1.25), density: 0.35, parts: 0.6 },
+    { pr: cap(1), density: 0.3, parts: 0.5 },
   ]
-  let tier = small ? 2 : 0
+  let tier = small ? 1 : 0
   if (q.has('tier')) tier = Math.max(0, Math.min(TIERS.length - 1, Number(q.get('tier')) || 0))
   let W = 1
   let H = 1
@@ -237,7 +265,8 @@ export function startChaos(host, overlay = {}, options = {}) {
     camera.aspect = W / H
     camera.updateProjectionMatrix()
     storm.setDensity(T.density)
-    trails.enabled = T.trails && !reduced
+    const db = renderer.getDrawingBufferSize(new THREE.Vector2())
+    storm.setViewport(db.x, db.y, T.pr)
     finish.uniforms.uAspect.value = W / H
   }
   applySize()
@@ -265,7 +294,6 @@ export function startChaos(host, overlay = {}, options = {}) {
     p.sub(l).multiplyScalar(k).add(l)
   }
   let frame = 0
-  let noTrails = false
   const render = (t) => {
     const tau = ((t % LOOP) + LOOP) % LOOP
     const tm = t % 3600
@@ -284,6 +312,19 @@ export function startChaos(host, overlay = {}, options = {}) {
     u.uFlowB.value = fb
     u.uTime.value = tm
     u.uChaos.value = fx.chaos
+    // the streak tails: the same storm, FLOW.trail seconds earlier
+    const t2 = t - FLOW.trail
+    const at2 = attractorAt(tau - FLOW.trail)
+    const [fa2, fb2] = flowPhases(t2)
+    u.uFlowA2.value = fa2
+    u.uFlowB2.value = fb2
+    u.uTime2.value = ((t2 % 3600) + 3600) % 3600
+    // morph progress on the head's own pair of attractors (across a window edge, the tail holds where the head is)
+    u.uMorph2.value = at2.a === at.a && at2.b === at.b ? at2.m : at.a !== at.b ? 0 : at.m
+    const ex2 = explodeAt(tau - FLOW.trail)
+    u.uRel2.value[0] = ex2.v8
+    u.uRel2.value[1] = ex2.beast
+    u.uRel2.value[2] = ex2.gear
     for (let i = 0; i < 3; i++) {
       u.uPalA.value[i].copy(pal[at.a][i])
       u.uPalB.value[i].copy(pal[at.b][i])
@@ -318,7 +359,6 @@ export function startChaos(host, overlay = {}, options = {}) {
     u.uScale.value = (H * T.pr) / (2 * Math.tan((camera.fov * Math.PI) / 360))
 
     // passes
-    trails.uniforms.damp.value = reduced || noTrails ? 0 : fx.trails
     bloom.strength = fx.bloom
     finish.uniforms.uKal.value = reduced ? 0 : fx.kaleido
     finish.uniforms.uRot.value = tm * 0.07
@@ -416,13 +456,7 @@ export function startChaos(host, overlay = {}, options = {}) {
 
   // test hook: render any moment on demand (the page's own review loop uses it)
   window.__chaos = {
-    renderAt: (s) => {
-      // a still has no history: one frame without trails flushes whatever the last still left in them
-      noTrails = true
-      render(s)
-      noTrails = false
-      render(s)
-    },
+    renderAt: (s) => render(s),
     get tier() {
       return tier
     },
