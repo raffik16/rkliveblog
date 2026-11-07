@@ -122,7 +122,7 @@ export function buildLabelNames(title, font, width) {
     const into = (slot - i) * HOLD_BARS // bars into this name
     const w = smoother((into - (HOLD_BARS - FADE_BARS)) / FADE_BARS)
     const n = order.length
-    const cur = ((i % n) + n) % n | 0
+    const cur = ((i % n) + n) % n
     set(a, tex[cur], 1 - w)
     set(b, tex[(cur + 1) % n], w)
   }
