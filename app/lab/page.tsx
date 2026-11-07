@@ -8,7 +8,7 @@ import EdPill from '@/components/edition/EdPill'
 export const metadata = genPageMetadata({
   title: 'Lab',
   description:
-    'Interactive demos built alongside the blog: a Canvas spacecraft simulator, twelve historical clocks, a one-button game and a WebMCP toolkit.',
+    'Interactive demos built alongside the blog: two full-screen three.js pieces, a Canvas spacecraft simulator, twelve historical clocks, a one-button game and a WebMCP toolkit.',
   path: '/lab',
 })
 
@@ -38,8 +38,9 @@ export default function LabPage() {
           </div>
           <div className="ed-notes">
             <EdNote index={1} label="Heads up">
-              Chaos fills the whole window and has no controls. Use your browser&apos;s back button
-              to leave it.
+              The two Chaos pieces fill the whole window and have no controls: click for fullscreen,
+              and use your browser&apos;s back button to leave. Roller Grill Sessions keeps the
+              screen awake, so it can run behind a DJ all night.
             </EdNote>
           </div>
         </div>

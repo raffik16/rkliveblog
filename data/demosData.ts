@@ -9,6 +9,14 @@ export interface Demo {
 
 const demosData: Demo[] = [
   {
+    slug: 'roller-grill-sessions',
+    title: 'Chaos Is an Art Form: Roller Grill Sessions',
+    href: '/chaos/hotdog',
+    description:
+      'A full-screen VJ backdrop for a DJ set, no controls. Hot dogs spin on the roller grill, DJs spin records: a Chicago dog, a ballpark dog and a New York dog come apart into exploded views on the downbeat inside five strange attractors, over a neon Hot Dog City, the set’s name alternating with the night’s other names on a giant record’s label. 124 bpm by default; set your own with ?bpm=, and your own party name with ?title=.',
+    tech: ['three.js', 'WebGL 2', 'GLSL', 'teardown'],
+  },
+  {
     slug: 'chaos',
     title: 'Chaos Is an Art Form',
     href: '/chaos',
