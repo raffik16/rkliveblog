@@ -176,6 +176,10 @@ export function buildAttractors() {
   return SYSTEMS.map(build)
 }
 
+/** The attractors' names, in build order, and one of them built on its own (the loader reports them one by one). */
+export const ATTRACTOR_NAMES = SYSTEMS.map((s) => s.name)
+export const buildAttractor = (i) => build(SYSTEMS[i])
+
 /** Position on attractor `a` at curve parameter u (0..1), linear between samples, written into out. */
 export function sampleAt(a, u, out) {
   const f = (((u % 1) + 1) % 1) * L
