@@ -1,12 +1,15 @@
 'use client'
 
-import { useState, useMemo, useId } from 'react'
+import { useId, useMemo, useState } from 'react'
 
 interface BlogFiltersProps {
   allTags: Record<string, number>
-  /** Current filters. The parent owns this state so other controls (e.g. a tag sidebar) stay in sync. */
+  /** Current filters. The parent owns this state. */
   value: FilterState
   onFiltersChange: (filters: FilterState) => void
+  /** "Showing N of M posts" line, shown while any filter is on */
+  resultCount?: number
+  totalCount?: number
 }
 
 export interface FilterState {
@@ -15,316 +18,141 @@ export interface FilterState {
   sortBy: 'newest' | 'oldest' | 'title'
 }
 
-export default function BlogFilters({ allTags, value, onFiltersChange }: BlogFiltersProps) {
+export const EMPTY_FILTERS: FilterState = { searchQuery: '', selectedTags: [], sortBy: 'newest' }
+
+const SORTS: { value: FilterState['sortBy']; label: string }[] = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'oldest', label: 'Oldest' },
+  { value: 'title', label: 'A–Z' },
+]
+
+const VISIBLE_TAGS = 12
+
+// Search, sort and topic filters for a post list: a hairline search field, a segmented sort
+// control and topic chips, all in the raffi.website mono-pill style.
+export default function BlogFilters({
+  allTags,
+  value,
+  onFiltersChange,
+  resultCount,
+  totalCount,
+}: BlogFiltersProps) {
   const { searchQuery, selectedTags, sortBy } = value
-  // Only UI state lives here; the filter values themselves are controlled by the parent
-  const [isExpanded, setIsExpanded] = useState(false)
-  const panelId = useId()
-  const sortId = useId()
+  const [showAll, setShowAll] = useState(false)
+  const searchId = useId()
+  const tagsId = useId()
 
-  const sortedTags = useMemo(() => {
-    return Object.entries(allTags).sort((a, b) => b[1] - a[1])
-  }, [allTags])
+  const sortedTags = useMemo(
+    () => Object.entries(allTags).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])),
+    [allTags]
+  )
+  // Selected topics always stay visible, even when they fall outside the first few.
+  const visibleTags = showAll
+    ? sortedTags
+    : sortedTags.filter(([t], i) => i < VISIBLE_TAGS || selectedTags.includes(t))
+  const hiddenCount = sortedTags.length - visibleTags.length
 
-  const hasActiveFilters = searchQuery || selectedTags.length > 0 || sortBy !== 'newest'
-  const activeFilterCount =
-    (searchQuery ? 1 : 0) + selectedTags.length + (sortBy !== 'newest' ? 1 : 0)
-
-  const updateFilters = (updates: Partial<FilterState>) => {
-    onFiltersChange({ ...value, ...updates })
-  }
-
-  const handleSearchChange = (query: string) => {
-    updateFilters({ searchQuery: query })
-  }
-
-  const toggleTag = (tag: string) => {
-    const newTags = selectedTags.includes(tag)
-      ? selectedTags.filter((t) => t !== tag)
-      : [...selectedTags, tag]
-    updateFilters({ selectedTags: newTags })
-  }
-
-  const handleSortChange = (sort: FilterState['sortBy']) => {
-    updateFilters({ sortBy: sort })
-  }
-
-  const clearAllFilters = () => {
-    onFiltersChange({ searchQuery: '', selectedTags: [], sortBy: 'newest' })
-  }
+  const active = !!searchQuery || selectedTags.length > 0 || sortBy !== 'newest'
+  const update = (updates: Partial<FilterState>) => onFiltersChange({ ...value, ...updates })
+  const toggleTag = (tag: string) =>
+    update({
+      selectedTags: selectedTags.includes(tag)
+        ? selectedTags.filter((t) => t !== tag)
+        : [...selectedTags, tag],
+    })
 
   return (
-    <div className="mb-8 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:p-4 dark:border-gray-700 dark:bg-gray-800/50">
-      {/* Search and Sort Row - Always horizontal */}
-      <div className="flex items-center gap-2 sm:gap-4">
-        {/* Search Input */}
-        <div className="relative min-w-0 flex-1">
-          <label>
-            <span className="sr-only">Search posts</span>
-            <input
-              aria-label="Search posts"
-              type="text"
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Search..."
-              className="focus:border-primary-500 focus:ring-primary-500/20 block w-full rounded-lg border border-gray-300 bg-white py-2 pr-8 pl-8 text-sm text-gray-900 transition-colors focus:ring-2 sm:py-2.5 sm:pr-10 sm:pl-10 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-400"
-            />
+    <div className="ed-filter" role="search" aria-label="Filter posts">
+      <div className="ed-filter__row">
+        <div className="ed-filter__search">
+          <label htmlFor={searchId} className="sr-only">
+            Search posts
           </label>
-          <svg
-            aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2 text-gray-400 sm:left-3"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              strokeWidth={1.75}
+              d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
             />
           </svg>
+          <input
+            id={searchId}
+            type="search"
+            value={searchQuery}
+            onChange={(e) => update({ searchQuery: e.target.value })}
+            placeholder="Search titles, summaries and topics"
+            autoComplete="off"
+            spellCheck={false}
+          />
           {searchQuery && (
             <button
               type="button"
-              onClick={() => handleSearchChange('')}
-              className="absolute top-1/2 right-2 -translate-y-1/2 text-gray-400 hover:text-gray-600 sm:right-3 dark:hover:text-gray-300"
+              className="ed-filter__clear-search"
+              onClick={() => update({ searchQuery: '' })}
               aria-label="Clear search"
             >
-              <svg
-                aria-hidden="true"
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              ×
             </button>
           )}
         </div>
-
-        {/* Sort Dropdown */}
-        <div className="flex shrink-0 items-center">
-          <label
-            htmlFor={sortId}
-            className="sr-only sm:not-sr-only sm:mr-2 sm:text-sm sm:text-gray-600 sm:dark:text-gray-400"
-          >
-            Sort:
-          </label>
-          <select
-            id={sortId}
-            value={sortBy}
-            onChange={(e) => handleSortChange(e.target.value as FilterState['sortBy'])}
-            className="focus:border-primary-500 focus:ring-primary-500/20 rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900 transition-colors focus:ring-2 sm:px-3 sm:py-2.5 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-          >
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-            <option value="title">A-Z</option>
-          </select>
-        </div>
-
-        {/* Filter Toggle Button */}
-        <button
-          type="button"
-          onClick={() => setIsExpanded(!isExpanded)}
-          aria-expanded={isExpanded}
-          aria-controls={panelId}
-          className={`flex shrink-0 items-center gap-1 rounded-lg border px-2 py-2 text-sm font-medium transition-all sm:gap-2 sm:px-4 sm:py-2.5 ${
-            isExpanded || selectedTags.length > 0
-              ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400'
-              : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-500'
-          }`}
-        >
-          <svg
-            aria-hidden="true"
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-            />
-          </svg>
-          {/* Visible from sm; still announced on mobile so the icon-only button has a name */}
-          <span className="sr-only sm:not-sr-only">Tags</span>
-          {selectedTags.length > 0 && (
-            <span className="bg-primary-500 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white">
-              <span aria-hidden="true">{selectedTags.length}</span>
-              <span className="sr-only">, {selectedTags.length} selected</span>
-            </span>
-          )}
-          <svg
-            aria-hidden="true"
-            className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Expandable Tags Section (inert while collapsed so hidden buttons can't take focus) */}
-      <div
-        id={panelId}
-        inert={!isExpanded}
-        className={`transition-all duration-300 ease-in-out motion-reduce:transition-none ${
-          isExpanded
-            ? 'mt-4 max-h-[min(24rem,60vh)] overflow-y-auto opacity-100'
-            : 'max-h-0 overflow-hidden opacity-0'
-        }`}
-      >
-        <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Filter by tags
-            </span>
-            {selectedTags.length > 0 && (
-              <button
-                type="button"
-                onClick={() => updateFilters({ selectedTags: [] })}
-                className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 text-xs"
-              >
-                Clear tags
-              </button>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {sortedTags.map(([tag, count]) => {
-              const isSelected = selectedTags.includes(tag)
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => toggleTag(tag)}
-                  aria-pressed={isSelected}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
-                    isSelected
-                      ? 'bg-primary-500 hover:bg-primary-600 text-white shadow-sm'
-                      : 'bg-white text-gray-700 ring-1 ring-gray-300 ring-inset hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {tag}
-                  <span
-                    className={`text-xs ${isSelected ? 'text-primary-100' : 'text-gray-500 dark:text-gray-400'}`}
-                  >
-                    ({count})
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+        <div className="ed-filter__sort" role="group" aria-label="Sort posts">
+          {SORTS.map((s) => (
+            <button
+              key={s.value}
+              type="button"
+              aria-pressed={sortBy === s.value}
+              onClick={() => update({ sortBy: s.value })}
+            >
+              {s.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Active Filters Summary */}
-      {hasActiveFilters && (
-        <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-4 dark:border-gray-700">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Active filters:</span>
-            {searchQuery && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                Search: "{searchQuery}"
-                <button
-                  type="button"
-                  onClick={() => handleSearchChange('')}
-                  className="ml-0.5 hover:text-blue-600 dark:hover:text-blue-200"
-                  aria-label="Remove search filter"
-                >
-                  <svg
-                    aria-hidden="true"
-                    className="h-3 w-3"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </span>
-            )}
-            {sortBy !== 'newest' && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-1 text-xs font-medium text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
-                {sortBy === 'oldest' ? 'Oldest First' : 'Title A-Z'}
-                <button
-                  type="button"
-                  onClick={() => handleSortChange('newest')}
-                  className="ml-0.5 hover:text-purple-600 dark:hover:text-purple-200"
-                  aria-label="Reset sort to newest first"
-                >
-                  <svg
-                    aria-hidden="true"
-                    className="h-3 w-3"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </span>
-            )}
-            {selectedTags.map((tag) => (
-              <span
-                key={tag}
-                className="bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
-              >
-                {tag}
-                <button
-                  type="button"
-                  onClick={() => toggleTag(tag)}
-                  className="hover:text-primary-600 dark:hover:text-primary-200 ml-0.5"
-                  aria-label={`Remove ${tag} tag filter`}
-                >
-                  <svg
-                    aria-hidden="true"
-                    className="h-3 w-3"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </span>
-            ))}
-          </div>
+      <div className="ed-filter__tags" role="group" aria-labelledby={tagsId}>
+        <span id={tagsId} className="ed-filter__label">
+          Topics
+        </span>
+        {visibleTags.map(([tag, count]) => {
+          const on = selectedTags.includes(tag)
+          return (
+            <button
+              key={tag}
+              type="button"
+              className="ed-pill ed-pill--tag"
+              aria-pressed={on}
+              onClick={() => toggleTag(tag)}
+            >
+              {tag}
+              <span className="ed-pill__count">{count}</span>
+            </button>
+          )
+        })}
+        {(hiddenCount > 0 || showAll) && (
           <button
             type="button"
-            onClick={clearAllFilters}
-            className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+            className="ed-filter__more"
+            aria-expanded={showAll}
+            onClick={() => setShowAll(!showAll)}
           >
-            Clear all
+            {showAll ? 'Fewer topics' : `+ ${hiddenCount} more`}
           </button>
-        </div>
-      )}
+        )}
+      </div>
+
+      <div className="ed-filter__status" aria-live="polite">
+        {active && typeof resultCount === 'number' && (
+          <>
+            <span>
+              Showing {resultCount} of {totalCount} posts
+            </span>
+            <button type="button" onClick={() => onFiltersChange(EMPTY_FILTERS)}>
+              Clear filters
+            </button>
+          </>
+        )}
+      </div>
     </div>
   )
 }

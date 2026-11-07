@@ -22,9 +22,11 @@ This document explains how to quickly create blog posts using Claude Code with v
 ### Simple Voice Workflow
 
 **Say this to Claude Code:**
+
 > "Create a new blog post titled [YOUR TITLE] with the following content: [YOUR CONTENT]"
 
 Claude will automatically:
+
 1. Generate a URL-friendly slug from your title
 2. Create the MDX file in `/data/blog/`
 3. Add proper frontmatter with current date
@@ -50,6 +52,7 @@ how AI is changing software development. Tag it with AI and technology."
 ### Minimum Required Fields
 
 Every blog post MUST have:
+
 - **title**: The post title
 - **date**: Publication date (YYYY-MM-DD format)
 - **file location**: `/data/blog/your-post-slug.mdx`
@@ -57,6 +60,7 @@ Every blog post MUST have:
 ### Recommended Fields
 
 For better SEO and organization:
+
 - **summary**: Brief description (150-200 characters)
 - **tags**: Array of relevant tags
 - **draft**: Set to `true` for unpublished posts
@@ -66,6 +70,7 @@ For better SEO and organization:
 All blog posts go in: `/data/blog/`
 
 **File naming convention:**
+
 - Use kebab-case: `my-awesome-post.mdx`
 - Only lowercase letters, numbers, and hyphens
 - Must end with `.mdx` extension
@@ -94,19 +99,19 @@ bibliography: references-data.bib
 
 ### Field Descriptions
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `title` | string | ✅ Yes | Post title (appears in heading and metadata) |
-| `date` | date | ✅ Yes | Publication date (YYYY-MM-DD) |
-| `tags` | array | ❌ No | List of tags for categorization |
-| `lastmod` | date | ❌ No | Last modified date (for SEO) |
-| `draft` | boolean | ❌ No | `true` to hide from production builds |
-| `summary` | string | ❌ No | Brief description (shown in listings, SEO) |
-| `images` | array | ❌ No | Featured images for Open Graph/Twitter cards |
-| `authors` | array | ❌ No | Author slugs (e.g., `['default', 'sparrowhawk']`) |
-| `layout` | string | ❌ No | Layout template (see below) |
-| `bibliography` | string | ❌ No | BibTeX file for citations |
-| `canonicalUrl` | string | ❌ No | Canonical URL if content is republished |
+| Field          | Type    | Required | Description                                       |
+| -------------- | ------- | -------- | ------------------------------------------------- |
+| `title`        | string  | ✅ Yes   | Post title (appears in heading and metadata)      |
+| `date`         | date    | ✅ Yes   | Publication date (YYYY-MM-DD)                     |
+| `tags`         | array   | ❌ No    | List of tags for categorization                   |
+| `lastmod`      | date    | ❌ No    | Last modified date (for SEO)                      |
+| `draft`        | boolean | ❌ No    | `true` to hide from production builds             |
+| `summary`      | string  | ❌ No    | Brief description (shown in listings, SEO)        |
+| `images`       | array   | ❌ No    | Featured images for Open Graph/Twitter cards      |
+| `authors`      | array   | ❌ No    | Author slugs (e.g., `['default', 'sparrowhawk']`) |
+| `layout`       | string  | ❌ No    | Layout template (see below)                       |
+| `bibliography` | string  | ❌ No    | BibTeX file for citations                         |
+| `canonicalUrl` | string  | ❌ No    | Canonical URL if content is republished           |
 
 ---
 
@@ -115,21 +120,19 @@ bibliography: references-data.bib
 ### Available Layout Options
 
 1. **PostLayout** (default)
-   - 2-column layout with sidebar
-   - Shows author info, date, reading time
-   - Table of contents in sidebar
-   - Related posts section
+   - Contents rail on the left (from the post's `##` headings), notes on the right
+   - Issue number, reading time, author byline, publish/updated dates
+   - Previous/next posts and the newsletter at the end
    - **Use for**: Standard blog posts
 
 2. **PostSimple**
-   - Single column, centered content
-   - Minimal UI, focus on content
-   - No sidebar or extras
+   - Same reading layout without the contents rail
+   - Comments under the article (when giscus is configured)
    - **Use for**: Essays, long-form content
 
 3. **PostBanner**
-   - Featured banner image at top
-   - Great for visual posts
+   - The first image in `images` runs wide under the header
+   - Comments under the article (when giscus is configured)
    - **Use for**: Photo essays, visual content
 
 ### Layout Selection
@@ -148,9 +151,11 @@ layout: PostBanner      # With banner image
 ### Example 1: Quick Technical Post
 
 **Say:**
+
 > "Create a blog post titled 'Understanding React Server Components' with an explanation of how RSCs work, their benefits, and a code example. Tag it with react, nextjs, and tutorial."
 
 **Result:** Claude creates:
+
 ```
 /data/blog/understanding-react-server-components.mdx
 ```
@@ -158,11 +163,13 @@ layout: PostBanner      # With banner image
 ### Example 2: Personal Update
 
 **Say:**
+
 > "Write a post called 'My Weekend Project' about building a weather app. Keep it casual, use PostSimple layout, and tag it with projects and javascript."
 
 ### Example 3: Draft Post
 
 **Say:**
+
 > "Create a draft post titled 'Future of Web Development' with placeholder content. I'll finish it later."
 
 Claude will set `draft: true` automatically.
@@ -170,6 +177,7 @@ Claude will set `draft: true` automatically.
 ### Example 4: Multi-section Post
 
 **Say:**
+
 > "Create a post called 'TypeScript Best Practices' with these sections: Introduction, Type Safety, Generics, and Conclusion. Add actual content for each section."
 
 ---
@@ -179,6 +187,7 @@ Claude will set `draft: true` automatically.
 ### Local Development
 
 1. **Start dev server:**
+
    ```bash
    yarn dev
    ```
@@ -191,11 +200,13 @@ Claude will set `draft: true` automatically.
 ### Production Deployment
 
 1. **Build the site:**
+
    ```bash
    yarn build
    ```
 
 2. **Test production build:**
+
    ```bash
    yarn start
    ```
@@ -208,6 +219,7 @@ Claude will set `draft: true` automatically.
 ### Verification Checklist
 
 After creating a post, verify:
+
 - [ ] Frontmatter is properly formatted (no YAML errors)
 - [ ] Date is in correct format (YYYY-MM-DD)
 - [ ] Tags are in array format: `['tag1', 'tag2']`
@@ -224,42 +236,49 @@ After creating a post, verify:
 This blog supports:
 
 **Text Formatting:**
+
 - Standard Markdown syntax
-- **Bold**, *italic*, `code`
+- **Bold**, _italic_, `code`
 - Headings (H1-H6)
 - Lists (ordered/unordered)
 - Blockquotes
 - Tables
 
 **Code Blocks:**
+
 ````markdown
 ```javascript
-const greeting = "Hello World";
-console.log(greeting);
+const greeting = 'Hello World'
+console.log(greeting)
 ```
 ````
 
 **Math Equations (KaTeX):**
+
 ```markdown
 Inline: $E = mc^2$
 
 Block:
+
 $$
 \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
 $$
 ```
 
 **Images:**
+
 ```markdown
 ![Alt text](/static/images/photo.jpg)
 ```
 
 **Links:**
+
 ```markdown
 [Link text](https://example.com)
 ```
 
 **Custom Components:**
+
 - Use any React component in MDX
 - Import components at top of file
 - Embed interactive elements
@@ -317,6 +336,7 @@ Use the PostLayout and tag it [tags]."
 
 **Cause:** Invalid frontmatter YAML
 **Fix:** Check for:
+
 - Missing quotes around strings with special characters
 - Incorrect date format
 - Malformed arrays (should be `['tag1', 'tag2']`)
@@ -325,6 +345,7 @@ Use the PostLayout and tag it [tags]."
 
 **Cause:** Invalid MDX syntax
 **Fix:** Check for:
+
 - Unclosed JSX tags
 - Invalid component imports
 - Syntax errors in code blocks
@@ -333,9 +354,36 @@ Use the PostLayout and tag it [tags]."
 
 **Cause:** Incorrect image path
 **Fix:**
+
 - Images should be in `/public/static/images/`
 - Reference as: `/static/images/your-image.jpg`
 - Use forward slashes (not backslashes)
+
+---
+
+## Design System (Edition '26)
+
+The blog uses the same visual system as the main site, [raffi.website](https://raffi.website)
+(repo `raffik16/raffi-website-com-25`). Keep new pages and components on it:
+
+- **Dark only.** Every page sits on a fixed backdrop (`components/edition/EdBackdrop.tsx`) that
+  takes the colour of the section in the middle of the screen. Mark a section with
+  `data-chapter="id"`, `data-chapter-label`, `data-chapter-num` and
+  `data-chapter-color="var(--ed-cobalt)"` (ink, cobalt, violet, raspberry, ember, forest).
+  Sections with labels show up in the left chapter rail; add `data-chapter-rail="off"` to colour
+  the backdrop without adding a rail entry.
+- **Tokens and pieces** live in `css/edition.css` (colours, type, shell grid, navbar, rail,
+  chapter heads, pills, panels, notes, stats). Blog-specific styles (hero, post lists, filters,
+  post page, prose) are in `css/blog.css`. Class names match the main site's (`ed-*`).
+- **Type:** Inter for text, Inter Tight for headings, Instrument Serif italic for the odd accent
+  word (`<em>` in big titles), JetBrains Mono for labels and meta.
+- **Lime (`--ed-signal`)** is for primary calls to action, focus rings and live states only.
+- **Components:** `EdChapterHead` (numbered chapter opener with the outline title that fills on
+  scroll), `EdPanel`, `EdPill`, `EdNote` (margin notes), `PostRow` (post list row).
+- `lib/edition/fibreField.js` is copied unchanged from the main site; edit it there and copy it
+  back rather than changing it here.
+- Watch out: `prettier-plugin-tailwindcss` trims spaces inside template-literal class names, so
+  join conditional classes with `cx()` from `lib/edition/cx.ts` instead of `` `a${x ? ' b' : ''}` ``.
 
 ---
 
@@ -384,6 +432,7 @@ This is my first blog post using this awesome Next.js starter template.
 ## What I'm Going to Write About
 
 I plan to write about:
+
 - Web development
 - JavaScript and TypeScript
 - React and Next.js
@@ -402,7 +451,7 @@ Here's a simple code example:
 
 \`\`\`javascript
 function greet(name) {
-  return `Hello, ${name}!`;
+return `Hello, ${name}!`;
 }
 
 console.log(greet('World'));
@@ -428,6 +477,7 @@ data/blog/
 ```
 
 Posts will be available at:
+
 - `/blog/react-series/part-1-introduction`
 - `/blog/react-series/part-2-components`
 - `/blog/react-series/part-3-state`

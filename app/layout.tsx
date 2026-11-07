@@ -2,25 +2,48 @@ import 'css/tailwind.css'
 import 'pliny/search/algolia.css'
 import 'remark-github-blockquote-alert/alert.css'
 
-import { Space_Grotesk } from 'next/font/google'
+import { Inter, Inter_Tight, Instrument_Serif, JetBrains_Mono } from 'next/font/google'
 import Script from 'next/script'
 import { Analytics, AnalyticsConfig } from 'pliny/analytics'
 import { SearchProvider, SearchConfig } from 'pliny/search'
 import Header from '@/components/Header'
-import SectionContainer from '@/components/SectionContainer'
 import Footer from '@/components/Footer'
 import siteMetadata from '@/data/siteMetadata'
 import { ThemeProviders } from './theme-providers'
-import { Metadata } from 'next'
+import { Metadata, Viewport } from 'next'
 import { twitterHandle } from './seo'
-import { ScrollProgress } from '@/components/animations'
 import WebMCPTools from '@/components/WebMCPTools'
+import EdBackdrop from '@/components/edition/EdBackdrop'
+import EdRail from '@/components/edition/EdRail'
+import Reveal from '@/components/edition/Reveal'
 
-const space_grotesk = Space_Grotesk({
+// The raffi.website type system: Inter for text, Inter Tight for display, Instrument Serif
+// italic for the odd accent word, JetBrains Mono for labels.
+const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' })
+const interTight = Inter_Tight({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-space-grotesk',
+  weight: ['400', '500', '600'],
+  variable: '--font-inter-tight',
 })
+const instrumentSerif = Instrument_Serif({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: '400',
+  style: ['normal', 'italic'],
+  variable: '--font-instrument-serif',
+})
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['400', '500'],
+  variable: '--font-jetbrains-mono',
+})
+
+export const viewport: Viewport = {
+  themeColor: '#07080C',
+  colorScheme: 'dark',
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteMetadata.siteUrl),
@@ -78,15 +101,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang={siteMetadata.language}
-      className={`${space_grotesk.variable} motion-safe:scroll-smooth`}
+      className={`${inter.variable} ${interTight.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} dark motion-safe:scroll-smooth`}
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
-      <link
-        rel="apple-touch-icon"
-        sizes="180x180"
-        href={`${basePath}/static/favicons/apple-touch-icon.png`}
-      />
+      <link rel="icon" type="image/svg+xml" href={`${basePath}/static/favicons/favicon.svg`} />
       <link
         rel="icon"
         type="image/png"
@@ -99,15 +118,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         sizes="16x16"
         href={`${basePath}/static/favicons/favicon-16x16.png`}
       />
+      <link
+        rel="apple-touch-icon"
+        sizes="180x180"
+        href={`${basePath}/static/favicons/apple-touch-icon.png`}
+      />
       <link rel="manifest" href={`${basePath}/static/favicons/site.webmanifest`} />
       <link
         rel="mask-icon"
         href={`${basePath}/static/favicons/safari-pinned-tab.svg`}
-        color="#FF5B04"
+        color="#D7FF3D"
       />
-      <meta name="msapplication-TileColor" content="#16232A" />
-      <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fff" />
-      <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#16232A" />
+      <meta name="msapplication-TileColor" content="#07080C" />
       <link rel="alternate" type="application/rss+xml" href={`${basePath}/feed.xml`} />
       {/* Google Tag Manager */}
       <Script id="google-tag-manager" strategy="afterInteractive">
@@ -118,7 +140,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 })(window,document,'script','dataLayer','GTM-M5H2L6Z');`}
       </Script>
       {/* End Google Tag Manager */}
-      <body className="bg-white pl-[calc(100vw-100%)] text-black antialiased dark:bg-gray-950 dark:text-white">
+      <body className="antialiased">
         {/* Organization Schema */}
         <script
           type="application/ld+json"
@@ -154,18 +176,29 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           />
         </noscript>
         {/* End Google Tag Manager (noscript) */}
+        {/* Without JS, chapter titles show filled (the scroll scrub never runs) */}
+        <noscript>
+          <style>{`.ed-chapter-head__fill{clip-path:none!important}`}</style>
+        </noscript>
+        <a href="#main" className="ed-skip">
+          Skip to content
+        </a>
         <ThemeProviders>
-          <ScrollProgress color="#FF5B04" height={4} position="top" />
           <Analytics analyticsConfig={siteMetadata.analytics as AnalyticsConfig} />
           {/* Registers a read-only search_posts WebMCP tool where the browser supports it */}
           <WebMCPTools />
-          <SectionContainer>
-            <SearchProvider searchConfig={siteMetadata.search as SearchConfig}>
+          <SearchProvider searchConfig={siteMetadata.search as SearchConfig}>
+            <EdBackdrop />
+            <div className="ed-app">
               <Header />
-              <main className="mb-auto">{children}</main>
-            </SearchProvider>
-            <Footer />
-          </SectionContainer>
+              <EdRail />
+              <main id="main" className="ed-main" tabIndex={-1}>
+                {children}
+              </main>
+              <Footer />
+            </div>
+            <Reveal />
+          </SearchProvider>
         </ThemeProviders>
       </body>
     </html>

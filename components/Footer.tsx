@@ -1,35 +1,94 @@
-import Link from './Link'
+import NextLink from 'next/link'
 import siteMetadata from '@/data/siteMetadata'
-import SocialIcon from '@/components/social-icons'
+import headerNavLinks from '@/data/headerNavLinks'
+import brand from '@/data/brand'
+import EdPill from '@/components/edition/EdPill'
 
+// Closing block on every page: a hand-off to raffi.website (the same call to action as the main
+// site), then a colophon of links. Marked as an ink chapter so the backdrop settles back to
+// ink under it; the rail leaves it out (id "end").
 export default function Footer() {
+  const elsewhere = [
+    { href: siteMetadata.github, title: 'GitHub' },
+    { href: siteMetadata.linkedin, title: 'LinkedIn' },
+    { href: siteMetadata.x, title: 'X' },
+    { href: siteMetadata.instagram, title: 'Instagram' },
+  ].filter((s) => s.href)
+
   return (
-    <footer>
-      <div className="mt-16 flex flex-col items-center">
-        <div className="mb-3 flex space-x-4">
-          <SocialIcon kind="mail" href={`mailto:${siteMetadata.email}`} size={6} />
-          <SocialIcon kind="github" href={siteMetadata.github} size={6} />
-          <SocialIcon kind="facebook" href={siteMetadata.facebook} size={6} />
-          <SocialIcon kind="youtube" href={siteMetadata.youtube} size={6} />
-          <SocialIcon kind="linkedin" href={siteMetadata.linkedin} size={6} />
-          <SocialIcon kind="twitter" href={siteMetadata.twitter} size={6} />
-          <SocialIcon kind="bluesky" href={siteMetadata.bluesky} size={6} />
-          <SocialIcon kind="x" href={siteMetadata.x} size={6} />
-          <SocialIcon kind="instagram" href={siteMetadata.instagram} size={6} />
-          <SocialIcon kind="threads" href={siteMetadata.threads} size={6} />
-          <SocialIcon kind="medium" href={siteMetadata.medium} size={6} />
+    <footer className="ed-footer" data-chapter="end" data-chapter-color="var(--ed-ink)">
+      <div className="ed-shell">
+        <div className="ed-wide ed-footer__cta" data-reveal="">
+          <div className="ed-meta">
+            <span className="ed-num">→</span>
+            <span>The day job</span>
+          </div>
+          <p className="ed-footer__title">
+            I build fast sites your team can <em>update.</em>
+          </p>
+          <p className="ed-footer__sub">
+            This blog is where I write up what I learn along the way. The client work, websites for
+            studios, publishers and real estate firms, lives at raffi.website.
+          </p>
+          <div className="ed-pills">
+            <EdPill href={brand.contact} variant="signal" size="lg" arrow>
+              Book a free 30-minute call
+            </EdPill>
+            <EdPill href={`${brand.mainSite}/work`} variant="outline" size="lg" arrow>
+              See the work
+            </EdPill>
+          </div>
         </div>
-        <div className="mb-2 flex space-x-2 text-sm text-gray-500 dark:text-gray-400">
-          <div>{siteMetadata.author}</div>
-          <div>{` • `}</div>
-          <div>{`© ${new Date().getFullYear()}`}</div>
-          <div>{` • `}</div>
-          <Link href="/">{siteMetadata.title}</Link>
-        </div>
-        <div className="mb-8 text-sm text-gray-500 dark:text-gray-400">
-          <Link href="https://github.com/timlrx/tailwind-nextjs-starter-blog">
-            Tailwind Nextjs Theme
-          </Link>
+
+        <nav className="ed-wide ed-footer__grid" aria-label="Footer">
+          <div>
+            <p className="ed-footer__head">Blog</p>
+            <ul>
+              {headerNavLinks.map((link) => (
+                <li key={link.href}>
+                  <NextLink href={link.href}>{link.title}</NextLink>
+                </li>
+              ))}
+              <li>
+                <a href="/feed.xml">RSS feed</a>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p className="ed-footer__head">raffi.website</p>
+            <ul>
+              {brand.mainNav.map((link) => (
+                <li key={link.href}>
+                  <a href={link.href}>{link.title}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="ed-footer__head">Elsewhere</p>
+            <ul>
+              {elsewhere.map((link) => (
+                <li key={link.title}>
+                  <a href={link.href} target="_blank" rel="noopener noreferrer me">
+                    {link.title}
+                    <span aria-hidden="true"> ↗</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </nav>
+
+        <div className="ed-wide ed-footer__base">
+          <span>
+            © {new Date().getFullYear()} {brand.name} · {brand.place}
+          </span>
+          <span>
+            Next.js and MDX ·{' '}
+            <a href={siteMetadata.siteRepo} target="_blank" rel="noopener noreferrer">
+              Source on GitHub ↗
+            </a>
+          </span>
         </div>
       </div>
     </footer>

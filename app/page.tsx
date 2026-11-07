@@ -1,11 +1,17 @@
 import type { Metadata } from 'next'
+import NextLink from 'next/link'
 import { sortPosts, allCoreContent } from 'pliny/utils/contentlayer'
 import { allBlogs } from 'contentlayer/generated'
-import Link from '@/components/Link'
 import siteMetadata from '@/data/siteMetadata'
-import { Hero6, type HeroStats } from '@/components/heroes'
 import demosData from '@/data/demosData'
-import Main from './Main'
+import HomeHero from '@/components/home/HomeHero'
+import EdChapterHead from '@/components/edition/EdChapterHead'
+import EdPanel from '@/components/edition/EdPanel'
+import EdPill from '@/components/edition/EdPill'
+import EdNote from '@/components/edition/EdNote'
+import PostRow from '@/components/PostRow'
+import NewsletterForm from '@/components/NewsletterForm'
+import { postNumber } from '@/lib/posts'
 import tagData from './tag-data.json'
 
 // The root layout no longer sets a canonical (it was inherited by every page), so the
@@ -19,73 +25,181 @@ export const metadata: Metadata = {
   },
 }
 
-export default async function Page() {
-  const sortedPosts = sortPosts(allBlogs)
-  // allCoreContent drops drafts in production, so these are the published posts
-  const posts = allCoreContent(sortedPosts)
+const CHAPTERS = [
+  { id: 'latest', num: '01', label: 'Latest', color: 'var(--ed-cobalt)' },
+  { id: 'lab', num: '02', label: 'Lab', color: 'var(--ed-violet)' },
+  { id: 'topics', num: '03', label: 'Topics', color: 'var(--ed-raspberry)' },
+  { id: 'subscribe', num: '04', label: 'Subscribe', color: 'var(--ed-ink)' },
+]
 
-  // Read the year straight from the ISO string so the server's time zone can't shift it
-  const years = posts
-    .map((post) => Number.parseInt(String(post.date).slice(0, 4), 10))
-    .filter((year) => Number.isFinite(year))
-
-  const stats: HeroStats = {
-    posts: posts.length,
-    topics: Object.keys(tagData).length,
-    demos: demosData.length,
-    since: years.length > 0 ? Math.min(...years) : new Date().getFullYear(),
+const chapterProps = (id: string) => {
+  const c = CHAPTERS.find((ch) => ch.id === id)!
+  return {
+    id: c.id,
+    'data-chapter': c.id,
+    'data-chapter-label': c.label,
+    'data-chapter-num': c.num,
+    'data-chapter-color': c.color,
   }
-
-  return (
-    <>
-      <Hero6 stats={stats} />
-      <FromTheLab />
-      <Main posts={posts} tagData={tagData} />
-    </>
-  )
 }
 
-function FromTheLab() {
+export default async function Page() {
+  // allCoreContent drops drafts in production, so these are the published posts
+  const posts = allCoreContent(sortPosts(allBlogs))
+  const topics = Object.entries(tagData as Record<string, number>)
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+  const recent = posts.slice(0, 6)
+
   return (
-    <section aria-labelledby="from-the-lab-heading" className="pt-10 sm:pt-12">
-      <div className="mb-4 flex items-baseline justify-between gap-4">
-        <h2
-          id="from-the-lab-heading"
-          className="text-2xl font-extrabold tracking-tight text-gray-900 sm:text-3xl dark:text-gray-100"
-        >
-          From the lab
-        </h2>
-        <Link
-          href="/lab"
-          className="text-primary-700 hover:text-primary-800 dark:text-primary-500 dark:hover:text-primary-400 shrink-0 text-sm font-medium"
-        >
-          All demos &rarr;
-        </Link>
-      </div>
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {demosData.map((demo) => (
-          <li key={demo.slug} className="flex">
-            {/* Stretched link: the title is the link; its ::after makes the whole card clickable */}
-            <div className="group hover:border-primary-500/60 dark:hover:border-primary-400/60 focus-within:border-primary-500/60 dark:focus-within:border-primary-400/60 relative flex w-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all duration-300 hover:shadow-lg motion-safe:hover:-translate-y-0.5 dark:border-gray-700 dark:bg-gray-800/50">
-              <span
-                aria-hidden="true"
-                className="from-primary-500 absolute inset-x-0 top-0 h-1 bg-gradient-to-r to-[#075056] opacity-70 transition-opacity group-hover:opacity-100"
+    <div className="ed-page">
+      <HomeHero posts={posts} topics={topics} demos={demosData.length} chapters={CHAPTERS} />
+
+      <section className="ed-chapter" {...chapterProps('latest')} aria-labelledby="latest-title">
+        <div className="ed-shell">
+          <EdChapterHead
+            num="01"
+            kicker="Newest first"
+            display="Latest"
+            title="Recent writing on engineering, AI and the web"
+            id="latest-title"
+          >
+            <p>
+              Practical guides, deep dives and honest takes on the tools shaping how we build,
+              newest first.
+            </p>
+          </EdChapterHead>
+          <ol className="ed-posts">
+            {recent.map((post, i) => (
+              <PostRow
+                key={post.slug}
+                post={post}
+                number={postNumber(posts, post.slug)}
+                lead={i === 0}
               />
-              <h3 className="group-hover:text-primary-700 dark:group-hover:text-primary-400 font-bold text-gray-900 transition-colors dark:text-gray-100">
-                <Link href={demo.href} className="after:absolute after:inset-0 after:rounded-xl">
-                  {demo.title}
-                </Link>
-              </h3>
-              <p className="mt-1 line-clamp-2 text-sm leading-6 text-gray-600 dark:text-gray-400">
-                {demo.description}
-              </p>
-              <p className="mt-auto pt-3 text-xs font-medium text-gray-500 dark:text-gray-400">
-                {demo.tech.slice(0, 3).join(' · ')}
-              </p>
+            ))}
+          </ol>
+          <div className="ed-section-actions" data-reveal="">
+            <EdPill href="/blog" variant="light" size="lg" arrow>
+              All {posts.length} posts
+            </EdPill>
+            <EdPill href="/tags" variant="outline" size="lg">
+              Browse by topic
+            </EdPill>
+          </div>
+          <div className="ed-notes">
+            <EdNote index={1} label="Archive">
+              {posts.length} posts so far. Search, sort and filter them all on the{' '}
+              <NextLink href="/blog">blog page</NextLink>.
+            </EdNote>
+            <EdNote index={2} label="Feed">
+              Prefer a reader? There&apos;s an <a href="/feed.xml">RSS feed</a>.
+            </EdNote>
+          </div>
+        </div>
+      </section>
+
+      <section className="ed-chapter" {...chapterProps('lab')} aria-labelledby="lab-title">
+        <div className="ed-shell">
+          <EdChapterHead
+            num="02"
+            kicker="Interactive demos"
+            display="Lab"
+            title="Experiments that grew out of the posts"
+            id="lab-title"
+          >
+            <p>
+              Everything runs in your browser. Open a demo to play with it, or read how it was
+              built.
+            </p>
+          </EdChapterHead>
+          <div className="ed-grid">
+            {demosData.map((demo, i) => (
+              <EdPanel
+                key={demo.slug}
+                title={demo.title}
+                href={demo.href}
+                size={i === 0 ? 'lg' : 'md'}
+                className={i === 0 ? 'span-12' : 'span-6'}
+                sub={demo.tech.slice(0, 3).join(' · ')}
+                actions={
+                  <>
+                    <EdPill href={demo.href} variant="dark" arrow>
+                      Open demo<span className="sr-only">: {demo.title}</span>
+                    </EdPill>
+                    {demo.postHref && (
+                      <EdPill href={demo.postHref} variant="outline">
+                        Read the story<span className="sr-only">: {demo.title}</span>
+                      </EdPill>
+                    )}
+                  </>
+                }
+              >
+                <p>{demo.description}</p>
+              </EdPanel>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="ed-chapter" {...chapterProps('topics')} aria-labelledby="topics-title">
+        <div className="ed-shell">
+          <EdChapterHead
+            num="03"
+            kicker={`${topics.length} topics`}
+            display="Topics"
+            title="What I write about, most often first"
+            id="topics-title"
+          />
+          <ol className="ed-topic-index">
+            {topics.slice(0, 12).map((t, i) => (
+              <li key={t.tag} data-reveal="">
+                <NextLink href={`/tags/${t.tag}`}>
+                  <span className="ed-topic-index__no">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="ed-topic-index__name">{t.tag}</span>
+                  <span className="ed-topic-index__rule" aria-hidden="true" />
+                  <span className="ed-topic-index__count">
+                    {t.count} {t.count === 1 ? 'post' : 'posts'}
+                  </span>
+                </NextLink>
+              </li>
+            ))}
+          </ol>
+          <div className="ed-section-actions" data-reveal="">
+            <EdPill href="/tags" variant="light" size="lg" arrow>
+              All {topics.length} topics
+            </EdPill>
+          </div>
+        </div>
+      </section>
+
+      {siteMetadata.newsletter?.provider && (
+        <section
+          className="ed-chapter ed-subscribe"
+          {...chapterProps('subscribe')}
+          aria-labelledby="subscribe-title"
+        >
+          <div className="ed-shell">
+            <div className="ed-wide ed-subscribe__grid">
+              <div data-reveal="">
+                <div className="ed-meta">
+                  <span className="ed-num">04</span>
+                  <span>Subscribe</span>
+                </div>
+                <h2 id="subscribe-title" className="ed-subscribe__title">
+                  Get new posts <em>by email.</em>
+                </h2>
+                <p className="ed-lede">
+                  Leave your address and the next post lands in your inbox when it&apos;s out.
+                </p>
+              </div>
+              <div className="ed-subscribe__form" data-reveal="">
+                <NewsletterForm />
+              </div>
             </div>
-          </li>
-        ))}
-      </ul>
-    </section>
+          </div>
+        </section>
+      )}
+    </div>
   )
 }

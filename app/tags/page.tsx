@@ -1,45 +1,65 @@
-import Link from '@/components/Link'
-import Tag from '@/components/Tag'
-import { slug } from 'github-slugger'
+import NextLink from 'next/link'
 import tagData from 'app/tag-data.json'
 import { genPageMetadata } from 'app/seo'
+import EdChapterHead from '@/components/edition/EdChapterHead'
+import EdNote from '@/components/edition/EdNote'
 
 export const metadata = genPageMetadata({
-  title: 'Tags',
-  description: 'Things I blog about',
+  title: 'Topics',
+  description: 'Every topic on the blog, with how many posts cover it.',
   path: '/tags',
 })
 
 export default async function Page() {
   const tagCounts = tagData as Record<string, number>
-  const tagKeys = Object.keys(tagCounts)
-  const sortedTags = tagKeys.sort((a, b) => tagCounts[b] - tagCounts[a])
+  const sortedTags = Object.keys(tagCounts).sort(
+    (a, b) => tagCounts[b] - tagCounts[a] || a.localeCompare(b)
+  )
+
   return (
-    <>
-      <div className="flex flex-col items-start justify-start divide-y divide-gray-200 md:mt-24 md:flex-row md:items-center md:justify-center md:space-x-6 md:divide-y-0 dark:divide-gray-700">
-        <div className="space-x-2 pt-6 pb-8 md:space-y-5">
-          <h1 className="text-3xl leading-9 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10 md:border-r-2 md:px-6 md:text-6xl md:leading-14 dark:text-gray-100">
-            Tags
-          </h1>
+    <div className="ed-page">
+      <section
+        className="ed-chapter ed-chapter--first"
+        data-chapter="intro"
+        data-chapter-color="var(--ed-ink)"
+        aria-labelledby="topics-title"
+      >
+        <div className="ed-shell">
+          <div className="ed-chapter-head--page">
+            <EdChapterHead
+              num="02"
+              kicker={`${sortedTags.length} topics`}
+              title="Topics"
+              as="h1"
+              id="topics-title"
+            >
+              <p>Everything the blog covers, the topics with the most posts first.</p>
+            </EdChapterHead>
+          </div>
+          <div className="ed-notes">
+            <EdNote index={1} label="Filter">
+              To combine topics, pick several at once on the{' '}
+              <NextLink href="/blog">blog page</NextLink>.
+            </EdNote>
+          </div>
+          {sortedTags.length === 0 ? (
+            <p className="ed-lede">No topics yet.</p>
+          ) : (
+            <ol className="ed-topic-index ed-topic-index--all">
+              {sortedTags.map((t, i) => (
+                <li key={t} data-reveal="">
+                  <NextLink href={`/tags/${t}`} aria-label={`${t}: ${tagCounts[t]} posts`}>
+                    <span className="ed-topic-index__no">{String(i + 1).padStart(2, '0')}</span>
+                    <span className="ed-topic-index__name">{t}</span>
+                    <span className="ed-topic-index__rule" aria-hidden="true" />
+                    <span className="ed-topic-index__count">{tagCounts[t]}</span>
+                  </NextLink>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
-        <div className="flex max-w-lg flex-wrap">
-          {tagKeys.length === 0 && 'No tags found.'}
-          {sortedTags.map((t) => {
-            return (
-              <div key={t} className="mt-2 mr-5 mb-2">
-                <Tag text={t} />
-                <Link
-                  href={`/tags/${slug(t)}`}
-                  className="-ml-2 text-sm font-semibold text-gray-600 uppercase dark:text-gray-300"
-                  aria-label={`View posts tagged ${t}`}
-                >
-                  {` (${tagCounts[t]})`}
-                </Link>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </>
+      </section>
+    </div>
   )
 }

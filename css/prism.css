@@ -1,136 +1,114 @@
-@reference "./tailwind.css";
+/*
+  Code highlighting (rehype-prism-plus) in the Edition '26 palette: neutral text on near-black,
+  cyan for structure, lime for strings, warm accents for literals, comments set back in grey.
+  Block chrome (panel, title bar, copy button) lives in css/blog.css under .ed-prose.
+*/
 
-/**
- * CSS Styles for code highlighting.
- * Feel free to customize token styles 
- * by copying from a prismjs compatible theme:
- * https://github.com/PrismJS/prism-themes
- */
-
-/* Code title styles */
-.remark-code-title {
-  @apply rounded-xs bg-gray-700 px-5 py-3 font-mono text-sm font-bold text-gray-200 dark:bg-gray-800;
-}
-
-.remark-code-title + div > pre {
-  @apply mt-0 rounded-t-none;
-}
-
-/* Code block styles */
 .code-highlight {
-  @apply float-left min-w-full;
+  float: left;
+  min-width: 100%;
 }
 
 .code-line {
-  @apply -mx-4 block border-l-4 border-transparent pr-4 pl-4;
+  display: block;
+  margin-inline: -20px;
+  padding-inline: 18px 20px;
+  border-left: 2px solid transparent;
 }
 
 .code-line.inserted {
-  @apply bg-green-500/20;
+  background: rgba(215, 255, 61, 0.1);
+  border-left-color: #d7ff3d;
 }
 
 .code-line.deleted {
-  @apply bg-red-500/20;
+  background: rgba(255, 107, 74, 0.12);
+  border-left-color: #ff6b4a;
 }
 
 .highlight-line {
-  @apply border-primary-500 -mx-4 border-l-4 bg-gray-700/50;
+  background: rgba(255, 255, 255, 0.06);
+  border-left-color: #d7ff3d;
 }
 
 .line-number::before {
-  @apply mr-4 -ml-2 inline-block w-4 text-right text-gray-400;
+  display: inline-block;
+  width: 1.5em;
+  margin-right: 1.25em;
+  color: rgba(255, 255, 255, 0.32);
+  text-align: right;
   content: attr(line);
 }
 
-/* Token styles */
-/**
- * MIT License
- * Copyright (c) 2018 Sarah Drasner
- * Sarah Drasner's[@sdras] Night Owl
- * Ported by Sara vieria [@SaraVieira]
- * Added by Souvik Mandal [@SimpleIndian]
- */
 .token.comment,
 .token.prolog,
+.token.doctype,
 .token.cdata {
-  color: rgb(99, 119, 119);
+  color: #7d8293;
   font-style: italic;
 }
 
 .token.punctuation {
-  color: rgb(199, 146, 234);
+  color: #9ca0ae;
 }
 
 .namespace {
-  color: rgb(178, 204, 214);
-}
-
-.token.deleted {
-  color: rgba(239, 83, 80, 0.56);
-  font-style: italic;
-}
-
-.token.symbol,
-.token.property {
-  color: rgb(128, 203, 196);
+  opacity: 0.8;
 }
 
 .token.tag,
+.token.keyword,
 .token.operator,
-.token.keyword {
-  color: rgb(127, 219, 202);
+.token.selector,
+.token.atrule {
+  color: #6fd6ff;
 }
 
-.token.boolean {
-  color: rgb(255, 88, 116);
+.token.property,
+.token.attr-name,
+.token.symbol {
+  color: #c4b5ff;
 }
 
-.token.number {
-  color: rgb(247, 140, 108);
-}
-
-.token.constant,
 .token.function,
 .token.builtin,
-.token.char {
-  color: rgb(130, 170, 255);
-}
-
-.token.selector,
-.token.doctype {
-  color: rgb(199, 146, 234);
-  font-style: italic;
-}
-
-.token.attr-name,
-.token.inserted {
-  color: rgb(173, 219, 103);
-  font-style: italic;
-}
-
-.token.string,
-.token.url,
-.token.entity,
-.language-css .token.string,
-.style .token.string {
-  color: rgb(173, 219, 103);
+.token.constant {
+  color: #f3f1ea;
 }
 
 .token.class-name,
-.token.atrule,
 .token.attr-value {
-  color: rgb(255, 203, 139);
+  color: #ffd08a;
+}
+
+.token.string,
+.token.char,
+.token.url,
+.token.entity,
+.token.inserted,
+.language-css .token.string,
+.style .token.string {
+  color: #d7ff3d;
+}
+
+.token.number,
+.token.boolean {
+  color: #ff9f80;
 }
 
 .token.regex,
 .token.important,
 .token.variable {
-  color: rgb(214, 222, 235);
+  color: #ffd08a;
+}
+
+.token.deleted {
+  color: #ff8a73;
 }
 
 .token.important,
 .token.bold {
-  font-weight: bold;
+  font-weight: 600;
 }
 
 .token.italic {
