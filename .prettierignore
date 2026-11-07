@@ -1,2 +1,4 @@
 # Vendored from elvarofficial/teardown; kept as close to upstream as possible
 app/chaos/teardown
+# Copied from raffi.website (composables/useFibreField.js); kept identical to the source
+lib/edition/fibreField.js

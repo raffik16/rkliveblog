@@ -9,5 +9,6 @@ export const metadata = genPageMetadata({
 })
 
 export default function ClocksLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+  // The demo keeps its own look; the frame only clears the fixed navbar.
+  return <div className="ed-demo-frame">{children}</div>
 }

@@ -1,106 +1,111 @@
 'use client'
 
-import { Dialog, DialogPanel, Transition, TransitionChild } from '@headlessui/react'
-import { disableBodyScroll, enableBodyScroll, clearAllBodyScrollLocks } from 'body-scroll-lock'
-import { Fragment, useState, useEffect, useRef } from 'react'
-import Link from './Link'
+import { useEffect, useState } from 'react'
+import NextLink from 'next/link'
+import { usePathname } from 'next/navigation'
+import { Dialog, DialogPanel } from '@headlessui/react'
 import headerNavLinks from '@/data/headerNavLinks'
+import brand from '@/data/brand'
+import siteMetadata from '@/data/siteMetadata'
+import Logo from '@/components/edition/Logo'
+import EdPill from '@/components/edition/EdPill'
+import { isActivePath } from '@/lib/edition/nav'
 
+// Full-screen menu below 1025px: the navbar's links set large in Inter Tight, numbered like
+// the main site's chapter index, with the social links and the call to action underneath.
 const MobileNav = () => {
-  const [navShow, setNavShow] = useState(false)
-  const navRef = useRef(null)
+  const [open, setOpen] = useState(false)
+  const pathname = usePathname()
 
-  const onToggleNav = () => {
-    setNavShow((status) => {
-      if (status) {
-        enableBodyScroll(navRef.current)
-      } else {
-        // Prevent scrolling
-        disableBodyScroll(navRef.current)
-      }
-      return !status
-    })
-  }
-
+  // Close on navigation (the links are client-side, so the dialog would otherwise stay open).
   useEffect(() => {
-    return clearAllBodyScrollLocks
-  })
+    setOpen(false)
+  }, [pathname])
+
+  // The backdrop pauses its fibre field while the menu covers it.
+  useEffect(() => {
+    const html = document.documentElement
+    if (open) html.dataset.menu = 'open'
+    else delete html.dataset.menu
+    return () => {
+      delete html.dataset.menu
+    }
+  }, [open])
+
+  const socials = [
+    { href: siteMetadata.github, title: 'GitHub' },
+    { href: siteMetadata.linkedin, title: 'LinkedIn' },
+    { href: siteMetadata.x, title: 'X' },
+  ].filter((s) => s.href)
 
   return (
     <>
-      <button aria-label="Toggle Menu" onClick={onToggleNav} className="md:hidden">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          className="hover:text-primary-500 dark:hover:text-primary-400 h-8 w-8 text-gray-900 dark:text-gray-100"
-        >
-          <path
-            fillRule="evenodd"
-            d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-            clipRule="evenodd"
-          />
-        </svg>
+      <button
+        type="button"
+        className="ed-burger"
+        aria-label="Menu"
+        aria-expanded={open}
+        aria-controls="site-menu"
+        onClick={() => setOpen(true)}
+      >
+        <span />
+        <span />
       </button>
-      <Transition appear show={navShow} as={Fragment} unmount={false}>
-        <Dialog as="div" onClose={onToggleNav} unmount={false}>
-          <TransitionChild
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-            unmount={false}
-          >
-            <div className="fixed inset-0 z-60 bg-black/25" />
-          </TransitionChild>
-
-          <TransitionChild
-            as={Fragment}
-            enter="transition ease-in-out duration-300 transform"
-            enterFrom="translate-x-full opacity-0"
-            enterTo="translate-x-0 opacity-95"
-            leave="transition ease-in duration-200 transform"
-            leaveFrom="translate-x-0 opacity-95"
-            leaveTo="translate-x-full opacity-0"
-            unmount={false}
-          >
-            <DialogPanel className="fixed top-0 left-0 z-70 h-full w-full bg-white/95 duration-300 dark:bg-gray-950/98">
-              <nav
-                ref={navRef}
-                className="mt-8 flex h-full basis-0 flex-col items-start overflow-y-auto pt-2 pl-12 text-left"
-              >
-                {headerNavLinks.map((link) => (
-                  <Link
-                    key={link.title}
+      <Dialog open={open} onClose={() => setOpen(false)}>
+        <DialogPanel id="site-menu" className="ed-menu">
+          <div className="ed-menu__grain" aria-hidden="true" />
+          <div className="ed-menu__top">
+            <NextLink href="/" className="ed-nav__logo" aria-label={`${brand.name}. Blog home`}>
+              <Logo />
+            </NextLink>
+            <button
+              type="button"
+              className="ed-menu__close"
+              aria-label="Close menu"
+              onClick={() => setOpen(false)}
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M4 4l12 12M16 4L4 16" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            </button>
+          </div>
+          <p className="ed-kicker ed-menu__kicker">Menu</p>
+          <nav aria-label="Primary">
+            <ol className="ed-menu__list">
+              {headerNavLinks.map((link, i) => (
+                <li key={link.href}>
+                  <NextLink
                     href={link.href}
-                    className="hover:text-primary-500 dark:hover:text-primary-400 mb-4 py-2 pr-4 text-2xl font-bold tracking-widest text-gray-900 dark:text-gray-100"
-                    onClick={onToggleNav}
+                    aria-current={isActivePath(pathname, link.href) ? 'page' : undefined}
+                    onClick={() => setOpen(false)}
                   >
+                    <span className="ed-menu__num" aria-hidden="true">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
                     {link.title}
-                  </Link>
-                ))}
-              </nav>
-
-              <button
-                className="hover:text-primary-500 dark:hover:text-primary-400 fixed top-7 right-4 z-80 h-16 w-16 p-4 text-gray-900 dark:text-gray-100"
-                aria-label="Toggle Menu"
-                onClick={onToggleNav}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path
-                    fillRule="evenodd"
-                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-            </DialogPanel>
-          </TransitionChild>
-        </Dialog>
-      </Transition>
+                    <span className="ed-menu__arrow" aria-hidden="true">
+                      →
+                    </span>
+                  </NextLink>
+                </li>
+              ))}
+            </ol>
+          </nav>
+          <div className="ed-menu__foot">
+            <EdPill href={brand.contact} variant="signal" size="lg" arrow>
+              Let&apos;s talk
+            </EdPill>
+            <EdPill href={brand.mainSite} variant="outline" size="lg" arrow>
+              raffi.website
+            </EdPill>
+            {socials.map((s) => (
+              <EdPill key={s.title} href={s.href} variant="tag">
+                {s.title}
+              </EdPill>
+            ))}
+          </div>
+        </DialogPanel>
+      </Dialog>
     </>
   )
 }

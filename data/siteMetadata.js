@@ -1,15 +1,15 @@
 /** @type {import("pliny/config").PlinyConfig } */
 const siteMetadata = {
-  title: 'rkRanched - Engineering, AI & Creative Code',
+  title: 'Raffi Keklikian · Engineering, AI & Creative Code',
   author: 'Raffik Keklikian',
-  headerTitle: 'rkRanched',
+  headerTitle: 'Raffi Keklikian',
   description:
     'Deep dives into software engineering, AI-assisted development, and creative coding. Practical guides, interactive demos, and honest takes on the tools shaping modern development.',
   language: 'en-us',
-  theme: 'system', // system, dark or light
+  theme: 'dark', // dark only, like raffi.website (see app/theme-providers.tsx)
   siteUrl: 'https://rkliveblog.vercel.app',
   siteRepo: 'https://github.com/raffik16/rkliveblog',
-  siteLogo: `${process.env.BASE_PATH || ''}/static/images/logo.png`,
+  siteLogo: `${process.env.BASE_PATH || ''}/static/favicons/favicon.svg`,
   socialBanner: `${process.env.BASE_PATH || ''}/static/images/twitter-card.png`,
   github: 'https://github.com/raffik16',
   x: 'https://x.com/RKeklikian',

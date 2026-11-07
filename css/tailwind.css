@@ -1,42 +1,65 @@
 @import 'tailwindcss';
+@import './edition.css';
+@import './blog.css';
 @plugin "@tailwindcss/forms";
 @plugin '@tailwindcss/typography';
 @source '../node_modules/pliny';
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Core theme configuration */
+/*
+  Tailwind theme for the blog, mapped onto the raffi.website "Edition '26" system (css/edition.css
+  holds the real tokens). The site is dark only, like raffi.website: <html> always carries .dark,
+  so `dark:` utilities in the demos and in pliny (search, comments) resolve to their dark styles.
+*/
 @theme {
-  /* Font families */
-  --font-sans:
-    var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
-    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-sans: var(--font-inter), 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-inter-tight), 'Inter Tight', 'Inter', ui-sans-serif, sans-serif;
+  --font-serif: var(--font-instrument-serif), 'Instrument Serif', Georgia, serif;
+  --font-mono:
+    var(--font-jetbrains-mono), 'JetBrains Mono', 'SF Mono', ui-monospace, SFMono-Regular, monospace;
 
-  /* Brand Colors - RK Ranched */
-  /* PRIMARY: Blaze Orange (#FF5B04) - Links, accents, interactive elements */
-  --color-primary-50: oklch(0.97 0.03 30);
-  --color-primary-100: oklch(0.94 0.06 30);
-  --color-primary-200: oklch(0.88 0.1 30);
-  --color-primary-300: oklch(0.8 0.15 30);
-  --color-primary-400: oklch(0.73 0.19 30);
-  --color-primary-500: oklch(0.67 0.22 30);
-  --color-primary-600: oklch(0.6 0.22 30);
-  --color-primary-700: oklch(0.52 0.2 30);
-  --color-primary-800: oklch(0.43 0.17 30);
-  --color-primary-900: oklch(0.35 0.14 30);
-  --color-primary-950: oklch(0.25 0.1 30);
+  /* PRIMARY: the raffi.website signal lime (#D7FF3D at 300/400). Used by the demos and pliny for
+     links, focus rings and highlights, always on a dark surface. */
+  --color-primary-50: oklch(0.985 0.04 121);
+  --color-primary-100: oklch(0.97 0.08 121);
+  --color-primary-200: oklch(0.96 0.13 121);
+  --color-primary-300: oklch(0.95 0.18 121);
+  --color-primary-400: oklch(0.94 0.21 121);
+  --color-primary-500: oklch(0.9 0.21 121);
+  --color-primary-600: oklch(0.8 0.19 121);
+  --color-primary-700: oklch(0.68 0.16 121);
+  --color-primary-800: oklch(0.55 0.13 121);
+  --color-primary-900: oklch(0.42 0.1 121);
+  --color-primary-950: oklch(0.3 0.07 121);
 
-  /* GRAY: Mirage (#16232A), Deep Sea Green (#075056), Wild Sand (#E4EEF0) */
-  --color-gray-50: oklch(0.98 0.005 220);
-  --color-gray-100: oklch(0.95 0.008 220);
-  --color-gray-200: oklch(0.9 0.01 220);
-  --color-gray-300: oklch(0.82 0.015 215);
-  --color-gray-400: oklch(0.68 0.02 210);
-  --color-gray-500: oklch(0.54 0.025 205);
-  --color-gray-600: oklch(0.43 0.03 202);
-  --color-gray-700: oklch(0.35 0.035 200);
-  --color-gray-800: oklch(0.27 0.03 205);
-  --color-gray-900: oklch(0.19 0.025 220);
-  --color-gray-950: oklch(0.14 0.02 230);
+  /* GRAY: raffi.website neutrals, from paper (#F3F1EA) down to ink (#0A0B0F) */
+  --color-gray-50: #f3f1ea;
+  --color-gray-100: #e8e6de;
+  --color-gray-200: #d3d3d0;
+  --color-gray-300: #b8bac3;
+  --color-gray-400: #9ca0ae;
+  --color-gray-500: #7a7e8c;
+  --color-gray-600: #5c6070;
+  --color-gray-700: #3a3d48;
+  --color-gray-800: #262833;
+  --color-gray-900: #13141a;
+  --color-gray-950: #0a0b0f;
+
+  /* Edition colours as utilities (bg-ink, text-signal, border-line ...) */
+  --color-ink: #07080c;
+  --color-paper: #f3f1ea;
+  --color-signal: #d7ff3d;
+  --color-cyan: #3cc8ff;
+  --color-cobalt: #0b22b8;
+  --color-violet: #6410c4;
+  --color-raspberry: #b80f5c;
+  --color-ember: #b4400b;
+  --color-forest: #0d5a3e;
+  --color-fg: #ffffff;
+  --color-fg-2: rgba(255, 255, 255, 0.78);
+  --color-fg-3: rgba(255, 255, 255, 0.55);
+  --color-line: rgba(255, 255, 255, 0.16);
+  --color-line-strong: rgba(255, 255, 255, 0.32);
 
   /* Line heights */
   --line-height-11: 2.75rem;
@@ -50,125 +73,40 @@
   --z-80: 80;
 }
 
-/*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
 @layer base {
+  /* Tailwind v4 defaults borders to currentColor; keep the hairline look everywhere. */
   *,
   ::after,
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
+    border-color: var(--color-line, currentColor);
   }
 
   a,
   button {
-    outline-color: var(--color-primary-500);
+    outline-color: var(--color-signal);
   }
 
   a:focus-visible,
-  button:focus-visible {
-    outline: 2px solid;
-    border-radius: var(--radius-sm);
-    outline-color: var(--color-primary-500);
-  }
-}
-
-@layer utilities {
-  .prose {
-    /* primary-700/800 keep small link text above WCAG AA 4.5:1 on white (primary-500 is ~3.3:1) */
-    & a {
-      color: var(--color-primary-700);
-      &:hover {
-        color: var(--color-primary-800);
-      }
-      & code {
-        color: var(--color-primary-400);
-      }
-    }
-    /* Keep in-page anchor targets (TOC, heading links) clear of the sticky header */
-    & :where(h1, h2, h3, h4, h5, h6) {
-      scroll-margin-top: 6rem;
-    }
-    & :where(h1, h2) {
-      font-weight: 700;
-      letter-spacing: var(--tracking-tight);
-    }
-    & h3 {
-      font-weight: 600;
-    }
-    & :where(code):not(pre code) {
-      color: var(--color-indigo-500);
-    }
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid var(--color-signal);
+    outline-offset: 3px;
   }
 
-  /*
-    Dark mode. `dark:prose-invert` only swaps the typography plugin's own color variables; it
-    does not apply the plain `.prose-invert` rules below (Tailwind v4 no longer turns classes in
-    @layer utilities into variant-aware utilities), so dark overrides are keyed off `.dark`.
-  */
-  .dark .prose {
-    & a {
-      color: var(--color-primary-500);
-      &:hover {
-        color: var(--color-primary-400);
-      }
-    }
-    /* indigo-500 is ~4.3:1 on gray-950; indigo-400 is ~6.4:1 */
-    & :where(code):not(pre code) {
-      color: var(--color-indigo-400);
-    }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
   }
 
-  .prose-invert {
-    & a {
-      color: var(--color-primary-500);
-      &:hover {
-        color: var(--color-primary-400);
-      }
-      & code {
-        color: var(--color-primary-400);
-      }
-    }
-    & :where(h1, h2, h3, h4, h5, h6) {
-      color: var(--color-gray-100);
-    }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-fg-3);
   }
-}
-
-.task-list-item::before {
-  @apply hidden;
-}
-
-.task-list-item {
-  @apply list-none;
-}
-
-.footnotes {
-  @apply mt-12 border-t border-gray-200 pt-8 dark:border-gray-700;
-}
-
-.data-footnote-backref {
-  @apply no-underline;
-}
-
-.csl-entry {
-  @apply my-5;
-}
-
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-.no-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
 }
 
 /* https://stackoverflow.com/questions/61083813/how-to-avoid-internal-autofill-selected-style-to-be-applied */
@@ -179,103 +117,11 @@ input:-webkit-autofill:focus {
     color 600000s 0s;
 }
 
-.katex-display {
-  overflow: auto hidden;
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
-.content-header-link {
-  opacity: 0;
-  margin-left: -24px;
-  padding-right: 4px;
-}
-
-.content-header:hover .content-header-link,
-.content-header-link:hover {
-  opacity: 1;
-}
-
-.linkicon {
-  display: inline-block;
-  vertical-align: middle;
-}
-
-/* "On this page" sidebar list in layouts/PostLayout.tsx (links rendered by pliny's TOCInline) */
-.post-toc {
-  & ul ul {
-    margin-top: 0.25rem;
-    padding-left: 0.75rem;
-  }
-  & a {
-    display: block;
-    padding-block: 0.125rem;
-    color: var(--color-gray-500);
-    transition: color 150ms ease;
-    &:hover {
-      color: var(--color-primary-700);
-    }
-    /* The list can scroll, which would clip an outset focus ring */
-    &:focus-visible {
-      outline-offset: -2px;
-    }
-  }
-}
-
-.dark .post-toc a {
-  color: var(--color-gray-400);
-  &:hover {
-    color: var(--color-primary-400);
-  }
-}
-
-/* Frosted Glass with Gradient Borders */
-.glass-frost {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
-  background-clip: padding-box;
-  border: 1.5px solid transparent;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-}
-
-.glass-frost-hero {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-  background-clip: padding-box;
-  border: 2px solid transparent;
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-}
-
-/* Gradient Border Variants */
-.glass-border-primary {
-  background-image:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05)),
-    linear-gradient(135deg, rgba(255, 91, 4, 0.4), rgba(255, 140, 66, 0.4));
-  background-origin: border-box;
-}
-
-.glass-border-hero {
-  background-image:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)),
-    linear-gradient(135deg, rgba(255, 91, 4, 0.5), rgba(255, 140, 66, 0.5), rgba(7, 80, 86, 0.5));
-  background-origin: border-box;
-}
-
-.glass-border-cyan {
-  background-image:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05)),
-    linear-gradient(135deg, rgba(6, 182, 212, 0.4), rgba(59, 130, 246, 0.4));
-  background-origin: border-box;
-}
-
-.glass-border-purple {
-  background-image:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05)),
-    linear-gradient(135deg, rgba(168, 85, 247, 0.4), rgba(236, 72, 153, 0.4));
-  background-origin: border-box;
-}
-
-.glass-border-emerald {
-  background-image:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05)),
-    linear-gradient(135deg, rgba(16, 185, 129, 0.4), rgba(20, 184, 166, 0.4));
-  background-origin: border-box;
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
