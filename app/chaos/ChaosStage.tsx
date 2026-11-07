@@ -107,7 +107,7 @@ export default function ChaosStage() {
           CHAOS IS AN ART FORM
         </div>
         <div className="mt-4 text-[9px] tracking-[0.2em] text-white/55 [text-shadow:0_0_18px_rgba(0,0,0,0.9)] sm:text-[12px] sm:tracking-[0.42em]">
-          EVERYTHING · EVERYWHERE · ALL AT ONCE
+          NOTHING HERE IS RANDOM
         </div>
       </div>
 

@@ -352,7 +352,7 @@ export function startChaos(host, overlay = {}, options = {}) {
         right = ms.readout[shot.name]
       else if (shot.name === 'multiverse' || shot.name === 'all')
         right = [
-          'EVERYTHING · EVERYWHERE · ALL AT ONCE',
+          'NOTHING HERE IS RANDOM',
           `${fmtInt(Math.round(storm.count * T.density))} POINTS · ${debris.total} PARTS · 3 MACHINES`,
         ]
       else
