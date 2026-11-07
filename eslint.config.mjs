@@ -14,7 +14,8 @@ const compat = new FlatCompat({
 
 export default [
   {
-    ignores: ['next-env.d.ts'],
+    // app/chaos/teardown is vendored from elvarofficial/teardown and kept as close to upstream as possible
+    ignores: ['next-env.d.ts', 'app/chaos/teardown/**'],
   },
   js.configs.recommended,
   ...compat.extends(
