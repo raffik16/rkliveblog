@@ -9,6 +9,14 @@ export interface Demo {
 
 const demosData: Demo[] = [
   {
+    slug: 'chaos',
+    title: 'Chaos Is an Art Form',
+    href: '/chaos',
+    description:
+      'Full screen, no controls. A V8, a Strandbeest and a Cessna landing gear from teardown run, come apart and reassemble inside five strange attractors drawn by 200,000 points.',
+    tech: ['three.js', 'WebGL 2', 'GLSL', 'teardown'],
+  },
+  {
     slug: 'alien',
     title: 'Alien Spacecraft Command Center',
     href: '/alien',
