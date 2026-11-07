@@ -39,8 +39,8 @@ export default function LabPage() {
           <div className="ed-notes">
             <EdNote index={1} label="Heads up">
               The two Chaos pieces fill the whole window and have no controls: click for fullscreen,
-              and use your browser&apos;s back button to leave. The Hot Dog Set keeps the screen
-              awake, so it can run behind a DJ all night.
+              and use your browser&apos;s back button to leave. Roller Grill Sessions keeps the
+              screen awake, so it can run behind a DJ all night.
             </EdNote>
           </div>
         </div>

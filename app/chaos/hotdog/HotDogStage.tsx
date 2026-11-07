@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { JetBrains_Mono } from 'next/font/google'
+import { Bungee, JetBrains_Mono } from 'next/font/google'
 
 const mono = JetBrains_Mono({ subsets: ['latin'], weight: ['400', '600'], display: 'swap' })
+// the set's name, on the loader, the ribbon board and the record's label: flyer type
+const display = Bungee({ subsets: ['latin'], weight: '400', display: 'swap' })
 
 // The loader's drawing, traced as the set builds: the bun, the frank, the mustard, then the notes above it.
 const DOG =
@@ -29,6 +31,7 @@ export default function HotDogStage() {
   const [status, setStatus] = useState<Status>('loading')
   const [stage, setStage] = useState({ label: 'LOADING THREE.JS', k: 0.03 })
   const [bpm, setBpm] = useState<number | null>(null)
+  const [title, setTitle] = useState('ROLLER GRILL SESSIONS')
   const [idle, setIdle] = useState(false)
 
   useEffect(() => {
@@ -41,10 +44,12 @@ export default function HotDogStage() {
     let stop: (() => void) | undefined
     let cancelled = false
     import('./scene/set.js')
-      .then(({ startHotDogSet, tempoFrom }) => {
+      .then(({ startHotDogSet, tempoFrom, titleFrom }) => {
         if (cancelled || !hostRef.current) return
         setBpm(tempoFrom(location.search))
+        setTitle(titleFrom(location.search))
         stop = startHotDogSet(hostRef.current, {
+          font: display.style.fontFamily,
           onProgress: (label: string, k: number) => setStage({ label, k }),
           onReady: () => setStatus('ready'),
           onUnsupported: () => setStatus('unsupported'),
@@ -130,7 +135,7 @@ export default function HotDogStage() {
     <div
       ref={rootRef}
       role="img"
-      aria-label="Chaos is an art form, the hot dog set: hot dogs come apart into exploded views and back together inside glowing strange attractors, while music notes fly, a ring of stave plays a melody, and more hot dogs drift over a neon city of hot dog towers under a night sky."
+      aria-label="Chaos is an art form, Roller Grill Sessions: hot dogs come apart into exploded views and back together inside glowing strange attractors, while music notes fly, a ring of stave plays a melody, more hot dogs drift over a neon city of hot dog towers under a night sky, the set's name crawls round a ribbon board, and franks roll on a giant roller grill."
       className={`${mono.className} fixed inset-0 z-[200] overflow-hidden bg-[#030304] select-none`}
       style={{ cursor: idle ? 'none' : 'default' }}
     >
@@ -183,8 +188,10 @@ export default function HotDogStage() {
             />
           </g>
         </svg>
-        <div className="mt-9 text-[11px] font-semibold tracking-[0.32em] text-white/80 sm:text-[12px] sm:tracking-[0.42em]">
-          HOT DOG SET
+        <div
+          className={`${display.className} mt-9 max-w-[90vw] text-center text-[15px] leading-tight tracking-[0.12em] text-[#ffd21f] [text-shadow:0_0_18px_rgba(255,106,31,0.55)] sm:text-[22px]`}
+        >
+          {title}
         </div>
         <div className="mt-2 h-3 text-[9px] tracking-[0.3em] text-white/40 sm:text-[10px]">
           {bpm ? `${bpm} BPM` : ''}

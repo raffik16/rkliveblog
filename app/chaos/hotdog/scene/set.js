@@ -1,7 +1,9 @@
-// Chaos is an art form: the hot dog set. A VJ backdrop with no controls. Three hot dogs (a Chicago dog, a ballpark dog
-// and a New York dog) come apart into exploded views and go back together inside the five strange attractors of
+// Chaos is an art form: Roller Grill Sessions. A VJ backdrop with no controls. Three hot dogs (a Chicago dog, a ballpark
+// dog and a New York dog) come apart into exploded views and go back together inside the five strange attractors of
 // /chaos, while the storm carries flying parts and notes, a ring of stave plays a melody round the whole room, more
-// dogs drift in the space beyond, and Hot Dog City spreads out under a night sky. Everything counts in bars at the
+// dogs drift in the space beyond, and Hot Dog City spreads out under a night sky, the set's name crawling round it on a
+// ribbon board and a giant roller grill turning at the plaza's edge (hot dogs spin on the roller grill, DJs spin
+// records). Everything counts in bars at the
 // set's tempo (124 bpm, or ?bpm=), so the teardowns, camera moves and pulses land on the downbeat, and everything
 // eases: there are no cuts and no steps. It plays itself, tunes its own quality to the GPU behind the loader, and
 // stops when the page goes away.
@@ -17,8 +19,10 @@ import { buildStorm, flowPhases, FLOW } from '../../scene/storm.js'
 import { buildHotDogs, lowDog, partGeometries } from './hotdog.js'
 import { buildFlyers } from './flyers.js'
 import { buildStave, STAVE } from './stave.js'
-import { buildCity } from './city.js'
+import { buildCity, CITY } from './city.js'
 import { buildDrifters } from './drifters.js'
+import { buildGrill } from './grill.js'
+import { buildMarquee, DEFAULT_TITLE } from './marquee.js'
 import { attractorAt, beatAt, clock, fxAt, shotAt, teardownAt } from './director.js'
 
 // one palette per attractor (slow, mid, fast): ketchup, relish, club ice, mustard, magenta
@@ -148,6 +152,12 @@ const hasWebGL2 = () => {
   }
 }
 
+/** The set's name: ?title= if given (up to 40 characters), else Roller Grill Sessions. */
+export function titleFrom(search) {
+  const v = (new URLSearchParams(search).get('title') || '').trim().replace(/\s+/g, ' ')
+  return v ? v.slice(0, 40).toUpperCase() : DEFAULT_TITLE
+}
+
 /** The tempo from ?bpm=, kept to what a set plays. */
 export function tempoFrom(search) {
   const v = Number(new URLSearchParams(search).get('bpm'))
@@ -161,10 +171,12 @@ export function tempoFrom(search) {
  * GPU holds at full frame rate. Then onReady.
  *
  * Hooks for reviewing stills (not controls): ?t=<seconds> or ?bar=<bar> starts there, ?pause renders one frame and
- * waits for window.__hotdog.renderAt(t), ?tier=<0-5> fixes the quality tier, ?bpm=<60-200> sets the tempo.
+ * waits for window.__hotdog.renderAt(t), ?tier=<0-5> fixes the quality tier. Settings a DJ may want (not controls
+ * either): ?bpm=<60-200> sets the tempo, ?title=<name> the set's name on the board.
  *
  * @param {HTMLElement} host
- * @param {{onReady?: () => void, onUnsupported?: () => void, onProgress?: (label: string, k: number) => void}} [options]
+ * @param {{onReady?: () => void, onUnsupported?: () => void, onProgress?: (label: string, k: number) => void,
+ *   font?: string}} [options] font: a CSS font family for the set's name (the board and the record's label)
  * @returns {() => void}
  */
 export function startHotDogSet(host, options = {}) {
@@ -284,11 +296,25 @@ export function startHotDogSet(host, options = {}) {
     scene.add(flyers.group)
 
     progress('ZONING HOT DOG CITY', 0.65)
-    await yieldNow()
+    // the set's name is drawn in the display font: wait for it (briefly) so the board is not drawn in a fallback
+    const title = titleFrom(location.search)
+    const font = options.font || 'sans-serif'
+    await Promise.race([
+      document.fonts?.load(`100px ${font}`, title).catch(() => {}),
+      new Promise((r) => setTimeout(r, 2500)),
+    ])
     if (!alive) return
     const wholeDogs = ['mustard', 'ballpark', 'garden'].map((k) => lowDog(k))
-    const city = buildCity({ coin: parts.coin, dogs: wholeDogs })
+    const city = buildCity({ coin: parts.coin, dogs: wholeDogs, title, font })
     scene.add(city.group)
+
+    progress('FIRING UP THE ROLLER GRILL', 0.66)
+    await yieldNow()
+    if (!alive) return
+    const grill = buildGrill(parts.frank, CITY.ground)
+    scene.add(grill.group)
+    const marquee = buildMarquee(title, font)
+    scene.add(marquee.group)
 
     progress('LAUNCHING THE BLIMPS', 0.67)
     await yieldNow()
@@ -523,6 +549,8 @@ export function startHotDogSet(host, options = {}) {
       stave.update(bt.beats, kick)
       horizon.copy(pal[at.a][1]).lerp(pal[at.b][1], mm)
       city.update(t, bt.beats, horizon, T.pr)
+      grill.update(bt.beats)
+      marquee.update(bt.beats, kick)
       drifters.update(t, bt.beats, camera.position)
 
       // passes

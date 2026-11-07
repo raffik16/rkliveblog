@@ -8,6 +8,8 @@
 import * as THREE from 'three'
 import { rng } from '../../teardown/kit/util.js'
 import { trebleClef } from './notes.js'
+import { selfLit } from './mesher.js'
+import { GRILL } from './grill.js'
 
 export const CITY = {
   ground: -16,
@@ -20,21 +22,6 @@ export const CITY = {
 const smooth = (x) => {
   const k = Math.min(1, Math.max(0, x))
   return k * k * (3 - 2 * k)
-}
-
-/** A material that also glows in its own vertex colours, by `amount` (a {value} uniform you can change). */
-export function selfLit(mat, amount) {
-  mat.onBeforeCompile = (sh) => {
-    sh.uniforms.uSelfLit = amount
-    sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform float uSelfLit;')
-      .replace(
-        '#include <emissivemap_fragment>',
-        '#include <emissivemap_fragment>\n#ifdef USE_COLOR\n totalEmissiveRadiance += vColor.rgb * uSelfLit;\n#endif'
-      )
-  }
-  mat.customProgramCacheKey = () => 'self-lit'
-  return mat
 }
 
 // ------------------------------------------------------------------ sky
@@ -101,7 +88,7 @@ function radialSprite(inner, outer) {
 }
 
 // ------------------------------------------------------------------ the record
-function recordTexture() {
+function recordTexture(title, font) {
   const S = 2048
   const cv = document.createElement('canvas')
   cv.width = cv.height = S
@@ -151,9 +138,14 @@ function recordTexture() {
   g.stroke()
   g.restore()
   g.fillStyle = '#ffd21f'
-  g.font = `bold ${Math.round(R * 0.032)}px monospace`
+  // the set's name, shrunk to fit the label
   g.textAlign = 'center'
-  g.fillText('HOT DOG SET', c, c + R * 0.075)
+  let px = Math.round(R * 0.03)
+  g.font = `${px}px ${font}`
+  const fit = (R * 0.3) / Math.max(1, g.measureText(title).width)
+  if (fit < 1) px = Math.floor(px * fit)
+  g.font = `${px}px ${font}`
+  g.fillText(title, c, c + R * 0.075)
   g.font = `${Math.round(R * 0.018)}px monospace`
   g.fillText('SIDE A · 33⅓', c, c + R * 0.115)
   g.fillStyle = '#050507'
@@ -296,10 +288,11 @@ function neonSign(mats, withClef) {
 
 // ------------------------------------------------------------------ the city
 /**
- * coin: a frank-slice geometry (for the moon); dog: a low-detail whole dog (for the hot dog skyscrapers).
+ * coin: a frank-slice geometry (for the moon); dogs: low-detail whole dogs (for the hot dog skyscrapers); title: the
+ * set's name, for the record's label, in `font`.
  * Returns {group, update(t, beats, glow), stars} where glow is the colour on the horizon this frame.
  */
-export function buildCity({ coin, dogs }) {
+export function buildCity({ coin, dogs, title, font = 'sans-serif' }) {
   const r = rng(71)
   const group = new THREE.Group()
   const { ground, inner, outer, cell, plaza } = CITY
@@ -436,7 +429,7 @@ export function buildCity({ coin, dogs }) {
   const record = new THREE.Mesh(
     recordGeo,
     new THREE.MeshStandardMaterial({
-      map: recordTexture(),
+      map: recordTexture(title, font),
       roughness: 0.3,
       metalness: 0.15,
       envMapIntensity: 0.9,
@@ -449,7 +442,8 @@ export function buildCity({ coin, dogs }) {
   group.add(record)
 
   // landmarks, placed first so the blocks keep clear of them ------------------------
-  const avoid = []
+  // the roller grill's lot stays clear
+  const avoid = [[GRILL.radius * Math.cos(GRILL.az), GRILL.radius * Math.sin(GRILL.az), 22]]
   const at = (az, rad) => [rad * Math.cos(az), rad * Math.sin(az)]
   const faceIn = (o) => o.lookAt(0, o.position.y, 0)
 

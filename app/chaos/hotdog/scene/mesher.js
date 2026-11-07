@@ -161,3 +161,18 @@ export class Mesher {
 /** Linear-space colour from a hex string, optionally scaled. */
 export const col = (hex, k = 1) => new THREE.Color(hex).multiplyScalar(k)
 export const mix = (a, b, k) => a.clone().lerp(b, Math.min(1, Math.max(0, k)))
+
+/** A material that also glows in its own vertex colours, by `amount` (a {value} uniform you can change). */
+export function selfLit(mat, amount) {
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uSelfLit = amount
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uSelfLit;')
+      .replace(
+        '#include <emissivemap_fragment>',
+        '#include <emissivemap_fragment>\n#ifdef USE_COLOR\n totalEmissiveRadiance += vColor.rgb * uSelfLit;\n#endif'
+      )
+  }
+  mat.customProgramCacheKey = () => 'self-lit'
+  return mat
+}

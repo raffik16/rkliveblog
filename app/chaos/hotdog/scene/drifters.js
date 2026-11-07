@@ -3,7 +3,7 @@
 // smooth function of time. Anything the camera comes close to shrinks away before it can fill the lens.
 import * as THREE from 'three'
 import { rng } from '../../teardown/kit/util.js'
-import { selfLit } from './city.js'
+import { selfLit } from './mesher.js'
 
 const V3 = THREE.Vector3
 
