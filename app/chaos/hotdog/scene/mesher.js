@@ -166,7 +166,7 @@ export const mix = (a, b, k) => a.clone().lerp(b, Math.min(1, Math.max(0, k)))
 // light it gives off. Everything else is paint (a sauce brightened past 1 to read across a room stays paint).
 /** A vertex colour that marks an LED glowing `hex` at `k` times its colour (for a selfLit material). */
 export const ledCol = (hex, k = 3) => col(hex, k).addScalar(2)
-/** The LEDs' brightness, shared by every selfLit material: set once a frame, it throbs with the kick. */
+/** The LEDs' brightness, shared by every selfLit material. Steady: a whole city of LEDs pulsing at once strobes. */
 export const LED = { value: 1 }
 
 /**

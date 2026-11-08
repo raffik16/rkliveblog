@@ -18,9 +18,9 @@
 // 6-inch, 146 mm, hinged at the bottom; its halves open 19.5° each, and a 22 mm frank resting in that V sits with its
 // axis 33 mm above the hinge (r / sin 19.5°), its top level with the crust.
 import * as THREE from 'three'
-import { Mesher, col, mix, ledCol, selfLit, LED } from './mesher.js'
+import { Mesher, col, mix, ledCol, selfLit } from './mesher.js'
 import { rng, clamp01, easeInOutCubic } from '../../teardown/kit/util.js'
-import { chassis, collars, LED_RED } from './robot.js'
+import { chassis, collars } from './robot.js'
 
 export const SPEC = {
   frank: { length: 0.152, dia: 0.022, bend: 0.004, slices: 12 },
@@ -55,15 +55,15 @@ const C = {
   kraut: col('#eedfa6'),
   sauce: col('#a8301a'),
   // the skin the fur grows from
-  hide: col('#3a2414'),
-  hideTop: col('#2a190d'),
-  hideLow: col('#4a3020'),
+  hide: col('#7a5230'),
+  hideTop: col('#6c4828'),
+  hideLow: col('#86603a'),
   // inside a segment: a hub, an LED ring, the works, a machined housing
   hub: col('#2a2c33'),
   works: col('#15161c'),
   housing: col('#a7adb8'),
 }
-const CORE = ledCol('#2ee6ff', 1.6)
+const CORE = ledCol('#2ee6ff', 1.2)
 
 // a cut face, from the middle out: [radius share, colour]; a radius twice over is a hard edge
 const FACE = [
@@ -159,7 +159,8 @@ function frankSlice(x0, x1, { step = 0.001, radial = 44 } = {}) {
 
 /**
  * The robot's hardware on a whole low-detail frank (axis along x, centred): a chrome collar at every other joint (all
- * eleven would read as a string of beads from across the room) and LEDs down both sides.
+ * eleven would read as a string of beads from across the room). No LEDs: at this size they come out smaller than a
+ * pixel and twinkle as the frank moves.
  */
 function frankHardware(m, radial = 14) {
   const L = SPEC.frank.length
@@ -170,16 +171,6 @@ function frankHardware(m, radial = 14) {
     g.translate(-L / 2 + (j * L) / n, 0, 0)
     m.append(g)
   }
-  const led = new THREE.OctahedronGeometry(0.0013, 0)
-  for (let i = 0; i < n; i++) {
-    const x = -L / 2 + ((i + 0.5) * L) / n
-    for (const s of [-1, 1]) {
-      const g = led.clone()
-      g.translate(x, 0.96 * R * Math.cos(LED_TH), 0.96 * s * R * Math.sin(LED_TH))
-      m.add(g, LED_RED)
-    }
-  }
-  led.dispose()
   return m
 }
 
@@ -537,10 +528,10 @@ export function foodMaterials() {
       })
     ),
     chrome: new THREE.MeshStandardMaterial({
-      color: '#e9edf3',
-      roughness: 0.16,
+      color: '#dfe3ea',
+      roughness: 0.34,
       metalness: 1,
-      envMapIntensity: 1.1,
+      envMapIntensity: 0.85,
     }),
     // the chassis: anodised and painted parts, bare metal, a circuit board, LEDs
     robot: selfLit(
@@ -863,8 +854,8 @@ function buildDog(style, M, shared, seed) {
     for (let i = 0; i < n; i++) {
       const x = slices[i].xc / halfL
       const k =
-        0.7 + 6 * Math.exp(-(((x - a) / 0.15) ** 2)) + 1.8 * Math.exp(-(((x - b) / 0.22) ** 2))
-      leds.setColorAt(i, tint.setRGB(1, 0.06, 0.03).multiplyScalar(k * LED.value))
+        0.5 + 2.6 * Math.exp(-(((x - a) / 0.18) ** 2)) + 0.9 * Math.exp(-(((x - b) / 0.24) ** 2))
+      leds.setColorAt(i, tint.setRGB(1, 0.06, 0.03).multiplyScalar(k))
     }
     leds.instanceColor.needsUpdate = true
   }
@@ -988,8 +979,8 @@ export function buildHotDogs() {
 }
 
 /**
- * A whole dog at low detail, one draw call with its colours baked in: both bun halves opened, the robot frank (chrome
- * collars, LEDs down both sides), and its toppings. kind: 'mustard' (a yellow zigzag), 'ballpark' (mustard and a line
+ * A whole dog at low detail, one draw call with its colours baked in: both bun halves opened, the robot frank on its
+ * chrome collars, and its toppings. kind: 'mustard' (a yellow zigzag), 'ballpark' (mustard and a line
  * of ketchup) or 'garden' (mustard, neon relish and onions). Sauces are brightened so they read from across a room.
  */
 export function lowDog(kind = 'mustard', seed = 7) {

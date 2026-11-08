@@ -1,6 +1,6 @@
 // The flyers: what a robot hot dog teardown leaves in the air, and the notes of the set, caught in the storm. Small
 // whole robot dogs, franks on their chrome collars, segments with the machine inside showing, bun halves, pickle
-// spears, sport peppers, tomato wedges; the hardware, spur gears turning, hex nuts, bolts, coil springs and hobby
+// spears, sport peppers, tomato wedges; the hardware, spur gears slowly turning, hex nuts, bolts, coil springs and hobby
 // servos; and every kind of note. Each rides the same attractor curve as the points by the same formula, on the CPU:
 // a few hundred instanced meshes, every matrix recomposed per frame, a pure function of t. They also report where
 // they are and how fast they are going (bodies), for the fur to feel them pass.
@@ -39,9 +39,9 @@ export function buildFlyers(attractors, parts, food, glow, { seed = 37 } = {}) {
   const metal = selfLit(
     new THREE.MeshStandardMaterial({
       vertexColors: true,
-      roughness: 0.24,
+      roughness: 0.46,
       metalness: 1,
-      envMapIntensity: 1.1,
+      envMapIntensity: 0.75,
     })
   )
   const glyphs = noteGlyphs()
@@ -61,13 +61,13 @@ export function buildFlyers(attractors, parts, food, glow, { seed = 37 } = {}) {
       spin: 1,
     },
     // the hardware: gears turn on their own axles as they fly
-    { geo: unit(gear()), mat: metal, n: 22, size: [0.5, 0.8], spin: 2.5 },
+    { geo: unit(gear()), mat: metal, n: 22, size: [0.5, 0.8], spin: 0.7 },
     {
       geo: unit(gear({ teeth: 20, windows: 6, color: METAL.steel })),
       mat: metal,
       n: 12,
       size: [0.8, 1.1],
-      spin: 1.6,
+      spin: 0.5,
     },
     { geo: unit(hexNut()), mat: metal, n: 26, size: [0.2, 0.32], spin: 1 },
     { geo: unit(bolt()), mat: metal, n: 22, size: [0.36, 0.56] },

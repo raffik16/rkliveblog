@@ -40,7 +40,7 @@ export function buildDrifters(dogs, { seed = 53, perKind = 14 } = {}) {
         w: (0.006 + 0.014 * r()) * (r() < 0.5 ? -1 : 1),
         bob: r() * 6.28,
         size: 22 + 20 * r(),
-        spin: 30 + 8 * r(),
+        spin: 2.4 + 0.8 * r(),
       })
   }
 
@@ -69,7 +69,7 @@ export function buildDrifters(dogs, { seed = 53, perKind = 14 } = {}) {
       phi: (k / 4) * Math.PI * 2 + r() * 0.8,
       w: (0.0035 + 0.003 * r()) * (k % 2 ? -1 : 1),
       bob: r() * 6.28,
-      spin: 18 + 4 * r(),
+      spin: 1.6 + 0.4 * r(),
     })
   }
 

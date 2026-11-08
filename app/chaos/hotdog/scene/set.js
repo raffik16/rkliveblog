@@ -20,7 +20,6 @@ import { buildStorm, flowPhases, swirl, FLOW } from '../../scene/storm.js'
 import { buildHotDogs, coatPoint, lowDog, partGeometries } from './hotdog.js'
 import { buildFur } from './fur.js'
 import { buildTonearm } from './tonearm.js'
-import { LED } from './mesher.js'
 import { buildFlyers } from './flyers.js'
 import { buildStave, STAVE } from './stave.js'
 import { buildCity, CITY } from './city.js'
@@ -56,7 +55,7 @@ const COATS = {
 }
 // how hard the air moves the fur: the storm's turbulence, the subs' puff on the kick, the burst out of a dog as it
 // comes apart (per unit of explode a second), and a flying part or note passing through (world units / s)
-const AIR = { gust: 0.9, chaos: 1.5, kick: 5.5, burst: 7, pass: 10 }
+const AIR = { gust: 0.8, chaos: 1.2, kick: 1.2, burst: 7, pass: 10 }
 
 // Before bloom: no pixel brighter than K times white, hue kept, so a glossy highlight stays a sparkle, not a halo.
 const CLAMP = {
@@ -307,7 +306,7 @@ export function startHotDogSet(host, options = {}) {
       }))
     )
     holds.forEach((h) => h.updateMatrixWorld(true))
-    const fur = buildFur(coats, { strands: small ? 5200 : 9000 })
+    const fur = buildFur(coats, { strands: small ? 4000 : 6500 })
     scene.add(fur.mesh)
 
     progress('SCORING THE MELODY', 0.58)
@@ -565,7 +564,6 @@ export function startHotDogSet(host, options = {}) {
       const kick = reduced ? 0 : bt.kick
 
       poseDogs(t, bars, fx.bounce, bt.beats)
-      LED.value = 0.75 + 0.9 * kick
 
       // storm
       const u = storm.uniforms

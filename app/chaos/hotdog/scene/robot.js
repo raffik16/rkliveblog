@@ -16,9 +16,9 @@ export const METAL = {
   pcb: col('#0e5a2c'),
   chip: col('#101114'),
 }
-export const LED_RED = ledCol('#ff2a1a', 2.6)
-export const LED_GREEN = ledCol('#2aff6a', 2.2)
-export const LED_CYAN = ledCol('#2ee6ff', 2)
+export const LED_RED = ledCol('#ff2a1a', 1.4)
+export const LED_GREEN = ledCol('#2aff6a', 1.2)
+export const LED_CYAN = ledCol('#2ee6ff', 1.1)
 
 const V3 = THREE.Vector3
 const place = (g, p, q = new THREE.Quaternion(), s = new V3(1, 1, 1)) =>
@@ -93,27 +93,27 @@ export function hexNut({ color = METAL.steel } = {}) {
   return new Mesher().add(g, color).build()
 }
 
-/** A hex-head bolt along y, its threads cut as a zigzag on the shank. */
+/** A hex-head bolt along y, a few broad threads cut on the shank. */
 export function bolt({ color = METAL.steel } = {}) {
   const m = new Mesher()
   m.add(place(new THREE.CylinderGeometry(1, 1, 0.62, 6), new V3(0, 0.31, 0)), color)
   const pts = [new THREE.Vector2(0, 0), new THREE.Vector2(0.5, 0)]
-  const N = 22
-  for (let k = 1; k <= N; k++) pts.push(new THREE.Vector2(k % 2 ? 0.42 : 0.52, -k * 0.11))
-  pts.push(new THREE.Vector2(0.3, -N * 0.11 - 0.12), new THREE.Vector2(0, -N * 0.11 - 0.12))
+  const N = 8
+  for (let k = 1; k <= N; k++) pts.push(new THREE.Vector2(k % 2 ? 0.44 : 0.5, -k * 0.3))
+  pts.push(new THREE.Vector2(0.32, -N * 0.3 - 0.12), new THREE.Vector2(0, -N * 0.3 - 0.12))
   m.add(new THREE.LatheGeometry(pts, 14), color)
   return m.build()
 }
 
-/** A coil spring along y, five and a half turns. */
-export function spring({ color = METAL.steel, turns = 5.5 } = {}) {
+/** A coil spring along y, four and a half turns. */
+export function spring({ color = METAL.steel, turns = 4.5 } = {}) {
   class Helix extends THREE.Curve {
     getPoint(t, out = new V3()) {
       const a = t * turns * Math.PI * 2
       return out.set(Math.cos(a), (t - 0.5) * turns * 0.38, Math.sin(a))
     }
   }
-  const g = new THREE.TubeGeometry(new Helix(), 160, 0.11, 6, false)
+  const g = new THREE.TubeGeometry(new Helix(), 140, 0.17, 6, false)
   return new Mesher().add(g, color).build()
 }
 
@@ -151,7 +151,7 @@ export function collars(hl, r, bw, ends = [true, true], radial = 36) {
       (u, v) => {
         const [s, rk] = prof[Math.round(u * (prof.length - 1))]
         const th = v * Math.PI * 2
-        return { p: [x0 + bw * s, r * rk * Math.cos(th), r * rk * Math.sin(th)], c: METAL.chrome }
+        return { p: [x0 + bw * s, r * rk * Math.cos(th), r * rk * Math.sin(th)], c: METAL.steel }
       },
       { inside: [x0 + bw / 2, 0, 0], wrapV: true }
     )
@@ -224,14 +224,14 @@ export function droneFrame() {
       METAL.chrome
     )
     m.add(
-      place(new THREE.OctahedronGeometry(0.0024, 0), new V3(x * 1.08, -0.058, z * 1.08)),
+      place(new THREE.SphereGeometry(0.0045, 8, 6), new V3(x * 1.1, -0.059, z * 1.1)),
       x > 0 ? LED_GREEN : LED_RED
     )
   }
   return m.build()
 }
 
-/** A turning rotor as the eye sees it: a faint disc with two blurred blades. Drawn once. */
+/** A turning rotor as the eye sees it: a faint disc, its two blades smeared most of the way round. Drawn once. */
 let rotorTex = null
 export function rotorTexture() {
   if (rotorTex) return rotorTex
@@ -246,9 +246,9 @@ export function rotorTexture() {
   g.fill()
   g.lineCap = 'round'
   for (let b = 0; b < 2; b++)
-    for (let i = 0; i < 48; i++) {
-      const a = b * Math.PI - i * 0.026
-      g.strokeStyle = `rgba(230,236,244,${0.32 * Math.pow(1 - i / 48, 2.2)})`
+    for (let i = 0; i < 100; i++) {
+      const a = b * Math.PI - i * 0.028
+      g.strokeStyle = `rgba(230,236,244,${0.16 * Math.pow(1 - i / 100, 1.6)})`
       g.lineWidth = S * 0.045
       g.beginPath()
       g.moveTo(c + Math.cos(a) * c * 0.16, c + Math.sin(a) * c * 0.16)

@@ -2,9 +2,9 @@
 // tonearm it keeps one length and sweeps: its turret turns so the stylus, starting in the outer groove at the top of
 // the loop, works its way in across the record over sixty bars; then the arm lifts, swings back out and drops onto
 // the outer groove again as the loop comes round, every move from rest to rest. It keeps time while it plays: the
-// head nods on every kick, an LED on it flashes, a ring of light round its base breathes on the bar. Its joints are
-// solved each frame (two links, elbow up) so the head always points straight down at the groove; a hydraulic ram
-// lifts the upper arm.
+// head nods on every kick, LEDs glow on its head and arms, a ring of light round its base breathes on the bar. Its
+// joints are solved each frame (two links, elbow up) so the head always points straight down at the groove; a
+// hydraulic ram lifts the upper arm.
 import * as THREE from 'three'
 import { METAL } from './robot.js'
 
@@ -65,16 +65,16 @@ export function buildTonearm(ground) {
       g.add(c)
     }
     for (const s of [-1, 1]) {
-      const plate = mesh(new THREE.BoxGeometry(len * 0.72, h * 0.56, 0.08), joint)
-      plate.position.set(len / 2, 0, s * (d / 2 + 0.04))
+      const plate = mesh(new THREE.BoxGeometry(len * 0.72, h * 0.56, 0.24), joint)
+      plate.position.set(len / 2, 0, s * (d / 2 + 0.06))
       g.add(plate)
-      const strip = mesh(new THREE.BoxGeometry(len * 0.6, 0.14, 0.04), stripMat)
-      strip.position.set(len / 2, -h * 0.12, s * (d / 2 + 0.1))
+      const strip = mesh(new THREE.BoxGeometry(len * 0.6, 0.36, 0.24), stripMat)
+      strip.position.set(len / 2, -h * 0.12, s * (d / 2 + 0.16))
       g.add(strip)
     }
     const cable = mesh(cyl(0.26, 0.26, len * 0.7, 10), joint)
     cable.rotation.z = Math.PI / 2
-    cable.position.set(len / 2, h / 2 + 0.3, 0)
+    cable.position.set(len / 2, h / 2 + 0.16, 0)
     g.add(cable)
     return g
   }
@@ -124,7 +124,7 @@ export function buildTonearm(ground) {
   const cart = mesh(new THREE.BoxGeometry(3.2, 1.9, 2.2), joint)
   cart.position.x = 2.2
   wrist.add(cart)
-  const stripe = mesh(new THREE.BoxGeometry(3.24, 0.4, 2.24), paint)
+  const stripe = mesh(new THREE.BoxGeometry(3.5, 0.4, 2.5), paint)
   stripe.position.set(2.2, 0.35, 0)
   wrist.add(stripe)
   const led = mesh(new THREE.SphereGeometry(0.32, 12, 8), ledMat)
@@ -205,8 +205,8 @@ export function buildTonearm(ground) {
     barrel.position.copy(pa).addScaledVector(dir, 4.5)
     rod.quaternion.copy(barrel.quaternion)
     rod.position.copy(pb).addScaledVector(dir, -4.5)
-    ledMat.color.setRGB(1, 0.1, 0.05).multiplyScalar(0.5 + 4 * kick)
-    stripMat.color.setRGB(0.18, 0.9, 1).multiplyScalar(0.7 + 1.8 * kick)
+    ledMat.color.setRGB(1, 0.1, 0.05).multiplyScalar(1 + 0.5 * kick)
+    stripMat.color.setRGB(0.18, 0.9, 1).multiplyScalar(0.9 + 0.2 * kick)
     const bar = (((beats / 4) % 1) + 1) % 1
     ringMat.color
       .setRGB(1, 0.72, 0.1)

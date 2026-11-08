@@ -26,10 +26,10 @@ const H = 1 / 120 // the simulation's step, seconds
 
 export const FUR = {
   length: 0.74, // a guide's length, world units (about 14 mm on a dog this size)
-  width: 0.0062, // a strand's width at its root, world units
+  width: 0.0075, // a strand's width at its root, world units
   gravity: 26, // world units / s²
   drag: 5, // how hard the air drags a strand toward the wind's speed, 1/s
-  damping: 0.012, // velocity lost per step
+  damping: 0.035, // velocity lost per step: air and its own hairs damp fur, so it settles, not rings
   stiff: [0.09, 0.04, 0.02], // how hard each segment holds its lay, per step (root first)
   vMax: 0.97, // fur grows up to here round the coat (1 is the cut edge)
   locks: [60, 16], // locks along a coat and round it
@@ -59,6 +59,7 @@ out vec3 vTip;
 out float vS;
 out float vSide;
 out float vCover;
+out float vFar;
 
 // a guide's point k (1..3), relative to its root, per unit of length
 vec3 guide(int g, int k) {
@@ -98,14 +99,15 @@ void main() {
   vec3 b2 = cross(tan, b1);
   float curl = aRand.z * 6.2831853 + s * 5.5;
   p += (b1 * cos(curl) + b2 * sin(curl)) * len * 0.06 * s * s;
-  // a ribbon across the line of sight, never thinner than a device pixel: below that its light is coverage
+  // a ribbon across the line of sight, never thinner than two device pixels: below that its light is coverage. A
+  // strand one pixel wide crawls from pixel to pixel as it moves; two wide, the multisampling smooths it
   vec3 view = normalize(cameraPosition - p);
   vec3 side = normalize(cross(tan, view) + 1e-6);
   vec4 mv = viewMatrix * vec4(p, 1.0);
   float depth = max(0.05, -mv.z);
   float w = uWidth * aRand.w * (1.0 - 0.82 * s);
   float px = w * uScale / depth;
-  float wide = max(px, 1.0) * depth / uScale;
+  float wide = max(px, 2.0) * depth / uScale;
   p += side * position.y * wide * 0.5;
   gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
   vT = tan;
@@ -114,7 +116,9 @@ void main() {
   vTip = aTip;
   vS = s;
   vSide = position.y;
-  vCover = min(1.0, px) * (1.0 - smoothstep(0.86, 1.0, s));
+  vCover = min(1.0, px * 0.5) * (1.0 - smoothstep(0.7, 1.0, s));
+  // how far below a pixel this strand is: there it blends into the coat instead of standing out from it
+  vFar = 1.0 - smoothstep(0.5, 2.0, px);
 }`
 
 const frag = /* glsl */ `
@@ -133,15 +137,19 @@ in vec3 vTip;
 in float vS;
 in float vSide;
 in float vCover;
+in float vFar;
 out vec4 fragColor;
 
 void main() {
   vec3 T = normalize(vT);
   vec3 N = normalize(vN);
   vec3 V = normalize(cameraPosition - vP);
-  // dark at the roots, light at the tips; the undercoat sits in its own shade
-  vec3 base = mix(vTip * vec3(0.2, 0.17, 0.15), vTip, smoothstep(0.0, 0.8, vS));
-  float occ = mix(0.3, 1.0, smoothstep(0.0, 0.75, vS)) * (1.0 - 0.25 * vSide * vSide);
+  // darker at the roots, light at the tips; the undercoat sits in its own shade. Kept gentle, and a strand thinner
+  // than a pixel takes the coat's average colour, so hairs moving across pixels do not flicker against the skin
+  vec3 base = mix(vTip * vec3(0.5, 0.45, 0.4), vTip, smoothstep(0.0, 0.8, vS));
+  base = mix(base, vTip * 0.72, vFar * 0.85);
+  float occ = mix(0.62, 1.0, smoothstep(0.0, 0.75, vS)) * (1.0 - 0.1 * vSide * vSide);
+  float gloss = 1.0 - vFar;
   // light from the room (the hemisphere and the club's reflections), then each light; lights in three's units, so
   // a diffuse surface returns 1/pi of what falls on it
   const float INV_PI = 0.31830989;
@@ -157,12 +165,15 @@ void main() {
     vec3 T2 = normalize(T - N * 0.22);
     float h1 = dot(T1, Hv);
     float h2 = dot(T2, Hv);
-    float s1 = pow(sqrt(max(0.0, 1.0 - h1 * h1)), 90.0);
-    float s2 = pow(sqrt(max(0.0, 1.0 - h2 * h2)), 26.0);
+    // broad highlights: a narrow glint on a hair a pixel wide sparkles from frame to frame
+    float s1 = pow(sqrt(max(0.0, 1.0 - h1 * h1)), 36.0);
+    float s2 = pow(sqrt(max(0.0, 1.0 - h2 * h2)), 14.0);
     // light from behind glows through the tips
     float back = pow(max(0.0, -dot(V, L)), 3.0) * vS;
-    col += uLightCol[i] * INV_PI * (shade * occ * (base * diff + 0.5 * s1 + base * 1.6 * s2) + base * back * 1.4);
+    col += uLightCol[i] * INV_PI * (shade * occ * (base * diff + gloss * (0.18 * s1 + base * 0.7 * s2)) + base * back * 0.7);
   }
+  // fur is matte: it never reaches the bloom, which would turn any glint into a blinking halo
+  col = min(col, vec3(0.92));
   float d = length(vP - cameraPosition);
   col = mix(col, uFog, 1.0 - exp(-uFogDensity * uFogDensity * d * d));
   fragColor = vec4(col, vCover);
@@ -213,6 +224,10 @@ export function buildFur(coats, { strands = 9000, seed = 61, scale = 1 } = {}) {
   // the state, world space: every guide's four points now and a step ago
   const X = new Float32Array(NG * NODES * 3)
   const P = new Float32Array(NG * NODES * 3)
+  // the state one step back: what is drawn is blended between it and X by how far the clock is into the next step,
+  // so the fur moves smoothly at any refresh rate (a frame that falls between two steps would otherwise stand still,
+  // and the next jump two)
+  const XW = new Float32Array(NG * NODES * 3)
   // the roots and lays this frame and last, world space
   const rootNow = new Float32Array(NG * 3)
   const rootWas = new Float32Array(NG * 3)
@@ -470,19 +485,24 @@ export function buildFur(coats, { strands = 9000, seed = 61, scale = 1 } = {}) {
           X[i + a] = P[i + a] = rootNow[g * 3 + a] + layNow[g * 3 + a] * seg * k
       }
     for (let i = 0; i < n; i++) step(1)
+    XW.set(X)
   }
 
-  const upload = () => {
+  // each guide's points relative to its root, a share `a` of the way from the last step back to the latest
+  const upload = (a) => {
     const d = tex.image.data
     const L = FUR.length * scale
-    for (let g = 0; g < NG; g++)
+    for (let g = 0; g < NG; g++) {
+      const r = g * NODES * 3
       for (let k = 1; k < NODES; k++) {
-        const i = (g * NODES + k) * 3
+        const i = r + k * 3
         const o = ((k - 1) * NG + g) * 4
-        d[o] = (X[i] - X[g * NODES * 3]) / L
-        d[o + 1] = (X[i + 1] - X[g * NODES * 3 + 1]) / L
-        d[o + 2] = (X[i + 2] - X[g * NODES * 3 + 2]) / L
+        for (let c = 0; c < 3; c++) {
+          const was = XW[i + c] - XW[r + c]
+          d[o + c] = (was + (X[i + c] - X[r + c] - was) * a) / L
+        }
       }
+    }
     tex.needsUpdate = true
   }
 
@@ -515,11 +535,14 @@ export function buildFur(coats, { strands = 9000, seed = 61, scale = 1 } = {}) {
       acc += dt
       const n = Math.min(8, Math.floor(acc / H))
       acc = Math.min(acc - n * H, H)
-      for (let i = 1; i <= n; i++) step(i / n)
+      for (let i = 1; i <= n; i++) {
+        if (i === n) XW.set(X)
+        step(i / n)
+      }
       if (n > 0) rootWas.set(rootNow)
     }
     last = t
-    upload()
+    upload(acc / H)
 
     for (let i = 0; i < 3; i++) {
       uniforms.uLightDir.value[i].copy(lights.dir[i])
