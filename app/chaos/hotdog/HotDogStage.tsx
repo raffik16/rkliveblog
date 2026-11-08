@@ -135,7 +135,7 @@ export default function HotDogStage() {
     <div
       ref={rootRef}
       role="img"
-      aria-label="Chaos is an art form, Roller Grill Sessions: hot dogs come apart into exploded views and back together inside glowing strange attractors, while music notes fly, a ring of stave plays a melody, more hot dogs drift over a neon city of hot dog towers under a night sky, franks roll on a giant roller grill, and the set's name alternates with others on the label of a giant record."
+      aria-label="Chaos is an art form, Roller Grill Sessions: three animatronic hot dogs in coats of real fur, robots inside with chrome-jointed franks and scanning LEDs, come apart into exploded views and back together inside glowing strange attractors. Their fur hangs under gravity and blows about as the storm, flying notes, gears and bolts pass through it. A ring of stave plays a melody, hot dog drones fly over a neon city of hot dog towers under a night sky, robot franks roll on a giant roller grill, a robot arm plays a giant record, and the set's name alternates with others on its label."
       className={`${mono.className} fixed inset-0 z-[200] overflow-hidden bg-[#030304] select-none`}
       style={{ cursor: idle ? 'none' : 'default' }}
     >

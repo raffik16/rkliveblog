@@ -193,9 +193,20 @@ function towerMaterial(windows) {
           vec2 cell = vec2(u / 1.5, vFacade.y / 2.1);
           vec2 id = floor(cell);
           vec2 f = fract(cell);
-          float h = fract(sin(dot(id + vec2(vSeed * 1.37, vSeed * 0.71) + vFacN.xz * 17.0, vec2(12.9898, 78.233))) * 43758.5453);
-          vec2 e = smoothstep(vec2(0.16, 0.2), vec2(0.24, 0.28), f) * (1.0 - smoothstep(vec2(0.76, 0.72), vec2(0.84, 0.8), f));
+          // which panes are lit: an integer hash of the building, the face and the pane, exact on every GPU. (A sine
+          // hash of numbers this large is noise: it read every pane differently from frame to frame, and the city
+          // flickered.)
+          ivec2 iid = ivec2(id);
+          int face = int(floor(vFacN.x + 0.5)) * 3 + int(floor(vFacN.z + 0.5)) + 4;
+          uint hx = uint(int(vSeed + 0.5)) * 747796405u ^ uint(iid.x + 1024) * 2891336453u ^
+            uint(iid.y + 1024) * 1597334677u ^ uint(face) * 3812015801u;
+          hx ^= hx >> 16; hx *= 0x7feb352du; hx ^= hx >> 15; hx *= 0x846ca68bu; hx ^= hx >> 16;
+          float h = float(hx >> 8) / 16777216.0;
+          // the pane's edges, filtered to about two pixels so a camera drifting by a fraction of one fades them
           vec2 fw = fwidth(cell);
+          vec2 aa = max(fw, vec2(0.04));
+          vec2 e = smoothstep(vec2(0.2, 0.24) - aa, vec2(0.2, 0.24) + aa, f) *
+            (1.0 - smoothstep(vec2(0.8, 0.76) - aa, vec2(0.8, 0.76) + aa, f));
           float far = smoothstep(0.3, 0.9, max(fw.x, fw.y));
           float lit = mix(e.x * e.y * step(0.74, h) * (0.55 + 0.6 * fract(h * 97.0)), 0.07, far);
           vec3 wc = h > 0.965 ? vec3(1.6, 0.25, 1.4) : h > 0.93 ? vec3(0.2, 1.2, 1.6) : vec3(1.6, 1.05, 0.55);

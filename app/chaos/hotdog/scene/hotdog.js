@@ -2,6 +2,13 @@
 // an exploded view and go back together. Every pose is a function of two inputs, how far apart it is (explode, 0..1)
 // and how far the frank is sliced (slice, 0..1); nothing is keyframed per part.
 //
+// They are animatronics. The bun is a skin that grows real fur (fur.js); the frank is twelve segments on chrome
+// collars, an LED scanning along its side on the beat, and every cut shows a machined housing round a glowing core;
+// under the frank, inside the bun, a chassis (a spine rail, two servos, a circuit board) shows when the bun comes off.
+// They come apart the way a pick-and-place robot works: each part straight up, across, and down, every leg from rest
+// to rest, with a servo's small overshoot as it sets down. Out of the bun the frank's segments ripple like a robot
+// snake.
+//
 //   Chicago   all-beef frank in a steamed poppy seed bun, "dragged through the garden": yellow mustard, neon green
 //             relish, chopped white onions, two tomato wedges, a dill pickle spear, two sport peppers, celery salt.
 //   Ballpark  the frank, yellow mustard in a zigzag, a line of ketchup, chopped onions.
@@ -11,8 +18,9 @@
 // 6-inch, 146 mm, hinged at the bottom; its halves open 19.5° each, and a 22 mm frank resting in that V sits with its
 // axis 33 mm above the hinge (r / sin 19.5°), its top level with the crust.
 import * as THREE from 'three'
-import { Mesher, col, mix } from './mesher.js'
+import { Mesher, col, mix, ledCol, selfLit } from './mesher.js'
 import { rng, clamp01, easeInOutCubic } from '../../teardown/kit/util.js'
+import { chassis, collars } from './robot.js'
 
 export const SPEC = {
   frank: { length: 0.152, dia: 0.022, bend: 0.004, slices: 12 },
@@ -25,8 +33,6 @@ const C = {
   casing: col('#a43f1f'),
   casingHi: col('#c25a2e'),
   char: col('#341509'),
-  meat: col('#b0584a'),
-  meatCore: col('#c46c5c'),
   crust: col('#d4904a'),
   crustTop: col('#a8622a'),
   crustLow: col('#ecc690'),
@@ -48,7 +54,32 @@ const C = {
   celery: col('#87834f'),
   kraut: col('#eedfa6'),
   sauce: col('#a8301a'),
+  // the skin the fur grows from
+  hide: col('#7a5230'),
+  hideTop: col('#6c4828'),
+  hideLow: col('#86603a'),
+  // inside a segment: a hub, an LED ring, the works, a machined housing
+  hub: col('#2a2c33'),
+  works: col('#15161c'),
+  housing: col('#a7adb8'),
 }
+const CORE = ledCol('#2ee6ff', 1.2)
+
+// a cut face, from the middle out: [radius share, colour]; a radius twice over is a hard edge
+const FACE = [
+  [0, C.hub],
+  [0.15, C.hub],
+  [0.15, CORE],
+  [0.32, CORE],
+  [0.32, C.works],
+  [0.72, C.works],
+  [0.72, C.housing],
+  [0.9, C.housing],
+  [0.9, C.casing],
+  [1, C.casing],
+]
+// the LEDs along the frank's side: this far round from the top toward the front (+z), one per segment
+const LED_TH = 1.0
 
 // ------------------------------------------------------------------ the frank
 const frankR = (x) => {
@@ -86,7 +117,10 @@ function charAt(x, th) {
   return band * clamp01((d - 0.36) / 0.08)
 }
 
-/** One slice of the frank between x0 and x1, centred on its own middle. `step` and `radial` set the detail. */
+/**
+ * One slice of the frank between x0 and x1, centred on its own middle, its cut faces showing the machine inside (a
+ * housing, the works, a glowing core). `step` and `radial` set the detail.
+ */
 function frankSlice(x0, x1, { step = 0.001, radial = 44 } = {}) {
   const xc = (x0 + x1) / 2
   const m = new Mesher()
@@ -105,24 +139,39 @@ function frankSlice(x0, x1, { step = 0.001, radial = 44 } = {}) {
     },
     { wrapV: true }
   )
-  // the cut faces: pink emulsion, a thin dark ring of casing
-  const RING = [0, 0.35, 0.7, 0.86, 0.9, 1]
+  // the cut faces: the machine inside, a thin ring of casing
   for (const x of [x0, x1]) {
     const r = frankR(x)
     if (r < R * 0.2) continue
     m.grid(
-      RING.length - 1,
+      FACE.length - 1,
       radial,
       (u, v) => {
-        const k = RING[Math.round(u * (RING.length - 1))]
+        const [k, c] = FACE[Math.round(u * (FACE.length - 1))]
         const th = v * Math.PI * 2
-        const c = k > 0.89 ? C.casing : mix(C.meatCore, C.meat, k)
         return { p: [x - xc, r * k * Math.cos(th), r * k * Math.sin(th)], c }
       },
       { wrapV: true }
     )
   }
   return m.build()
+}
+
+/**
+ * The robot's hardware on a whole low-detail frank (axis along x, centred): a chrome collar at every other joint (all
+ * eleven would read as a string of beads from across the room). No LEDs: at this size they come out smaller than a
+ * pixel and twinkle as the frank moves.
+ */
+function frankHardware(m, radial = 14) {
+  const L = SPEC.frank.length
+  const n = SPEC.frank.slices
+  const bw = 0.0009
+  for (let j = 2; j < n; j += 2) {
+    const g = collars(bw, R, 2 * bw, [true, false], radial)
+    g.translate(-L / 2 + (j * L) / n, 0, 0)
+    m.append(g)
+  }
+  return m
 }
 
 // ------------------------------------------------------------------ the bun
@@ -147,12 +196,71 @@ function bunPoint(x, phi, side) {
   return [x, y + H / 2, z]
 }
 
-/** Half a hinged bun, crust and crumb, poppy seeds baked into its crust. side +1 is the front (z > 0) half. */
-function bunHalf(side, seed, { nu = 72, nv = 30, seeds = 300 } = {}) {
+const bunInside = (side) => [0, SPEC.bun.height / 2, (side * SPEC.bun.width) / 5]
+
+/**
+ * Half a bun as a solid, for the fur to lie on: a function (p, margin) that pushes a point p (THREE.Vector3, in the
+ * half's own frame, metres) out of the crust to `margin` above it, and says whether it moved it. The crust is the
+ * superellipse bunPoint draws, |z/a|^2.7 + |y/b|^q = 1 round the middle of each cross-section, its ends rounding off.
+ * The cut side (the frank's side) is open.
+ */
+export function coatBody(side) {
+  const { length: L, width: W, height: H } = SPEC.bun
+  const pull = (yc, z, a, b) => {
+    const q = yc >= 0 ? BUN_TOP : BUN_BOTTOM
+    return Math.pow(Math.abs(z) / a, 2.7) + Math.pow(Math.abs(yc) / b, q)
+  }
+  return (p, margin) => {
+    if (p.z * side < 0 || Math.abs(p.x) > L / 2) return false
+    const e = bunEnds(p.x)
+    const a = (W / 2) * e + margin
+    const b = (H / 2) * Math.pow(e, 0.7) + margin
+    const yc = p.y - H / 2
+    // well clear of it: nothing to do (and no powers to take)
+    if (yc * yc + p.z * p.z > Math.max(a, b) ** 2) return false
+    let f = pull(yc, p.z, a, b)
+    if (f >= 1 || f < 1e-6) return false
+    // out along the line from the cross-section's middle, until the point is on the surface (two refinements)
+    let k = Math.pow(f, -1 / 2.6)
+    f = pull(yc * k, p.z * k, a, b)
+    k *= Math.pow(f, -1 / 2.6)
+    p.y = H / 2 + yc * k
+    p.z *= k
+    return true
+  }
+}
+
+/**
+ * Where fur grows on half a bun (the outside of its crust), in the half's own frame: the point at u (along it, 0..1)
+ * and v (round it from the bottom, 0..1), and the outward normal. out: {p, n} of THREE.Vector3.
+ */
+export function coatPoint(side, u, v, out) {
+  const L = SPEC.bun.length
+  const x = (u - 0.5) * L
+  const phi = -Math.PI / 2 + v * Math.PI
+  const p = bunPoint(x, phi, side)
+  const pu = bunPoint(x + 1e-4, phi, side)
+  const pv = bunPoint(x, phi + 1e-3, side)
+  const du = new THREE.Vector3(pu[0] - p[0], pu[1] - p[1], pu[2] - p[2])
+  const dv = new THREE.Vector3(pv[0] - p[0], pv[1] - p[1], pv[2] - p[2])
+  out.p.set(p[0], p[1], p[2])
+  out.n.crossVectors(du, dv).normalize()
+  const c = bunInside(side)
+  if (out.n.dot(new THREE.Vector3(p[0] - c[0], p[1] - c[1], p[2] - c[2])) < 0) out.n.negate()
+  return out
+}
+
+/**
+ * Half a hinged bun, crust and crumb, poppy seeds baked into its crust. side +1 is the front (z > 0) half. skin: the
+ * crust is a dark hide for fur to grow from (and carries no seeds).
+ */
+function bunHalf(side, seed, { nu = 72, nv = 30, seeds = 300, skin = false } = {}) {
   const L = SPEC.bun.length
   const r = rng(seed)
   const m = new Mesher()
-  const inside = [0, SPEC.bun.height / 2, (side * SPEC.bun.width) / 5]
+  const inside = bunInside(side)
+  const [mid, top, low] = skin ? [C.hide, C.hideTop, C.hideLow] : [C.crust, C.crustTop, C.crustLow]
+  if (skin) seeds = 0
   // crust
   m.grid(
     nu,
@@ -162,8 +270,7 @@ function bunHalf(side, seed, { nu = 72, nv = 30, seeds = 300 } = {}) {
       const phi = -Math.PI / 2 + v * Math.PI
       const p = bunPoint(x, phi, side)
       const s = Math.sin(phi)
-      const c =
-        s > 0 ? mix(C.crust, C.crustTop, Math.pow(s, 3) * 0.9) : mix(C.crust, C.crustLow, -s)
+      const c = s > 0 ? mix(mid, top, Math.pow(s, 3) * 0.9) : mix(mid, low, -s)
       return { p, c }
     },
     { inside }
@@ -181,7 +288,7 @@ function bunHalf(side, seed, { nu = 72, nv = 30, seeds = 300 } = {}) {
       const e = bunEnds(x)
       const rim = Math.max(1 - Math.min(v, 1 - v) / 0.08, 1 - (1 - (1 - e) * 8))
       const groove = Math.exp(-Math.pow((v - 0.72) / 0.12, 2)) * 0.5
-      const c = mix(mix(C.crumb, C.crumbDark, n * 0.6 + groove), C.crust, clamp01(rim) * 0.85)
+      const c = mix(mix(C.crumb, C.crumbDark, n * 0.6 + groove), mid, clamp01(rim) * 0.85)
       return { p: [x, bot + (top - bot) * v, 0], c }
     },
     { inside }
@@ -442,13 +549,35 @@ function kraut(r) {
 export function foodMaterials() {
   const phys = (o) => new THREE.MeshPhysicalMaterial(o)
   return {
-    frank: phys({
-      vertexColors: true,
-      roughness: 0.42,
-      clearcoat: 0.85,
-      clearcoatRoughness: 0.28,
-      envMapIntensity: 0.7,
+    // the casing, and the machine its cut faces show: the core's LED ring lights itself
+    frank: selfLit(
+      phys({
+        vertexColors: true,
+        roughness: 0.42,
+        clearcoat: 0.85,
+        clearcoatRoughness: 0.28,
+        envMapIntensity: 0.7,
+      })
+    ),
+    chrome: new THREE.MeshStandardMaterial({
+      color: '#dfe3ea',
+      roughness: 0.34,
+      metalness: 1,
+      envMapIntensity: 0.85,
     }),
+    // the chassis: anodised and painted parts, bare metal, a circuit board, LEDs
+    robot: selfLit(
+      phys({
+        vertexColors: true,
+        roughness: 0.3,
+        metalness: 0.55,
+        clearcoat: 0.5,
+        clearcoatRoughness: 0.2,
+        envMapIntensity: 0.9,
+      })
+    ),
+    // the scanner's LEDs: their colour is their light, set per frame
+    led: new THREE.MeshBasicMaterial({ color: '#ffffff' }),
     bun: phys({
       vertexColors: true,
       roughness: 0.78,
@@ -504,53 +633,105 @@ const TOPPINGS = {
 const V3 = THREE.Vector3
 const Q = (x, y, z) => new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z))
 
+// smootherstep: from rest, to rest
+const smoother = (x) => {
+  const k = clamp01(x)
+  return k * k * k * (k * (k * 6 - 15) + 10)
+}
+// setting down: from rest to rest, a little past and back, the way a servo settles
+const settle = (x) => {
+  const k = clamp01(x)
+  return smoother(k) + 3 * k * k * k * (1 - k) * (1 - k)
+}
+
 /**
- * Build one dog. Returns {root, update(t, explode, slice), radius}; root's origin is the frank's middle.
- * M: foodMaterials(); the geometry comes from `shared`, so three dogs cost one set of buffers.
+ * A pick-and-place move from home (hp) to out (op), k of the way (0..1): straight up to `rise` above the higher of
+ * the two, across, and down, each leg from rest to rest. Writes the point to `out`; returns how far across it is (a
+ * part turns on that leg).
+ */
+function placeAt(hp, op, k, rise, out) {
+  const top = Math.max(hp.y, op.y) + rise
+  const up = smoother(k / 0.3)
+  const across = smoother((k - 0.3) / 0.4)
+  const down = settle((k - 0.7) / 0.3)
+  out.set(
+    hp.x + (op.x - hp.x) * across,
+    hp.y + (top - hp.y) * up + (op.y - top) * down,
+    hp.z + (op.z - hp.z) * across
+  )
+  return across
+}
+
+// how high the frank's segments ripple once it is out of the bun
+const WAVE = 0.0018
+
+/**
+ * Build one dog. Returns {root, update(t, explode, slice, beats), radius, bun}; root's origin is the frank's middle,
+ * bun the two halves (back, front) the fur grows on. M: foodMaterials(); the geometry comes from `shared`, so three
+ * dogs cost one set of buffers.
  */
 function buildDog(style, M, shared, seed) {
   const r = rng(seed)
   const root = new THREE.Group()
   const parts = []
-  // home and out: [position, quaternion]; delay 0 leaves first, 1 last; lift: how high it arcs on the way
-  const part = (obj, home, out, delay, lift = 0.012) => {
+  // home and out: [position, quaternion]; delay 0 leaves first, 1 last; rise: how far up it is lifted on the way
+  const part = (obj, home, out, delay, rise = 0.012) => {
     root.add(obj)
     obj.matrixAutoUpdate = false
-    parts.push({ obj, hp: home[0], hq: home[1], op: out[0], oq: out[1], delay, lift })
+    parts.push({ obj, hp: home[0], hq: home[1], op: out[0], oq: out[1], delay, rise })
     return obj
   }
   const mesh = (g, m) => new THREE.Mesh(g, m)
 
   // bun: the back half (-z) and the front half (+z), opened on their hinge
   const A = SPEC.bun.open
-  part(
+  const bunBack = part(
     mesh(shared.bunBack, M.bun),
     [new V3(0, -HINGE, 0), Q(-A, 0, 0)],
     [new V3(0, -0.058, -0.04), Q(-0.62, 0, 0)],
     0.9,
     0
   )
-  part(
+  const bunFront = part(
     mesh(shared.bunFront, M.bun),
     [new V3(0, -HINGE, 0), Q(A, 0, 0)],
     [new V3(0, -0.066, 0.034), Q(2.15, 0, 0)],
     0.95,
     0
   )
+  // the chassis under the frank rises a little as the bun comes off it
+  part(
+    mesh(shared.chassis, M.robot),
+    [new V3(), new THREE.Quaternion()],
+    [new V3(0, 0.008, 0), new THREE.Quaternion()],
+    0.85,
+    0
+  )
 
-  // the frank, as slices that sit flush until it is sliced
+  // the frank, as segments that sit flush until it is sliced, chrome collars where they meet
   const slices = []
   const n = SPEC.frank.slices
+  const segLen = SPEC.frank.length / n
   for (let i = 0; i < n; i++) {
-    const x0 = -SPEC.frank.length / 2 + (i * SPEC.frank.length) / n
-    const x1 = x0 + SPEC.frank.length / n
-    const xc = (x0 + x1) / 2
+    const x0 = -SPEC.frank.length / 2 + i * segLen
+    const xc = x0 + segLen / 2
     const o = mesh(shared.slices[i], M.frank)
+    o.add(mesh(shared.collars[i], M.chrome))
     root.add(o)
     o.matrixAutoUpdate = false
     slices.push({ o, xc, y: frankY(xc), a: Math.atan(frankSlope(xc)) })
   }
   const FRANK_OUT = 0.03
+  // an LED on every segment's side, the scanner sweeping along them
+  const leds = new THREE.InstancedMesh(shared.led, M.led, n)
+  leds.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+  leds.frustumCulled = false
+  root.add(leds)
+  const ledLocal = new THREE.Matrix4().makeTranslation(
+    0,
+    R * 0.9 * Math.cos(LED_TH),
+    R * 0.9 * Math.sin(LED_TH)
+  )
 
   // toppings, in the order they come off (top first)
   const tops = TOPPINGS[style]
@@ -690,13 +871,30 @@ function buildDog(style, M, shared, seed) {
   const scl = new V3()
   const Y = new V3(0, 1, 0)
   const Z = new V3(0, 0, 1)
+  const tint = new THREE.Color()
   let atRest = false
 
   // each part leaves on its own share of the explosion: delay 0 first, 1 last (and back in the reverse order)
   const stage = (e, d) => clamp01((e - d * 0.4) / 0.6)
 
-  /** t: seconds (keeps exploded parts drifting); explode 0..1; slice 0..1. */
-  const update = (t, explode, slice) => {
+  // the scanner: one sweep along the frank every two beats, a dimmer echo trailing it
+  const scanAt = (b) => -0.95 * Math.cos((Math.PI * b) / 2)
+  const halfL = SPEC.frank.length / 2
+  const scan = (beats) => {
+    const a = scanAt(beats)
+    const b = scanAt(beats - 0.3)
+    for (let i = 0; i < n; i++) {
+      const x = slices[i].xc / halfL
+      const k =
+        0.5 + 2.6 * Math.exp(-(((x - a) / 0.18) ** 2)) + 0.9 * Math.exp(-(((x - b) / 0.24) ** 2))
+      leds.setColorAt(i, tint.setRGB(1, 0.06, 0.03).multiplyScalar(k))
+    }
+    leds.instanceColor.needsUpdate = true
+  }
+
+  /** t: seconds (keeps exploded parts drifting); explode 0..1; slice 0..1; beats: the set's beat clock. */
+  const update = (t, explode, slice, beats = 0) => {
+    scan(beats)
     // whole and still: posed once, then nothing to do until it moves again
     const rest = explode < 1e-4 && slice < 1e-4
     if (rest && atRest) return
@@ -704,46 +902,53 @@ function buildDog(style, M, shared, seed) {
     if (rest) explode = slice = 0
     for (const p of parts) {
       const k = stage(explode, p.delay)
-      const ke = easeInOutCubic(k)
-      pos.lerpVectors(p.hp, p.op, ke)
-      pos.y += Math.sin(Math.PI * k) * p.lift
-      // a slow drift while it hangs in the air
-      pos.y += 0.0025 * Math.sin(t * 0.9 + p.delay * 9) * ke
-      q.slerpQuaternions(p.hq, p.oq, ke)
-      q2.setFromAxisAngle(Y, 0.12 * Math.sin(t * 0.5 + p.delay * 5) * ke)
+      const across = placeAt(p.hp, p.op, k, p.rise, pos)
+      const held = smoother(k)
+      // a slow drift while it is held out in the air
+      pos.y += 0.0025 * Math.sin(t * 0.9 + p.delay * 9) * held
+      q.slerpQuaternions(p.hq, p.oq, across)
+      q2.setFromAxisAngle(Y, 0.12 * Math.sin(t * 0.5 + p.delay * 5) * held)
       q.premultiply(q2)
       mtx.compose(pos, q, one)
       p.obj.matrix.copy(mtx)
     }
-    // the frank: up out of the bun, then its slices fan out along x and turn their cut faces to the front
+    // the frank: up out of the bun, rippling; then its segments index out along x, the outer ones first, and turn
+    // their cut faces to the front
     const kf = easeInOutCubic(stage(explode, 0.75))
-    const ks = easeInOutCubic(slice)
-    for (let i = 0; i < slices.length; i++) {
+    const maxMid = (n - 1) / 2
+    for (let i = 0; i < n; i++) {
       const s = slices[i]
-      const mid = i - (slices.length - 1) / 2
+      const mid = i - maxMid
+      const ks = smoother((slice - 0.45 * (1 - Math.abs(mid) / maxMid)) / 0.55)
+      const wv = kf * (1 - ks)
+      const ph = i * 0.95 - beats * Math.PI
       pos.set(
         s.xc + mid * 0.0085 * ks,
         s.y * (1 - ks) +
           kf * FRANK_OUT +
           ks * (0.004 * Math.sin(i * 0.9 + t * 1.3)) +
-          Math.sin(Math.PI * kf) * 0.01,
+          Math.sin(Math.PI * kf) * 0.01 +
+          WAVE * Math.sin(ph) * wv,
         ks * 0.012 * Math.cos(i * 0.7)
       )
-      q.setFromAxisAngle(Z, s.a * (1 - ks))
+      q.setFromAxisAngle(
+        Z,
+        s.a * (1 - ks) + Math.atan(((WAVE * 0.95) / segLen) * Math.cos(ph)) * wv
+      )
       // not quite face-on: the cut and a little of the casing both show
       q2.setFromAxisAngle(Y, (-Math.PI / 2) * ks * (0.78 + 0.08 * Math.sin(i + t * 0.7)))
       q.premultiply(q2)
       mtx.compose(pos, q, one)
       s.o.matrix.copy(mtx)
+      leds.setMatrixAt(i, mtx.multiply(ledLocal))
     }
+    leds.instanceMatrix.needsUpdate = true
     for (const L of loose) {
       for (let i = 0; i < L.items.length; i++) {
         const it = L.items[i]
         const k = stage(explode, it.d)
-        const ke = easeInOutCubic(k)
-        pos.lerpVectors(it.hp, it.op, ke)
-        pos.y += Math.sin(Math.PI * k) * 0.02
-        q.setFromAxisAngle(it.axis, it.spin * t * ke + k * 3)
+        const across = placeAt(it.hp, it.op, k, 0.01, pos)
+        q.setFromAxisAngle(it.axis, it.spin * t * smoother(k) + across * 3)
         q.multiply(it.hq)
         scl.copy(it.s)
         mtx.compose(pos, q, scl)
@@ -754,23 +959,29 @@ function buildDog(style, M, shared, seed) {
   }
   update(0, 0, 0)
 
-  return { root, update, radius }
+  return { root, update, radius, bun: [bunBack, bunFront] }
 }
 
 /** All three dogs, sharing their geometry and materials. */
 export function buildHotDogs() {
   const M = foodMaterials()
   const n = SPEC.frank.slices
+  const segLen = SPEC.frank.length / n
   const slices = []
+  const rims = []
   for (let i = 0; i < n; i++) {
-    const x0 = -SPEC.frank.length / 2 + (i * SPEC.frank.length) / n
-    slices.push(frankSlice(x0, x0 + SPEC.frank.length / n))
+    const x0 = -SPEC.frank.length / 2 + i * segLen
+    slices.push(frankSlice(x0, x0 + segLen))
+    rims.push(collars(segLen / 2, R, 0.0012, [i > 0, i < n - 1]))
   }
   const chunk = new THREE.IcosahedronGeometry(1, 0)
   const shared = {
     slices,
-    bunBack: bunHalf(-1, 3),
-    bunFront: bunHalf(1, 4),
+    collars: rims,
+    chassis: chassis(),
+    led: new THREE.SphereGeometry(0.0026, 14, 10),
+    bunBack: bunHalf(-1, 3, { skin: true }),
+    bunFront: bunHalf(1, 4, { skin: true }),
     mustard: bead(zigzag({ amp: 0.0068, period: 0.021, lift: 0.0022 }), 0.0029, C.mustard),
     brown: bead(zigzag({ amp: 0.0058, period: 0.017, lift: 0.0022, phase: 1 }), 0.0027, C.brown),
     ketchup: bead(
@@ -800,9 +1011,9 @@ export function buildHotDogs() {
 }
 
 /**
- * A whole dog at low detail, one draw call with its colours baked in: both bun halves opened, the frank, and its
- * toppings. kind: 'mustard' (a yellow zigzag), 'ballpark' (mustard and a line of ketchup) or 'garden' (mustard,
- * neon relish and onions). Sauces are brightened so they read from across a room.
+ * A whole dog at low detail, one draw call with its colours baked in: both bun halves opened, the robot frank on its
+ * chrome collars, and its toppings. kind: 'mustard' (a yellow zigzag), 'ballpark' (mustard and a line
+ * of ketchup) or 'garden' (mustard, neon relish and onions). Sauces are brightened so they read from across a room.
  */
 export function lowDog(kind = 'mustard', seed = 7) {
   const A = SPEC.bun.open
@@ -814,6 +1025,7 @@ export function lowDog(kind = 'mustard', seed = 7) {
   m.append(posed(bunHalf(-1, 3, { nu: 22, nv: 10, seeds: 0 }), new V3(0, -HINGE, 0), Q(-A, 0, 0)))
   m.append(posed(bunHalf(1, 4, { nu: 22, nv: 10, seeds: 0 }), new V3(0, -HINGE, 0), Q(A, 0, 0)))
   m.append(frankSlice(-L / 2, L / 2, { step: 0.006, radial: 14 }))
+  frankHardware(m)
   const low = { seg: 1.2, radial: 5 }
   m.append(
     bead(
@@ -854,12 +1066,14 @@ export function lowDog(kind = 'mustard', seed = 7) {
 /** Geometry for the flying parts: the same parts at a lower detail, each one draw call with its colours baked in. */
 export function partGeometries() {
   const L = SPEC.frank.length
-  const lowFrank = frankSlice(-L / 2, L / 2, { step: 0.006, radial: 14 })
+  const lowFrank = frankHardware(
+    new Mesher().append(frankSlice(-L / 2, L / 2, { step: 0.006, radial: 14 }))
+  ).build()
   const lowFront = bunHalf(1, 4, { nu: 22, nv: 10, seeds: 0 })
   return {
     dog: lowDog('mustard'),
     frank: lowFrank,
-    // a single coin of frank, both cut faces showing
+    // a single segment of frank, both cut faces showing the machine inside
     coin: frankSlice(-0.0065, 0.0065, { step: 0.004, radial: 18 }),
     bun: lowFront,
     pickle: pickleSpear(),

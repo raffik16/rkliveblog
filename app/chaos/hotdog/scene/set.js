@@ -1,12 +1,13 @@
-// Chaos is an art form: Roller Grill Sessions. A VJ backdrop with no controls. Three hot dogs (a Chicago dog, a ballpark
-// dog and a New York dog) come apart into exploded views and go back together inside the five strange attractors of
-// /chaos, while the storm carries flying parts and notes, a ring of stave plays a melody round the whole room, more
-// dogs drift in the space beyond, and Hot Dog City spreads out under a night sky: the plaza under the storm is a record
-// whose label carries the set's name, alternating with the night's other names, and a giant roller grill turns at
-// its edge (hot dogs spin on the roller grill, DJs spin records). Everything counts in bars at the
-// set's tempo (124 bpm, or ?bpm=), so the teardowns, camera moves and pulses land on the downbeat, and everything
-// eases: there are no cuts and no steps. It plays itself, tunes its own quality to the GPU behind the loader, and
-// stops when the page goes away.
+// Chaos is an art form: Roller Grill Sessions. A VJ backdrop with no controls. Three animatronic hot dogs (a Chicago
+// dog, a ballpark dog and a New York dog: robots in coats of real fur) come apart into exploded views and go back
+// together inside the five strange attractors of /chaos, while the storm carries flying parts, hardware and notes and
+// blows through their fur, which hangs and swings under real gravity. A ring of stave plays a melody round the whole
+// room, hot dog drones fly in the space beyond, and Hot Dog City spreads out under a night sky: the plaza under the
+// storm is a record played by a robot tonearm, its label carrying the set's name, alternating with the night's other
+// names, and a giant roller grill turns at its edge (hot dogs spin on the roller grill, DJs spin records). Everything
+// counts in bars at the set's tempo (124 bpm, or ?bpm=), so the teardowns, camera moves and pulses land on the
+// downbeat, and everything eases: there are no cuts and no steps. It plays itself, tunes its own quality to the GPU
+// behind the loader, and stops when the page goes away.
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
@@ -15,8 +16,10 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { warmComposer } from '../../teardown/kit/warm.js'
 import { ATTRACTOR_NAMES, buildAttractor } from '../../scene/attractors.js'
-import { buildStorm, flowPhases, FLOW } from '../../scene/storm.js'
-import { buildHotDogs, lowDog, partGeometries } from './hotdog.js'
+import { buildStorm, flowPhases, swirl, FLOW } from '../../scene/storm.js'
+import { buildHotDogs, coatBody, coatPoint, lowDog, partGeometries } from './hotdog.js'
+import { buildFur } from './fur.js'
+import { buildTonearm } from './tonearm.js'
 import { buildFlyers } from './flyers.js'
 import { buildStave, STAVE } from './stave.js'
 import { buildCity, CITY } from './city.js'
@@ -44,6 +47,18 @@ const PLACES = [
   { az: 0.95 + 0.62 + 4.2, y: 2.4 },
 ]
 const DOG_SCALE = 52 // a 152 mm frank, about eight units long
+// each dog's coat: the colour at the tips (the roots are darker), and the Chicago dog's poppy seed flecks
+const COATS = {
+  chicago: { tip: '#d9a25e', fleck: '#22170f', flecks: 0.14 },
+  ballpark: { tip: '#e2aa60' },
+  newyork: { tip: '#efd3a4' },
+}
+// how hard the air moves the fur: the storm's turbulence, the bass blowing out through a dog's coat from inside it,
+// the burst out of a dog as it comes apart (per unit of explode a second), and a flying part or note passing through
+// (world units / s)
+const AIR = { gust: 0.8, chaos: 1.2, bass: 15, burst: 7, pass: 10 }
+// how far the bass swells a dog: across it, and up
+const THUMP = [0.13, 0.09]
 
 // Before bloom: no pixel brighter than K times white, hue kept, so a glossy highlight stays a sparkle, not a halo.
 const CLAMP = {
@@ -52,8 +67,11 @@ const CLAMP = {
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
     varying vec2 vUv;
+    // not a number, or infinite: the bloom would blur one such pixel across the frame
+    bool bad(float x) { return (floatBitsToUint(x) & 0x7f800000u) == 0x7f800000u; }
     void main() {
       vec4 c = texture2D(tDiffuse, vUv);
+      if (bad(c.r) || bad(c.g) || bad(c.b)) c.rgb = vec3(0.0);
       float m = max(c.r, max(c.g, c.b));
       gl_FragColor = vec4(c.rgb * min(1.0, 3.0 / max(m, 1e-4)), 1.0);
     }`,
@@ -262,7 +280,7 @@ export function startHotDogSet(host, options = {}) {
     storm = buildStorm(attractors, { count })
     scene.add(storm.group)
 
-    progress('STEAMING THE POPPY SEED BUNS', 0.44)
+    progress('CALIBRATING THE SERVOS', 0.44)
     await yieldNow()
     if (!alive) return
     const { dogs, materials: food } = buildHotDogs()
@@ -279,6 +297,30 @@ export function startHotDogSet(host, options = {}) {
       scene.add(hold)
       return hold
     })
+
+    progress('GROWING THE FUR', 0.55)
+    await yieldNow()
+    if (!alive) return
+    // fur on both halves of every bun: back (side -1) then front (+1)
+    const coats = DOGS.flatMap((k) =>
+      dogs[k].bun.map((obj, h) => ({
+        obj,
+        at: (u, v, out) => coatPoint(h ? 1 : -1, u, v, out),
+        body: coatBody(h ? 1 : -1),
+        tip: new THREE.Color(COATS[k].tip),
+        fleck: COATS[k].fleck && new THREE.Color(COATS[k].fleck),
+        flecks: COATS[k].flecks,
+      }))
+    )
+    holds.forEach((h) => h.updateMatrixWorld(true))
+    // a phone gets fewer guides and fewer, simpler strands, opaque (alpha to coverage costs a tiled GPU dearly)
+    const fur = buildFur(
+      coats,
+      small
+        ? { strands: 2600, guides: [16, 7], nodes: 5, segments: 6, coverage: false }
+        : { strands: 8000, guides: [26, 10], nodes: 6, segments: 12, coverage: true }
+    )
+    scene.add(fur.mesh)
 
     progress('SCORING THE MELODY', 0.58)
     await yieldNow()
@@ -314,7 +356,13 @@ export function startHotDogSet(host, options = {}) {
     const grill = buildGrill(parts.frank, CITY.ground)
     scene.add(grill.group)
 
-    progress('LAUNCHING THE BLIMPS', 0.67)
+    progress('ARMING THE TONEARM', 0.665)
+    await yieldNow()
+    if (!alive) return
+    const tonearm = buildTonearm(CITY.ground + 0.05)
+    scene.add(tonearm.group)
+
+    progress('SPINNING UP THE DRONES', 0.67)
     await yieldNow()
     if (!alive) return
     const drifters = buildDrifters(wholeDogs)
@@ -430,7 +478,7 @@ export function startHotDogSet(host, options = {}) {
     const radius = dogs.chicago.radius * DOG_SCALE
 
     // dogs and their points, at time t
-    const poseDogs = (t, bars, bounce) => {
+    const poseDogs = (t, bars, bass, beats) => {
       const td = teardownAt(bars)
       DOGS.forEach((k, i) => {
         const pl = PLACES[i]
@@ -438,7 +486,7 @@ export function startHotDogSet(host, options = {}) {
         const { explode, slice } = td[k]
         shotState.explode[k] = explode
         shotState.slice[k] = slice
-        dogs[k].update(t, explode, slice)
+        dogs[k].update(t, explode, slice, beats)
         hold.position.set(
           RING * Math.cos(pl.az),
           pl.y + 0.35 * Math.sin(t * 0.45 + i * 2),
@@ -450,18 +498,64 @@ export function startHotDogSet(host, options = {}) {
           Math.PI / 2 - pl.az + 0.28 * Math.sin(t * 0.13 + i * 1.7),
           0.05 * Math.sin(t * 0.17 + i)
         )
-        // the bounce: squash on the kick, keep the volume
-        const b = bounce * (1 - 0.6 * explode)
+        // the bass, from inside out: the whole dog swells on the kick and pulls back in, twice, as it dies away
+        const b = bass * (1 - 0.6 * explode)
         hold.scale.set(
-          DOG_SCALE * (1 + 0.018 * b),
-          DOG_SCALE * (1 - 0.036 * b),
-          DOG_SCALE * (1 + 0.018 * b)
+          DOG_SCALE * (1 + THUMP[0] * b),
+          DOG_SCALE * (1 + THUMP[1] * b),
+          DOG_SCALE * (1 + THUMP[0] * b)
         )
-        hold.updateMatrix()
+        hold.updateMatrixWorld(true)
         centre[k].copy(hold.position)
       })
       return td
     }
+
+    // the air the fur hangs in, this frame: what blows through it at p (a guide of coat `coat`), into out
+    const air = { t: 0, gust: 0, bass: 0, rate: [0, 0, 0], near: [[], [], []] }
+    const sp = [0, 0, 0]
+    const sw = [0, 0, 0]
+    const ad = new THREE.Vector3()
+    const bodies = flyers.bodies
+    const windAt = (p, coat, out) => {
+      const k = coat >> 1
+      sp[0] = p.x * 0.45
+      sp[1] = p.y * 0.45
+      sp[2] = p.z * 0.45
+      swirl(sp, air.t, sw)
+      out.set(sw[0], sw[1], sw[2]).multiplyScalar(air.gust)
+      // out through the coat from inside the dog: the bass (out on its push, in on its pull), and the points bursting
+      // out when it comes apart, rushing back in when it reassembles
+      ad.subVectors(p, centre[DOGS[k]])
+      out.addScaledVector(ad, (air.bass * AIR.bass + air.rate[k] * AIR.burst) / (ad.length() || 1))
+      // whatever flies close: pushed aside, and dragged along in its wake
+      for (const i of air.near[k]) {
+        const o = i * 7
+        const dx = p.x - bodies[o]
+        const dy = p.y - bodies[o + 1]
+        const dz = p.z - bodies[o + 2]
+        const rr = bodies[o + 6] + 1.4
+        const d2 = dx * dx + dy * dy + dz * dz
+        if (d2 > rr * rr) continue
+        const d = Math.sqrt(d2) || 1
+        const f = (1 - d / rr) ** 2
+        out.x += f * ((dx / d) * AIR.pass + 0.7 * bodies[o + 3])
+        out.y += f * ((dy / d) * AIR.pass + 0.7 * bodies[o + 4])
+        out.z += f * ((dz / d) * AIR.pass + 0.7 * bodies[o + 5])
+      }
+      return out
+    }
+    const furLights = {
+      dir: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()],
+      col: [new THREE.Color(), new THREE.Color(), new THREE.Color()],
+      sky: new THREE.Color(),
+      ground: new THREE.Color(),
+      fog: scene.fog.color,
+      fogDensity: scene.fog.density,
+      scale: 1,
+      gust: 1,
+    }
+    const reach = radius * 1.4 + 3
 
     const horizon = new THREE.Color()
     let frame = 0
@@ -480,7 +574,7 @@ export function startHotDogSet(host, options = {}) {
       const fx = fxAt(bars, bt, reduced)
       const kick = reduced ? 0 : bt.kick
 
-      poseDogs(t, bars, fx.bounce)
+      poseDogs(t, bars, fx.bass, bt.beats)
 
       // storm
       const u = storm.uniforms
@@ -544,10 +638,44 @@ export function startHotDogSet(host, options = {}) {
 
       glow.value = 1 + 0.6 * kick
       flyers.update(t, at.a, at.b, at.m, fx.chaos, 1.15, partShare, bt, camera.position)
+
+      // the fur: the air this frame, the lights, then a step of the simulation
+      const h = 0.06
+      const tdh = teardownAt(beatAt(t - h, ck).bars)
+      air.t = tm
+      air.gust = AIR.gust + AIR.chaos * fx.chaos
+      air.bass = fx.bass
+      DOGS.forEach((k, i) => {
+        air.rate[i] = (shotState.explode[k] - tdh[k].explode) / h
+        const c = centre[k]
+        const near = air.near[i]
+        near.length = 0
+        for (let j = 0; j < bodies.length; j += 7) {
+          const rr = reach + bodies[j + 6]
+          const dx = bodies[j] - c.x
+          const dy = bodies[j + 1] - c.y
+          const dz = bodies[j + 2] - c.z
+          if (bodies[j + 6] > 0 && dx * dx + dy * dy + dz * dz < rr * rr) near.push(j / 7)
+        }
+      })
+      furLights.dir[0].subVectors(key.position, key.target.position).normalize()
+      furLights.col[0].copy(key.color).multiplyScalar(key.intensity)
+      furLights.dir[1].copy(washA.position).normalize()
+      furLights.col[1].copy(washA.color).multiplyScalar(washA.intensity)
+      furLights.dir[2].copy(washB.position).normalize()
+      furLights.col[2].copy(washB.color).multiplyScalar(washB.intensity)
+      furLights.sky.copy(hemi.color).multiplyScalar(hemi.intensity)
+      furLights.ground.copy(hemi.groundColor).multiplyScalar(hemi.intensity)
+      furLights.scale = u.uScale.value
+      furLights.gust = air.gust
+      fur.setShare(partShare)
+      fur.update(t, windAt, furLights)
+
       stave.update(bt.beats, kick)
       horizon.copy(pal[at.a][1]).lerp(pal[at.b][1], mm)
       city.update(t, bt.beats, horizon, T.pr, camera.position)
       grill.update(bt.beats)
+      tonearm.update(bars, bt.beats, kick)
       drifters.update(t, bt.beats, camera.position)
 
       // passes
@@ -586,32 +714,38 @@ export function startHotDogSet(host, options = {}) {
     if (!alive) return
 
     // -------------------------------------------------------- find this GPU's tier, behind the loader
+    // Timed by what a frame really costs the GPU: each test frame reads one pixel back, which waits until the GPU has
+    // finished it. The time between animation frames is not enough: Safari on a phone keeps calling at 60 fps while
+    // the GPU falls behind, and shows the frames it could not finish as black.
+    const gl = renderer.getContext()
+    const pixel = new Uint8Array(4)
     const timeFrames = async (n) => {
       const ts = []
-      let prev = await nextFrame()
-      const start = prev
-      for (let i = 0; i < n + 3; i++) {
-        render(t)
-        const now = await nextFrame()
-        if (i >= 3) ts.push(now - prev)
-        prev = now
+      const start = performance.now()
+      for (let i = 0; i < n + 2; i++) {
+        await nextFrame()
         if (!alive) return Infinity
-        if (now - start > 1500 && ts.length >= 4) break
+        const a = performance.now()
+        render(t)
+        gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel)
+        if (i >= 2) ts.push(performance.now() - a)
+        if (performance.now() - start > 1500 && ts.length >= 4) break
       }
       ts.sort((a, b) => a - b)
       return ts[ts.length >> 1]
     }
-    const GOOD = 21 // ms: about 48 fps or better
+    // ms of GPU work a frame: well inside 60 fps, with room for the browser's own compositing
+    const GOOD = 13
     if (!fixedTier && !q.has('pause')) {
       progress('TUNING TO THIS SCREEN', 0.84)
       const t0 = performance.now()
-      let med = await timeFrames(12)
-      while (alive && med > GOOD && tier < TIERS.length - 1 && performance.now() - t0 < 4000) {
+      let med = await timeFrames(10)
+      while (alive && med > GOOD && tier < TIERS.length - 1 && performance.now() - t0 < 7000) {
         progress('TUNING TO THIS SCREEN', Math.min(0.97, 0.84 + 0.03 * tier))
         tier++
         sizeDirty = true
-        const next = await timeFrames(12)
-        if (next > med * 0.88) {
+        const next = await timeFrames(10)
+        if (next > med * 0.92) {
           tier--
           sizeDirty = true
           break
@@ -700,6 +834,9 @@ export function startHotDogSet(host, options = {}) {
       const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : []
       for (const m of mats) {
         for (const v of Object.values(m)) if (v && v.isTexture) textures.add(v)
+        // a shader's own textures (the fur's guides) live in its uniforms
+        for (const u of Object.values(m.uniforms || {}))
+          if (u?.value?.isTexture) textures.add(u.value)
         m.dispose()
       }
     })
