@@ -10,7 +10,6 @@ const MIN_BPM = 60
 const MAX_BPM = 200
 const DEFAULT_BPM = 124
 const TITLE_MAX = 40
-const DEFAULT_TITLE = 'Roller Grill Sessions'
 
 interface Props {
   /** The demo's route, e.g. /chaos/hotdog */
@@ -61,7 +60,7 @@ export default function SetLauncher({ href, name, variant = 'dark', size = 'md' 
             name="title"
             type="text"
             className="ed-set__input ed-set__input--title"
-            placeholder={DEFAULT_TITLE}
+            placeholder="Name your party"
             maxLength={TITLE_MAX}
             autoComplete="off"
             autoCapitalize="words"
