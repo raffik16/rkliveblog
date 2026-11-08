@@ -380,6 +380,10 @@ The blog uses the same visual system as the main site, [raffi.website](https://r
 - **Lime (`--ed-signal`)** is for primary calls to action, focus rings and live states only.
 - **Components:** `EdChapterHead` (numbered chapter opener with the outline title that fills on
   scroll), `EdPanel`, `EdPill`, `EdNote` (margin notes), `PostRow` (post list row).
+- **Scroll reveals:** add `data-reveal` to a content block (or `data-reveal-children` to a
+  container, as the post body does) and it fades and rises in as it scrolls into view.
+  `components/edition/Reveal.tsx` runs it (a port of the main site's `plugins/reveal.js`); blocks
+  already on screen when the page loads are never hidden, and reduced motion shows everything.
 - `lib/edition/fibreField.js` is copied unchanged from the main site; edit it there and copy it
   back rather than changing it here.
 - Watch out: `prettier-plugin-tailwindcss` trims spaces inside template-literal class names, so

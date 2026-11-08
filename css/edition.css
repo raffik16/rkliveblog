@@ -394,17 +394,15 @@ body {
   }
 
   /* ----------------------------------------------------------- reveal */
-  /* Elements that start below the fold get .ed-reveal from Reveal.tsx (so
-     nothing is hidden without JS) and .is-revealed when they scroll in. */
-  .ed-reveal:not(.is-revealed) {
+  /* Blocks that start below the fold get .ed-reveal from Reveal.tsx (so nothing is hidden
+     without JS) and wait here until they scroll in. The entrance itself is a Web Animation
+     started by Reveal.tsx (opacity + the `translate` property, compositor-only, ending on the
+     element's own style), so a component's own `transition` or `transform` can't cancel it.
+     `translate` is a separate property from `transform`, so waiting blocks aren't promoted to
+     layers. */
+  .ed-reveal.ed-reveal:not(.is-revealed) {
     opacity: 0;
     translate: 0 var(--ed-reveal-y);
-  }
-
-  .ed-reveal.is-revealed {
-    transition:
-      opacity var(--ed-reveal-fade) cubic-bezier(0.25, 0.1, 0.25, 1) var(--ed-reveal-delay, 0ms),
-      translate var(--ed-reveal-move) var(--ed-ease) var(--ed-reveal-delay, 0ms);
   }
 
   /* Page intro: the same fade + rise as a CSS keyframe, so it plays before hydration. Stagger
@@ -1626,5 +1624,13 @@ body {
   .ed-rail.is-hidden,
   .ed-progress {
     transition: none;
+  }
+}
+
+/* Printing a post: blocks still waiting to scroll in print like the rest. */
+@media print {
+  .ed-reveal.ed-reveal:not(.is-revealed) {
+    opacity: 1;
+    translate: none;
   }
 }
