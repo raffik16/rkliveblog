@@ -17,7 +17,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { warmComposer } from '../../teardown/kit/warm.js'
 import { ATTRACTOR_NAMES, buildAttractor } from '../../scene/attractors.js'
 import { buildStorm, flowPhases, swirl, FLOW } from '../../scene/storm.js'
-import { buildHotDogs, coatPoint, lowDog, partGeometries } from './hotdog.js'
+import { buildHotDogs, coatBody, coatPoint, lowDog, partGeometries } from './hotdog.js'
 import { buildFur } from './fur.js'
 import { buildTonearm } from './tonearm.js'
 import { buildFlyers } from './flyers.js'
@@ -53,9 +53,12 @@ const COATS = {
   ballpark: { tip: '#e2aa60' },
   newyork: { tip: '#efd3a4' },
 }
-// how hard the air moves the fur: the storm's turbulence, the subs' puff on the kick, the burst out of a dog as it
-// comes apart (per unit of explode a second), and a flying part or note passing through (world units / s)
-const AIR = { gust: 0.8, chaos: 1.2, kick: 1.2, burst: 7, pass: 10 }
+// how hard the air moves the fur: the storm's turbulence, the bass blowing out through a dog's coat from inside it,
+// the burst out of a dog as it comes apart (per unit of explode a second), and a flying part or note passing through
+// (world units / s)
+const AIR = { gust: 0.8, chaos: 1.2, bass: 15, burst: 7, pass: 10 }
+// how far the bass swells a dog: across it, and up
+const THUMP = [0.13, 0.09]
 
 // Before bloom: no pixel brighter than K times white, hue kept, so a glossy highlight stays a sparkle, not a halo.
 const CLAMP = {
@@ -303,18 +306,20 @@ export function startHotDogSet(host, options = {}) {
       dogs[k].bun.map((obj, h) => ({
         obj,
         at: (u, v, out) => coatPoint(h ? 1 : -1, u, v, out),
+        body: coatBody(h ? 1 : -1),
         tip: new THREE.Color(COATS[k].tip),
         fleck: COATS[k].fleck && new THREE.Color(COATS[k].fleck),
         flecks: COATS[k].flecks,
       }))
     )
     holds.forEach((h) => h.updateMatrixWorld(true))
-    // a phone's GPU gets fewer, simpler strands, opaque (alpha to coverage costs a tiled GPU dearly)
-    const fur = buildFur(coats, {
-      strands: small ? 2400 : 6500,
-      segments: small ? 5 : 7,
-      coverage: !small,
-    })
+    // a phone gets fewer guides and fewer, simpler strands, opaque (alpha to coverage costs a tiled GPU dearly)
+    const fur = buildFur(
+      coats,
+      small
+        ? { strands: 2600, guides: [16, 7], nodes: 5, segments: 6, coverage: false }
+        : { strands: 8000, guides: [26, 10], nodes: 6, segments: 12, coverage: true }
+    )
     scene.add(fur.mesh)
 
     progress('SCORING THE MELODY', 0.58)
@@ -473,7 +478,7 @@ export function startHotDogSet(host, options = {}) {
     const radius = dogs.chicago.radius * DOG_SCALE
 
     // dogs and their points, at time t
-    const poseDogs = (t, bars, bounce, beats) => {
+    const poseDogs = (t, bars, bass, beats) => {
       const td = teardownAt(bars)
       DOGS.forEach((k, i) => {
         const pl = PLACES[i]
@@ -493,12 +498,12 @@ export function startHotDogSet(host, options = {}) {
           Math.PI / 2 - pl.az + 0.28 * Math.sin(t * 0.13 + i * 1.7),
           0.05 * Math.sin(t * 0.17 + i)
         )
-        // the bounce: squash on the kick, keep the volume
-        const b = bounce * (1 - 0.6 * explode)
+        // the bass, from inside out: the whole dog swells on the kick and pulls back in, twice, as it dies away
+        const b = bass * (1 - 0.6 * explode)
         hold.scale.set(
-          DOG_SCALE * (1 + 0.018 * b),
-          DOG_SCALE * (1 - 0.036 * b),
-          DOG_SCALE * (1 + 0.018 * b)
+          DOG_SCALE * (1 + THUMP[0] * b),
+          DOG_SCALE * (1 + THUMP[1] * b),
+          DOG_SCALE * (1 + THUMP[0] * b)
         )
         hold.updateMatrixWorld(true)
         centre[k].copy(hold.position)
@@ -507,7 +512,7 @@ export function startHotDogSet(host, options = {}) {
     }
 
     // the air the fur hangs in, this frame: what blows through it at p (a guide of coat `coat`), into out
-    const air = { t: 0, gust: 0, kick: 0, rate: [0, 0, 0], near: [[], [], []] }
+    const air = { t: 0, gust: 0, bass: 0, rate: [0, 0, 0], near: [[], [], []] }
     const sp = [0, 0, 0]
     const sw = [0, 0, 0]
     const ad = new THREE.Vector3()
@@ -519,13 +524,10 @@ export function startHotDogSet(host, options = {}) {
       sp[2] = p.z * 0.45
       swirl(sp, air.t, sw)
       out.set(sw[0], sw[1], sw[2]).multiplyScalar(air.gust)
-      // a puff of air from the subs on every kick, out from the middle of the room
-      ad.set(p.x, 0, p.z).normalize()
-      out.addScaledVector(ad, air.kick)
-      out.y += 0.3 * air.kick
-      // the points bursting out of the dog through its coat, or rushing back in
+      // out through the coat from inside the dog: the bass (out on its push, in on its pull), and the points bursting
+      // out when it comes apart, rushing back in when it reassembles
       ad.subVectors(p, centre[DOGS[k]])
-      out.addScaledVector(ad, (air.rate[k] * AIR.burst) / (ad.length() || 1))
+      out.addScaledVector(ad, (air.bass * AIR.bass + air.rate[k] * AIR.burst) / (ad.length() || 1))
       // whatever flies close: pushed aside, and dragged along in its wake
       for (const i of air.near[k]) {
         const o = i * 7
@@ -551,6 +553,7 @@ export function startHotDogSet(host, options = {}) {
       fog: scene.fog.color,
       fogDensity: scene.fog.density,
       scale: 1,
+      gust: 1,
     }
     const reach = radius * 1.4 + 3
 
@@ -571,7 +574,7 @@ export function startHotDogSet(host, options = {}) {
       const fx = fxAt(bars, bt, reduced)
       const kick = reduced ? 0 : bt.kick
 
-      poseDogs(t, bars, fx.bounce, bt.beats)
+      poseDogs(t, bars, fx.bass, bt.beats)
 
       // storm
       const u = storm.uniforms
@@ -641,7 +644,7 @@ export function startHotDogSet(host, options = {}) {
       const tdh = teardownAt(beatAt(t - h, ck).bars)
       air.t = tm
       air.gust = AIR.gust + AIR.chaos * fx.chaos
-      air.kick = AIR.kick * kick
+      air.bass = fx.bass
       DOGS.forEach((k, i) => {
         air.rate[i] = (shotState.explode[k] - tdh[k].explode) / h
         const c = centre[k]
@@ -664,6 +667,7 @@ export function startHotDogSet(host, options = {}) {
       furLights.sky.copy(hemi.color).multiplyScalar(hemi.intensity)
       furLights.ground.copy(hemi.groundColor).multiplyScalar(hemi.intensity)
       furLights.scale = u.uScale.value
+      furLights.gust = air.gust
       fur.setShare(partShare)
       fur.update(t, windAt, furLights)
 

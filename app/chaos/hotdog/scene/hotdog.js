@@ -199,6 +199,38 @@ function bunPoint(x, phi, side) {
 const bunInside = (side) => [0, SPEC.bun.height / 2, (side * SPEC.bun.width) / 5]
 
 /**
+ * Half a bun as a solid, for the fur to lie on: a function (p, margin) that pushes a point p (THREE.Vector3, in the
+ * half's own frame, metres) out of the crust to `margin` above it, and says whether it moved it. The crust is the
+ * superellipse bunPoint draws, |z/a|^2.7 + |y/b|^q = 1 round the middle of each cross-section, its ends rounding off.
+ * The cut side (the frank's side) is open.
+ */
+export function coatBody(side) {
+  const { length: L, width: W, height: H } = SPEC.bun
+  const pull = (yc, z, a, b) => {
+    const q = yc >= 0 ? BUN_TOP : BUN_BOTTOM
+    return Math.pow(Math.abs(z) / a, 2.7) + Math.pow(Math.abs(yc) / b, q)
+  }
+  return (p, margin) => {
+    if (p.z * side < 0 || Math.abs(p.x) > L / 2) return false
+    const e = bunEnds(p.x)
+    const a = (W / 2) * e + margin
+    const b = (H / 2) * Math.pow(e, 0.7) + margin
+    const yc = p.y - H / 2
+    // well clear of it: nothing to do (and no powers to take)
+    if (yc * yc + p.z * p.z > Math.max(a, b) ** 2) return false
+    let f = pull(yc, p.z, a, b)
+    if (f >= 1 || f < 1e-6) return false
+    // out along the line from the cross-section's middle, until the point is on the surface (two refinements)
+    let k = Math.pow(f, -1 / 2.6)
+    f = pull(yc * k, p.z * k, a, b)
+    k *= Math.pow(f, -1 / 2.6)
+    p.y = H / 2 + yc * k
+    p.z *= k
+    return true
+  }
+}
+
+/**
  * Where fur grows on half a bun (the outside of its crust), in the half's own frame: the point at u (along it, 0..1)
  * and v (round it from the bottom, 0..1), and the outward normal. out: {p, n} of THREE.Vector3.
  */

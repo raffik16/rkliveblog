@@ -1,56 +1,64 @@
 // Fur: real strands on the animatronic dogs' coats, hanging under gravity and blown about by whatever flows through
-// them. It is simulated the way film hair is: a grid of guide hairs per coat, each a chain of four points integrated
-// on the CPU (Verlet, a fixed 120 Hz step) with gravity, a bending stiffness that holds its lay, air drag against the
-// wind, and the skin it grows from as a floor. Thousands of drawn strands then follow the guides round them on the
-// GPU, each a tapered ribbon along a cubic through its guides' points, with its own length, colour and curl, and
-// drawn in toward its neighbours at the tip, the way a pelt parts into locks.
+// them. It is simulated the way film hair is. A grid of guide hairs per coat, each a chain of points integrated on
+// the CPU (Verlet, a fixed 120 Hz step): gravity; a bending stiffness that holds the coat's lay at the root and gives
+// way toward the tip, so a hair droops in a curve that grows along it as a real one does; air drag against the wind;
+// and the bun itself as a solid, so a hair that falls across it drapes over its curve, lofted a little off the skin
+// the way a pelt keeps its volume. Every guide also feels its own gusts, so neighbouring locks never move as one.
 //
-// Nothing pushes the fur but physics: when a dog bounces on the kick, comes apart or swings round, the roots move
-// and the strands trail behind them and settle under their own weight; a bun half turned over hangs its fur the
-// other way. The wind is what flows through the set: the storm's own turbulence, a puff of air from the subs on
-// every kick, the points that burst out of a dog when it comes apart (and rush back in when it reassembles), and the
+// Thousands of drawn strands follow the guides round them on the GPU, along a smooth curve through the guides'
+// points. The pelt has two layers: a dense undercoat, short, soft and wavy, and long guard hairs lying over it,
+// glossier, banded light near the tip. A short hair takes only the root end of its guide's curve, so it stands
+// stiffer than a long one, as it would. Each strand has its own length, thickness, colour, waviness and a little
+// fan-out of its own, and is drawn in toward its neighbours at the tip, the way a pelt parts into locks.
+//
+// Nothing pushes the fur but physics: when a dog thumps on the kick, comes apart or swings round, the roots move and
+// the strands trail behind them and settle under their own weight; a bun half turned over hangs its fur the other
+// way. The wind is what flows through the set: the storm's turbulence, the bass from inside the dog out through its
+// coat, the points that burst out of a dog when it comes apart (and rush back in when it reassembles), and the
 // flying parts and notes that pass close by.
 //
-// It is shaded as hair (Kajiya-Kay, with the two shifted highlights of Marschner's model): dark at the roots where
-// the undercoat sits in its own shadow, light at the tips, glowing round the edges when a light is behind it. Strands
-// thinner than a pixel keep their share of it as coverage (alpha to coverage, on the multisampled target) instead of
-// shimmering.
+// Shaded as hair (Kajiya-Kay, with the two shifted highlights of Marschner's model): the undercoat in the coat's own
+// shade, guard hairs catching the light, backlit tips glowing. Strands are at least two device pixels wide so the
+// multisampling smooths them as they move; a strand thinner than that keeps its share of the light as coverage and
+// takes the coat's average colour, so moving hairs do not flicker against the skin.
 import * as THREE from 'three'
 import { rng } from '../../teardown/kit/util.js'
 
-const GU = 18 // guides along a coat
-const GV = 8 // guides round it, bottom to top
-const NODES = 4 // a guide: its root and three points
-const SEG = 7 // segments in a drawn strand
 const H = 1 / 120 // the simulation's step, seconds
 
 export const FUR = {
-  length: 0.74, // a guide's length, world units (about 14 mm on a dog this size)
-  width: 0.0075, // a strand's width at its root, world units
+  length: 0.95, // a guide's length, world units (about 18 mm on a dog this size): the longest guard hair
+  width: 0.0068, // a strand's width at its root, world units
   gravity: 26, // world units / s²
   drag: 5, // how hard the air drags a strand toward the wind's speed, 1/s
-  damping: 0.035, // velocity lost per step: air and its own hairs damp fur, so it settles, not rings
-  stiff: [0.09, 0.04, 0.02], // how hard each segment holds its lay, per step (root first)
+  damping: 0.022, // velocity lost per step: enough to settle, not so much a hit cannot shake it
+  stiff: 0.15, // how hard the root segment holds its lay, per step; it gives way toward the tip
+  limp: 0.82, // how much of that stiffness the tip segment has lost
+  follow: 0.62, // how much a segment bends toward the one before it rather than toward the lay
+  loft: [0.0005, 0.0009], // metres off the skin a hair's points keep: at the root, and more per point along it
+  bend: [75, 40], // the most a segment turns from the one before it, degrees: at the root (from the lay), then on
+  gusts: 0.55, // each guide's own gusts, as a share of the storm's turbulence
   vMax: 0.97, // fur grows up to here round the coat (1 is the cut edge)
-  locks: [60, 16], // locks along a coat and round it
-  clump: 0.6, // how far a strand's tip is drawn into its lock
+  locks: [72, 20], // locks along a coat and round it
+  guard: 0.22, // the share of strands that are guard hairs
 }
 
-const vert = /* glsl */ `
+const vert = (NS) => /* glsl */ `
 precision highp float;
 precision highp sampler2D;
 uniform mat4 uCoat[6];
 uniform sampler2D uGuides;
+uniform vec2 uGrid;
 uniform float uScale;
 uniform float uLen;
 uniform float uWidth;
-uniform float uClump;
 in vec3 aRoot;
 in vec3 aLock;
 in vec3 aNormal;
 in vec2 aUV;
 in float aCoat;
 in vec4 aRand;
+in vec4 aShape;
 in vec3 aTip;
 out vec3 vT;
 out vec3 vN;
@@ -60,19 +68,20 @@ out float vS;
 out float vSide;
 out float vCover;
 out float vFar;
+out float vGuard;
 
-// a guide's point k (1..3), relative to its root, per unit of length
+// point k (1..${NS}) of guide g, from its root, world units
 vec3 guide(int g, int k) {
   return texelFetch(uGuides, ivec2(g, k - 1), 0).xyz;
 }
-// the same point, blended from the four guides round this strand
-vec3 point(int base, vec2 uv, int k) {
-  vec2 f = uv * vec2(${GU - 1}.0, ${GV - 1}.0);
-  vec2 i0 = min(floor(f), vec2(${GU - 2}.0, ${GV - 2}.0));
-  vec2 w = f - i0;
-  int a = base + int(i0.x) * ${GV} + int(i0.y);
-  int b = a + ${GV};
-  return mix(mix(guide(a, k), guide(a + 1, k), w.y), mix(guide(b, k), guide(b + 1, k), w.y), w.x);
+// point k of this strand's guide, blended from the four guides round it; the root is the origin, and the curve runs
+// on past either end in a straight line
+int ga;
+int gb;
+vec2 gw;
+vec3 node(int k) {
+  if (k <= 0) return vec3(0.0);
+  return mix(mix(guide(ga, k), guide(ga + 1, k), gw.y), mix(guide(gb, k), guide(gb + 1, k), gw.y), gw.x);
 }
 
 void main() {
@@ -80,32 +89,56 @@ void main() {
   mat4 M = uCoat[c];
   vec3 root = (M * vec4(aRoot, 1.0)).xyz;
   vec3 nrm = normalize(mat3(M) * aNormal);
-  float len = uLen * aRand.x;
-  int base = c * ${GU * GV};
-  vec3 p1 = root + point(base, aUV, 1) * len;
-  vec3 p2 = root + point(base, aUV, 2) * len;
-  vec3 p3 = root + point(base, aUV, 3) * len;
-  // a cubic from the root through the guides' points
+  vec2 f = aUV * (uGrid - 1.0);
+  vec2 i0 = min(floor(f), uGrid - 2.0);
+  gw = f - i0;
+  ga = c * int(uGrid.x * uGrid.y) + int(i0.x) * int(uGrid.y) + int(i0.y);
+  gb = ga + int(uGrid.y);
+
+  // where along its guide this point of the strand falls: a short hair is the root end of the curve
   float s = position.x;
-  float u = 1.0 - s;
-  vec3 p = u * u * u * root + 3.0 * u * u * s * p1 + 3.0 * u * s * s * p2 + s * s * s * p3;
-  vec3 tan = 3.0 * u * u * (p1 - root) + 6.0 * u * s * (p2 - p1) + 3.0 * s * s * (p3 - p2);
+  float share = aRand.x;
+  float len = uLen * share;
+  float u = s * share * ${NS}.0;
+  int i = min(int(u), ${NS - 1});
+  float t = u - float(i);
+  vec3 P1 = node(i);
+  vec3 P2 = node(i + 1);
+  vec3 P0 = i == 0 ? -P2 : node(i - 1);
+  vec3 P3 = i + 2 > ${NS} ? 2.0 * P2 - P1 : node(i + 2);
+  // Catmull-Rom through the guide's points, and its slope
+  vec3 a3 = -P0 + 3.0 * P1 - 3.0 * P2 + P3;
+  vec3 a2 = 2.0 * P0 - 5.0 * P1 + 4.0 * P2 - P3;
+  vec3 a1 = -P0 + P2;
+  vec3 p = root + 0.5 * (2.0 * P1 + a1 * t + a2 * t * t + a3 * t * t * t);
+  vec3 tan = 0.5 * (a1 + 2.0 * a2 * t + 3.0 * a3 * t * t) * share * ${NS}.0;
+
+  // a frame round the root: this strand fans out a little from its guide, its own way
+  vec3 e1 = normalize(cross(nrm, abs(nrm.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
+  vec3 e2 = cross(nrm, e1);
+  float spread = 0.06 + 0.14 * fract(aRand.y * 7.31);
+  vec3 fan = (e1 * cos(aShape.w) + e2 * sin(aShape.w)) * spread * len;
+  p += fan * s;
+  tan += fan;
   // drawn toward the middle of its lock, more toward the tip
-  vec3 lock = mat3(M) * aLock * uClump;
+  vec3 lock = mat3(M) * aLock * (0.35 + 0.45 * fract(aRand.y * 13.7));
   p += lock * s * s;
-  tan = normalize(tan + lock * 2.0 * s + 1e-6);
-  // its own curl, growing toward the tip
+  tan += lock * 2.0 * s;
+  tan = tan * inversesqrt(max(dot(tan, tan), 1e-12));
+  // its own waves across the strand, growing from the root
   vec3 b1 = normalize(cross(tan, abs(tan.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
   vec3 b2 = cross(tan, b1);
-  float curl = aRand.z * 6.2831853 + s * 5.5;
-  p += (b1 * cos(curl) + b2 * sin(curl)) * len * 0.06 * s * s;
+  float ph = 6.2831853 * aShape.y * s + aRand.z * 6.2831853;
+  float amp = aShape.z * len * pow(s, 1.1);
+  p += (b1 * sin(ph) + b2 * 0.55 * sin(ph * 1.7 + 2.1)) * amp;
+
   // a ribbon across the line of sight, never thinner than two device pixels: below that its light is coverage. A
   // strand one pixel wide crawls from pixel to pixel as it moves; two wide, the multisampling smooths it
   vec3 view = normalize(cameraPosition - p);
   vec3 side = normalize(cross(tan, view) + 1e-6);
   vec4 mv = viewMatrix * vec4(p, 1.0);
   float depth = max(0.05, -mv.z);
-  float w = uWidth * aRand.w * (1.0 - 0.82 * s);
+  float w = uWidth * aRand.w * (1.0 - 0.86 * pow(s, 1.4));
   float px = w * uScale / depth;
   float wide = max(px, 2.0) * depth / uScale;
   p += side * position.y * wide * 0.5;
@@ -116,6 +149,7 @@ void main() {
   vTip = aTip;
   vS = s;
   vSide = position.y;
+  vGuard = aShape.x;
   vCover = min(1.0, px * 0.5) * (1.0 - smoothstep(0.7, 1.0, s));
   // how far below a pixel this strand is: there it blends into the coat instead of standing out from it
   vFar = 1.0 - smoothstep(0.5, 2.0, px);
@@ -138,6 +172,7 @@ in float vS;
 in float vSide;
 in float vCover;
 in float vFar;
+in float vGuard;
 out vec4 fragColor;
 
 void main() {
@@ -145,12 +180,20 @@ void main() {
   vec3 T = vT * inversesqrt(max(dot(vT, vT), 1e-12));
   vec3 N = vN * inversesqrt(max(dot(vN, vN), 1e-12));
   vec3 V = normalize(cameraPosition - vP);
-  // darker at the roots, light at the tips; the undercoat sits in its own shade. Kept gentle, and a strand thinner
-  // than a pixel takes the coat's average colour, so hairs moving across pixels do not flicker against the skin
-  vec3 base = mix(vTip * vec3(0.5, 0.45, 0.4), vTip, smoothstep(0.0, 0.8, vS));
+  // the undercoat: soft, a little grey, in the coat's own shade. Guard hairs: darker at the root, a light band
+  // near the tip and a darker point, as an animal's are. Kept gentle, and a strand thinner than a pixel takes the
+  // coat's average colour, so hairs moving across pixels do not flicker against the skin
+  float g = vGuard;
+  vec3 under = mix(vTip * vec3(0.52, 0.48, 0.45), vTip * 0.86, smoothstep(0.0, 1.0, vS));
+  under = mix(under, vec3(dot(under, vec3(0.3, 0.55, 0.15))), 0.18);
+  float band = smoothstep(0.55, 0.72, vS) * (1.0 - smoothstep(0.8, 0.95, vS));
+  vec3 guard = mix(vTip * vec3(0.5, 0.45, 0.4), vTip, smoothstep(0.0, 0.6, vS));
+  guard *= 1.0 + 0.22 * band - 0.3 * smoothstep(0.88, 1.0, vS);
+  vec3 base = mix(under, guard, g);
   base = mix(base, vTip * 0.72, vFar * 0.85);
-  float occ = mix(0.62, 1.0, smoothstep(0.0, 0.75, vS)) * (1.0 - 0.1 * vSide * vSide);
-  float gloss = 1.0 - vFar;
+  float occ = mix(mix(0.5, 0.9, smoothstep(0.0, 1.0, vS)), mix(0.66, 1.0, smoothstep(0.0, 0.7, vS)), g);
+  occ *= 1.0 - 0.1 * vSide * vSide;
+  float gloss = (1.0 - vFar) * mix(0.35, 1.0, g);
   // light from the room (the hemisphere and the club's reflections), then each light; lights in three's units, so
   // a diffuse surface returns 1/pi of what falls on it
   const float INV_PI = 0.31830989;
@@ -170,8 +213,8 @@ void main() {
     float s1 = pow(sqrt(max(0.0, 1.0 - h1 * h1)), 36.0);
     float s2 = pow(sqrt(max(0.0, 1.0 - h2 * h2)), 14.0);
     // light from behind glows through the tips
-    float back = pow(max(0.0, -dot(V, L)), 3.0) * vS;
-    col += uLightCol[i] * INV_PI * (shade * occ * (base * diff + gloss * (0.18 * s1 + base * 0.7 * s2)) + base * back * 0.7);
+    float back = pow(max(0.0, -dot(V, L)), 3.0) * vS * mix(0.6, 1.0, g);
+    col += uLightCol[i] * INV_PI * (shade * occ * (base * diff + gloss * (0.2 * s1 + base * 0.7 * s2)) + base * back * 0.7);
   }
   // fur is matte: it never reaches the bloom, which would turn any glint into a blinking halo
   col = min(col, vec3(0.92));
@@ -183,15 +226,27 @@ void main() {
 }`
 
 /**
- * coats: [{obj, at(u, v, out: {p, n}), tip: THREE.Color, fleck?: THREE.Color, flecks?: 0..1}], up to six: obj is the
- * mesh the fur grows on (its matrixWorld is read every frame), at() a point and outward normal on it in its own frame.
- * strands: per coat; segments: per drawn strand; coverage: thin strands fade by alpha to coverage (else opaque).
- * Returns {mesh, update(t, wind, lights), setShare(k)}.
+ * coats: up to six of {obj, at(u, v, out: {p, n}), body(p, margin), tip: THREE.Color, fleck?: THREE.Color,
+ * flecks?: 0..1}: obj is the mesh the fur grows on (its matrixWorld is read every frame), at() a point and outward
+ * normal on it in its own frame, body() pushes a point in its frame out of it (coatBody). strands: per coat; guides:
+ * [along, round] per coat; nodes: points per guide, root included; segments: per drawn strand; coverage: thin strands
+ * fade by alpha to coverage (else they are opaque). Returns {mesh, update(t, wind, lights), setShare(k)}.
  */
 export function buildFur(
   coats,
-  { strands = 9000, seed = 61, scale = 1, segments = SEG, coverage = true } = {}
+  {
+    strands = 8000,
+    seed = 61,
+    scale = 1,
+    guides = [26, 10],
+    nodes = 6,
+    segments = 12,
+    coverage = true,
+  } = {}
 ) {
+  const [GU, GV] = guides
+  const NODES = nodes
+  const NS = NODES - 1
   const r = rng(seed)
   const nC = coats.length
   const at = { p: new THREE.Vector3(), n: new THREE.Vector3() }
@@ -209,9 +264,10 @@ export function buildFur(
 
   // ---------------------------------------------------------------- the guides
   const NG = GU * GV * nC
-  const gRoot = [] // per guide, its root and lay in the coat's frame
+  const gRoot = [] // per guide, its root, lay and skin normal in the coat's frame
   const gLay = []
   const gN = []
+  const gGust = new Float32Array(NG * 6) // per guide, its own gusts: three frequencies, three phases
   for (let c = 0; c < nC; c++)
     for (let i = 0; i < GU; i++)
       for (let j = 0; j < GV; j++) {
@@ -228,7 +284,11 @@ export function buildFur(
         gN.push(at.n.clone())
         gLay.push(lay)
       }
-  // the state, world space: every guide's four points now and a step ago
+  for (let g = 0; g < NG; g++) {
+    for (let k = 0; k < 3; k++) gGust[g * 6 + k] = 0.7 + 1.6 * r()
+    for (let k = 3; k < 6; k++) gGust[g * 6 + k] = r() * 6.2832
+  }
+  // the state, world space: every guide's points now and a step ago
   const X = new Float32Array(NG * NODES * 3)
   const P = new Float32Array(NG * NODES * 3)
   // the state one step back: what is drawn is blended between it and X by how far the clock is into the next step,
@@ -239,14 +299,25 @@ export function buildFur(
   const rootNow = new Float32Array(NG * 3)
   const rootWas = new Float32Array(NG * 3)
   const layNow = new Float32Array(NG * 3)
-  const nrmNow = new Float32Array(NG * 3)
   const wind = new Float32Array(NG * 3)
-  const seg = (FUR.length * scale) / (NODES - 1)
+  const seg = (FUR.length * scale) / NS
+  // stiffness per segment, root first: it gives way along the hair
+  const stiff = Array.from(
+    { length: NS },
+    (_, k) => FUR.stiff * Math.pow(1 - FUR.limp * (k / Math.max(1, NS - 1)), 1.3)
+  )
+  // a hair bends, it does not fold: the cosine and sine of the most each segment may turn from the one before
+  const bendCos = Array.from({ length: NODES }, (_, k) =>
+    Math.cos(((k <= 1 ? FUR.bend[0] : FUR.bend[1]) * Math.PI) / 180)
+  )
+  const bendSin = bendCos.map((c) => Math.sqrt(1 - c * c))
+  // how far off the skin each point keeps (metres, in the coat's own frame)
+  const loft = Array.from({ length: NODES }, (_, k) => FUR.loft[0] + FUR.loft[1] * k)
 
   const tex = new THREE.DataTexture(
-    new Float32Array(NG * (NODES - 1) * 4),
+    new Float32Array(NG * NS * 4),
     NG,
-    NODES - 1,
+    NS,
     THREE.RGBAFormat,
     THREE.FloatType
   )
@@ -261,6 +332,7 @@ export function buildFur(
   const aUV = new Float32Array(total * 2)
   const aCoat = new Float32Array(total)
   const aRand = new Float32Array(total * 4)
+  const aShape = new Float32Array(total * 4)
   const aTip = new Float32Array(total * 3)
   // where roots go: each coat cut into little cells, picked in proportion to the skin they cover, so the fur grows
   // evenly by area
@@ -285,7 +357,7 @@ export function buildFur(
     }
     return lo
   }
-  // the middle of each lock, jittered per lock so they do not line up; worked out once
+  // the middle of each lock, jittered per lock so they do not line up, and each lock's own shade; worked out once
   const [LU, LV] = FUR.locks
   const jit = (a, b, c) => {
     const x = Math.sin(a * 127.1 + b * 311.7 + c * 74.7) * 43758.5453
@@ -301,7 +373,7 @@ export function buildFur(
         FUR.vMax * Math.min(1, Math.max(0, (iv + 0.5 + 0.6 * jit(iv, iu, c + 9)) / LV)),
         o
       )
-      locks.set(key, o.p)
+      locks.set(key, { p: o.p, shade: 0.88 + 0.24 * (jit(iu, iv, c + 31) + 0.5) })
     }
     return locks.get(key)
   }
@@ -320,13 +392,35 @@ export function buildFur(
       Math.min(LU - 1, Math.floor(u * LU)),
       Math.min(LV - 1, Math.floor((v / FUR.vMax) * LV))
     )
-    aLock.set([lock.x - at.p.x, lock.y - at.p.y, lock.z - at.p.z], s * 3)
+    aLock.set([lock.p.x - at.p.x, lock.p.y - at.p.y, lock.p.z - at.p.z], s * 3)
     aNormal.set([at.n.x, at.n.y, at.n.z], s * 3)
     aUV.set([Math.min(1, Math.max(0, (u - 0.012) / 0.976)), v / FUR.vMax], s * 2)
     aCoat[s] = c
-    aRand.set([0.6 + 0.4 * Math.pow(r(), 0.6), r(), r(), 0.7 + 0.6 * r()], s * 4)
+    // guard hairs: long, thicker, straighter; the undercoat: short, fine, wavy, and a few frizzy ones
+    const guard = r() < FUR.guard
+    const frizz = !guard && r() < 0.05
+    aRand.set(
+      [
+        guard ? 0.84 + 0.16 * r() : 0.36 + 0.36 * Math.pow(r(), 0.8),
+        r(),
+        r(),
+        guard ? 1.15 + 0.4 * r() : 0.65 + 0.35 * r(),
+      ],
+      s * 4
+    )
+    aShape.set(
+      [
+        guard ? 1 : 0,
+        guard ? 0.5 + 0.7 * r() : 1.2 + 1.8 * r(),
+        guard ? 0.012 + 0.02 * r() : frizz ? 0.14 : 0.03 + 0.05 * r(),
+        r() * 6.2832,
+      ],
+      s * 4
+    )
     const fleck = coat.fleck && r() < (coat.flecks || 0)
-    tint.copy(fleck ? coat.fleck : coat.tip).multiplyScalar(0.82 + 0.36 * r())
+    tint
+      .copy(fleck ? coat.fleck : coat.tip)
+      .multiplyScalar(lock.shade * (0.88 + 0.24 * r()) * (guard ? 1 : 0.95))
     aTip.set([tint.r, tint.g, tint.b], s * 3)
   }
 
@@ -346,6 +440,7 @@ export function buildFur(
   geo.setAttribute('aUV', new THREE.InstancedBufferAttribute(aUV, 2))
   geo.setAttribute('aCoat', new THREE.InstancedBufferAttribute(aCoat, 1))
   geo.setAttribute('aRand', new THREE.InstancedBufferAttribute(aRand, 4))
+  geo.setAttribute('aShape', new THREE.InstancedBufferAttribute(aShape, 4))
   geo.setAttribute('aTip', new THREE.InstancedBufferAttribute(aTip, 3))
   geo.instanceCount = total
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e4)
@@ -353,10 +448,10 @@ export function buildFur(
   const uniforms = {
     uCoat: { value: Array.from({ length: 6 }, () => new THREE.Matrix4()) },
     uGuides: { value: tex },
+    uGrid: { value: new THREE.Vector2(GU, GV) },
     uScale: { value: 800 },
     uLen: { value: FUR.length * scale },
     uWidth: { value: FUR.width * scale },
-    uClump: { value: FUR.clump },
     uLightDir: { value: [0, 1, 2].map(() => new THREE.Vector3(0, 1, 0)) },
     uLightCol: { value: [0, 1, 2].map(() => new THREE.Color(0, 0, 0)) },
     uSky: { value: new THREE.Color() },
@@ -367,7 +462,7 @@ export function buildFur(
   }
   const material = new THREE.ShaderMaterial({
     glslVersion: THREE.GLSL3,
-    vertexShader: vert,
+    vertexShader: vert(NS),
     fragmentShader: frag,
     uniforms,
     side: THREE.DoubleSide,
@@ -379,11 +474,17 @@ export function buildFur(
   // ---------------------------------------------------------------- the simulation
   const M3 = new THREE.Matrix3()
   const v = new THREE.Vector3()
-  /** Roots, lays and skin normals in the world, from each coat's matrix now. */
+  // each coat's matrix and its inverse, this frame (the bun is a solid in its own frame)
+  const toWorld = coats.map(() => new Float64Array(16))
+  const toLocal = coats.map(() => new Float64Array(16))
+  const inv = new THREE.Matrix4()
+  /** Roots, lays and the coats' frames, from each coat's matrix now. */
   const readRoots = () => {
     for (let c = 0; c < nC; c++) {
       const W = coats[c].obj.matrixWorld
       uniforms.uCoat.value[c].copy(W)
+      toWorld[c].set(W.elements)
+      toLocal[c].set(inv.copy(W).invert().elements)
       M3.setFromMatrix4(W)
       for (let g = c * GU * GV; g < (c + 1) * GU * GV; g++) {
         v.copy(gRoot[g]).applyMatrix4(W)
@@ -394,10 +495,6 @@ export function buildFur(
         layNow[g * 3] = v.x
         layNow[g * 3 + 1] = v.y
         layNow[g * 3 + 2] = v.z
-        v.copy(gN[g]).applyMatrix3(M3).normalize()
-        nrmNow[g * 3] = v.x
-        nrmNow[g * 3 + 1] = v.y
-        nrmNow[g * 3 + 2] = v.z
       }
     }
   }
@@ -405,9 +502,15 @@ export function buildFur(
   const drag = FUR.drag
   const keep = 1 - FUR.damping
   const g2 = FUR.gravity * H * H
+  const follow = FUR.follow
+  const lp = new THREE.Vector3()
   // one step for every guide, its root a share `a` of the way from where it was to where it is now
   const step = (a) => {
     for (let g = 0; g < NG; g++) {
+      const c = Math.floor(g / (GU * GV))
+      const Lm = toLocal[c]
+      const Wm = toWorld[c]
+      const body = coats[c].body
       const g3 = g * 3
       const rx = rootWas[g3] + (rootNow[g3] - rootWas[g3]) * a
       const ry = rootWas[g3 + 1] + (rootNow[g3 + 1] - rootWas[g3 + 1]) * a
@@ -415,9 +518,6 @@ export function buildFur(
       const lx = layNow[g3]
       const ly = layNow[g3 + 1]
       const lz = layNow[g3 + 2]
-      const nx = nrmNow[g3]
-      const ny = nrmNow[g3 + 1]
-      const nz = nrmNow[g3 + 2]
       const wx = wind[g3]
       const wy = wind[g3 + 1]
       const wz = wind[g3 + 2]
@@ -444,40 +544,65 @@ export function buildFur(
         x += vx + drag * (wx * H - vx) * H
         y += vy + drag * (wy * H - vy) * H - g2
         z += vz + drag * (wz * H - vz) * H
-        // stiffness: toward where this segment would lie, along the lay at the root, then along the strand
+        // stiffness: toward where this segment would lie, along the lay at the root, then more and more along the
+        // hair itself, so it bends in a curve
         const px = X[i - 3]
         const py = X[i - 2]
         const pz = X[i - 1]
-        const bx = k === 1 ? lx : dx * 0.6 + lx * 0.4
-        const by = k === 1 ? ly : dy * 0.6 + ly * 0.4
-        const bz = k === 1 ? lz : dz * 0.6 + lz * 0.4
-        const bl = Math.hypot(bx, by, bz) || 1
-        const s = FUR.stiff[k - 1]
+        const bx = k === 1 ? lx : dx * follow + lx * (1 - follow)
+        const by = k === 1 ? ly : dy * follow + ly * (1 - follow)
+        const bz = k === 1 ? lz : dz * follow + lz * (1 - follow)
+        const bl = Math.sqrt(bx * bx + by * by + bz * bz) || 1
+        const s = stiff[k - 1]
         x += (px + (bx / bl) * seg - x) * s
         y += (py + (by / bl) * seg - y) * s
         z += (pz + (bz / bl) * seg - z) * s
-        // the skin is a floor: no point sinks below the plane it grows from
-        const h = (x - rx) * nx + (y - ry) * ny + (z - rz) * nz
-        const floor = seg * 0.18 * k
-        if (h < floor) {
-          x += nx * (floor - h)
-          y += ny * (floor - h)
-          z += nz * (floor - h)
-        }
         // a hair does not stretch
         let ex = x - px
         let ey = y - py
         let ez = z - pz
-        const el = Math.hypot(ex, ey, ez) || 1
+        let el = Math.sqrt(ex * ex + ey * ey + ez * ez) || 1
         ex /= el
         ey /= el
         ez /= el
-        X[i] = px + ex * seg
-        X[i + 1] = py + ey * seg
-        X[i + 2] = pz + ez * seg
-        dx = ex
-        dy = ey
-        dz = ez
+        // nor fold: if this segment turns further from the last than a hair can bend, it turns only that far
+        const cb = ex * dx + ey * dy + ez * dz
+        if (cb < bendCos[k]) {
+          let qx = ex - dx * cb
+          let qy = ey - dy * cb
+          let qz = ez - dz * cb
+          const ql = Math.sqrt(qx * qx + qy * qy + qz * qz) || 1
+          qx /= ql
+          qy /= ql
+          qz /= ql
+          ex = dx * bendCos[k] + qx * bendSin[k]
+          ey = dy * bendCos[k] + qy * bendSin[k]
+          ez = dz * bendCos[k] + qz * bendSin[k]
+        }
+        x = px + ex * seg
+        y = py + ey * seg
+        z = pz + ez * seg
+        // nor pass through the bun: out to its loft above the crust, in the bun's own frame
+        lp.set(
+          Lm[0] * x + Lm[4] * y + Lm[8] * z + Lm[12],
+          Lm[1] * x + Lm[5] * y + Lm[9] * z + Lm[13],
+          Lm[2] * x + Lm[6] * y + Lm[10] * z + Lm[14]
+        )
+        if (body(lp, loft[k])) {
+          x = Wm[0] * lp.x + Wm[4] * lp.y + Wm[8] * lp.z + Wm[12]
+          y = Wm[1] * lp.x + Wm[5] * lp.y + Wm[9] * lp.z + Wm[13]
+          z = Wm[2] * lp.x + Wm[6] * lp.y + Wm[10] * lp.z + Wm[14]
+        }
+        X[i] = x
+        X[i + 1] = y
+        X[i + 2] = z
+        ex = x - px
+        ey = y - py
+        ez = z - pz
+        el = Math.sqrt(ex * ex + ey * ey + ez * ez) || 1
+        dx = ex / el
+        dy = ey / el
+        dz = ez / el
       }
     }
   }
@@ -495,18 +620,17 @@ export function buildFur(
     XW.set(X)
   }
 
-  // each guide's points relative to its root, a share `a` of the way from the last step back to the latest
+  // each guide's points from its root (world units), a share `a` of the way from the last step back to the latest
   const upload = (a) => {
     const d = tex.image.data
-    const L = FUR.length * scale
     for (let g = 0; g < NG; g++) {
-      const r = g * NODES * 3
+      const r0 = g * NODES * 3
       for (let k = 1; k < NODES; k++) {
-        const i = r + k * 3
+        const i = r0 + k * 3
         const o = ((k - 1) * NG + g) * 4
         for (let c = 0; c < 3; c++) {
-          const was = XW[i + c] - XW[r + c]
-          d[o + c] = (was + (X[i + c] - X[r + c] - was) * a) / L
+          const was = XW[i + c] - XW[r0 + c]
+          d[o + c] = was + (X[i + c] - X[r0 + c] - was) * a
         }
       }
     }
@@ -517,26 +641,29 @@ export function buildFur(
   let acc = 0
   const pt = new THREE.Vector3()
   const w3 = new THREE.Vector3()
+  const mid = Math.floor(NODES / 2)
   /**
    * t: seconds; windAt(p: Vector3, coat, out: Vector3): the air's velocity at p; lights: {dir: Vector3[3],
-   * col: Color[3], sky, ground, fog, fogDensity, scale}. Call after the coats' world matrices are current. A jump in
-   * time (a still, or the page coming back) starts the fur over, hung and settled.
+   * col: Color[3], sky, ground, fog, fogDensity, scale, gust}. Call after the coats' world matrices are current. A
+   * jump in time (a still, or the page coming back) starts the fur over, hung and settled.
    */
   const update = (t, windAt, lights) => {
     readRoots()
+    const gust = FUR.gusts * (lights.gust || 1)
     for (let g = 0; g < NG; g++) {
-      // the wind at each guide's middle
-      const o = (g * NODES + 2) * 3
+      // the wind at each guide's middle, and its own gusts on top
+      const o = (g * NODES + mid) * 3
       pt.set(X[o], X[o + 1], X[o + 2])
       if (last === null) pt.set(rootNow[g * 3], rootNow[g * 3 + 1], rootNow[g * 3 + 2])
       windAt(pt, Math.floor(g / (GU * GV)), w3)
-      wind[g * 3] = w3.x
-      wind[g * 3 + 1] = w3.y
-      wind[g * 3 + 2] = w3.z
+      const q = g * 6
+      wind[g * 3] = w3.x + gust * Math.sin(t * gGust[q] + gGust[q + 3])
+      wind[g * 3 + 1] = w3.y + gust * 0.6 * Math.sin(t * gGust[q + 1] + gGust[q + 4])
+      wind[g * 3 + 2] = w3.z + gust * Math.sin(t * gGust[q + 2] + gGust[q + 5])
     }
     const dt = last === null ? Infinity : t - last
     if (dt < 0 || dt > 0.25) {
-      settle(150)
+      settle(200)
       acc = 0
     } else if (dt > 0) {
       acc += dt

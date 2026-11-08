@@ -43,6 +43,16 @@ export function beatAt(t, ck) {
   return { beats: b, n, ph, kick, bars }
 }
 
+// The bass, from inside a dog out: a speaker cone's stroke on every kick. It pushes out hard, pulls back in, pushes
+// out again, dying away to exactly nothing as the next beat starts, so it is continuous from beat to beat. Out is
+// positive.
+const BASS_DECAY = 4.2
+const BASS_TAIL = Math.exp(-BASS_DECAY)
+export function bassAt(ph) {
+  const env = smooth(ph / 0.04) * ((Math.exp(-ph * BASS_DECAY) - BASS_TAIL) / (1 - BASS_TAIL))
+  return env * Math.cos(2 * Math.PI * 2 * ph)
+}
+
 // ------------------------------------------------------------------ attractors (bars)
 const MORPHS = [
   [12, 15, 0, 1],
@@ -306,7 +316,7 @@ export function fxAt(bars, beat, reduced) {
     aberration: reduced ? 0 : 0.0012 * morph.k + 0.0014 * drop * (0.6 + 0.4 * kick),
     bloom: 0.5 + 0.1 * kick + 0.12 * drop + 0.15 * phrase + 0.1 * morph.k,
     exposure: 1 + 0.03 * kick + 0.07 * phrase,
-    // the dogs bounce to the kick
-    bounce: kick * (0.6 + 0.4 * drop),
+    // the bass through the dogs, harder in the drop
+    bass: reduced ? 0 : bassAt(beat.ph) * (0.85 + 0.35 * drop),
   }
 }
