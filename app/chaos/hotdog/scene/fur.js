@@ -141,8 +141,9 @@ in float vFar;
 out vec4 fragColor;
 
 void main() {
-  vec3 T = normalize(vT);
-  vec3 N = normalize(vN);
+  // normalised safely: a strand folded back on itself can interpolate its tangent to nothing
+  vec3 T = vT * inversesqrt(max(dot(vT, vT), 1e-12));
+  vec3 N = vN * inversesqrt(max(dot(vN, vN), 1e-12));
   vec3 V = normalize(cameraPosition - vP);
   // darker at the roots, light at the tips; the undercoat sits in its own shade. Kept gentle, and a strand thinner
   // than a pixel takes the coat's average colour, so hairs moving across pixels do not flicker against the skin
@@ -176,15 +177,21 @@ void main() {
   col = min(col, vec3(0.92));
   float d = length(vP - cameraPosition);
   col = mix(col, uFog, 1.0 - exp(-uFogDensity * uFogDensity * d * d));
+  // anything not a number goes black here, not into the bloom
+  if (any(equal(floatBitsToUint(col) & 0x7f800000u, uvec3(0x7f800000u)))) col = vec3(0.0);
   fragColor = vec4(col, vCover);
 }`
 
 /**
  * coats: [{obj, at(u, v, out: {p, n}), tip: THREE.Color, fleck?: THREE.Color, flecks?: 0..1}], up to six: obj is the
  * mesh the fur grows on (its matrixWorld is read every frame), at() a point and outward normal on it in its own frame.
- * strands: per coat. Returns {mesh, update(t, wind, lights), setShare(k)}.
+ * strands: per coat; segments: per drawn strand; coverage: thin strands fade by alpha to coverage (else opaque).
+ * Returns {mesh, update(t, wind, lights), setShare(k)}.
  */
-export function buildFur(coats, { strands = 9000, seed = 61, scale = 1 } = {}) {
+export function buildFur(
+  coats,
+  { strands = 9000, seed = 61, scale = 1, segments = SEG, coverage = true } = {}
+) {
   const r = rng(seed)
   const nC = coats.length
   const at = { p: new THREE.Vector3(), n: new THREE.Vector3() }
@@ -323,13 +330,13 @@ export function buildFur(coats, { strands = 9000, seed = 61, scale = 1 } = {}) {
     aTip.set([tint.r, tint.g, tint.b], s * 3)
   }
 
-  // one strand: SEG segments, two vertices across each: position.x runs root (0) to tip (1), position.y is the side
+  // one strand: `segments` long, two vertices across each: position.x runs root (0) to tip (1), position.y is the side
   const geo = new THREE.InstancedBufferGeometry()
-  const pos = new Float32Array((SEG + 1) * 2 * 3)
+  const pos = new Float32Array((segments + 1) * 2 * 3)
   const idx = []
-  for (let k = 0; k <= SEG; k++) {
-    pos.set([k / SEG, -1, 0, k / SEG, 1, 0], k * 6)
-    if (k < SEG) idx.push(2 * k, 2 * k + 1, 2 * k + 2, 2 * k + 1, 2 * k + 3, 2 * k + 2)
+  for (let k = 0; k <= segments; k++) {
+    pos.set([k / segments, -1, 0, k / segments, 1, 0], k * 6)
+    if (k < segments) idx.push(2 * k, 2 * k + 1, 2 * k + 2, 2 * k + 1, 2 * k + 3, 2 * k + 2)
   }
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
   geo.setIndex(idx)
@@ -364,7 +371,7 @@ export function buildFur(coats, { strands = 9000, seed = 61, scale = 1 } = {}) {
     fragmentShader: frag,
     uniforms,
     side: THREE.DoubleSide,
-    alphaToCoverage: true,
+    alphaToCoverage: coverage,
   })
   const mesh = new THREE.Mesh(geo, material)
   mesh.frustumCulled = false

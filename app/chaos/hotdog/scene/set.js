@@ -64,8 +64,11 @@ const CLAMP = {
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
     varying vec2 vUv;
+    // not a number, or infinite: the bloom would blur one such pixel across the frame
+    bool bad(float x) { return (floatBitsToUint(x) & 0x7f800000u) == 0x7f800000u; }
     void main() {
       vec4 c = texture2D(tDiffuse, vUv);
+      if (bad(c.r) || bad(c.g) || bad(c.b)) c.rgb = vec3(0.0);
       float m = max(c.r, max(c.g, c.b));
       gl_FragColor = vec4(c.rgb * min(1.0, 3.0 / max(m, 1e-4)), 1.0);
     }`,
@@ -306,7 +309,12 @@ export function startHotDogSet(host, options = {}) {
       }))
     )
     holds.forEach((h) => h.updateMatrixWorld(true))
-    const fur = buildFur(coats, { strands: small ? 4000 : 6500 })
+    // a phone's GPU gets fewer, simpler strands, opaque (alpha to coverage costs a tiled GPU dearly)
+    const fur = buildFur(coats, {
+      strands: small ? 2400 : 6500,
+      segments: small ? 5 : 7,
+      coverage: !small,
+    })
     scene.add(fur.mesh)
 
     progress('SCORING THE MELODY', 0.58)
@@ -702,32 +710,38 @@ export function startHotDogSet(host, options = {}) {
     if (!alive) return
 
     // -------------------------------------------------------- find this GPU's tier, behind the loader
+    // Timed by what a frame really costs the GPU: each test frame reads one pixel back, which waits until the GPU has
+    // finished it. The time between animation frames is not enough: Safari on a phone keeps calling at 60 fps while
+    // the GPU falls behind, and shows the frames it could not finish as black.
+    const gl = renderer.getContext()
+    const pixel = new Uint8Array(4)
     const timeFrames = async (n) => {
       const ts = []
-      let prev = await nextFrame()
-      const start = prev
-      for (let i = 0; i < n + 3; i++) {
-        render(t)
-        const now = await nextFrame()
-        if (i >= 3) ts.push(now - prev)
-        prev = now
+      const start = performance.now()
+      for (let i = 0; i < n + 2; i++) {
+        await nextFrame()
         if (!alive) return Infinity
-        if (now - start > 1500 && ts.length >= 4) break
+        const a = performance.now()
+        render(t)
+        gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel)
+        if (i >= 2) ts.push(performance.now() - a)
+        if (performance.now() - start > 1500 && ts.length >= 4) break
       }
       ts.sort((a, b) => a - b)
       return ts[ts.length >> 1]
     }
-    const GOOD = 21 // ms: about 48 fps or better
+    // ms of GPU work a frame: well inside 60 fps, with room for the browser's own compositing
+    const GOOD = 13
     if (!fixedTier && !q.has('pause')) {
       progress('TUNING TO THIS SCREEN', 0.84)
       const t0 = performance.now()
-      let med = await timeFrames(12)
-      while (alive && med > GOOD && tier < TIERS.length - 1 && performance.now() - t0 < 4000) {
+      let med = await timeFrames(10)
+      while (alive && med > GOOD && tier < TIERS.length - 1 && performance.now() - t0 < 7000) {
         progress('TUNING TO THIS SCREEN', Math.min(0.97, 0.84 + 0.03 * tier))
         tier++
         sizeDirty = true
-        const next = await timeFrames(12)
-        if (next > med * 0.88) {
+        const next = await timeFrames(10)
+        if (next > med * 0.92) {
           tier--
           sizeDirty = true
           break
