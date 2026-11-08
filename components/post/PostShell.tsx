@@ -191,7 +191,9 @@ export default function PostShell({
             <PostToc toc={[]} articleId="post-article" />
           )}
         </aside>
-        <article id="post-article" className="ed-prose">
+        {/* Each block of the body (paragraph, heading, figure, table...) fades in as it
+            scrolls into view: see components/edition/Reveal.tsx. */}
+        <article id="post-article" className="ed-prose" data-reveal-children="">
           {children}
         </article>
         {tags.length > 0 && (

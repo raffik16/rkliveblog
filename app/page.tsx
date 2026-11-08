@@ -10,6 +10,7 @@ import EdPanel from '@/components/edition/EdPanel'
 import EdPill from '@/components/edition/EdPill'
 import EdNote from '@/components/edition/EdNote'
 import PostRow from '@/components/PostRow'
+import SetLauncher from '@/components/SetLauncher'
 import NewsletterForm from '@/components/NewsletterForm'
 import { postNumber } from '@/lib/posts'
 import tagData from './tag-data.json'
@@ -124,9 +125,13 @@ export default async function Page() {
                 sub={demo.tech.slice(0, 3).join(' · ')}
                 actions={
                   <>
-                    <EdPill href={demo.href} variant="dark" arrow>
-                      Open demo<span className="sr-only">: {demo.title}</span>
-                    </EdPill>
+                    {demo.setLauncher ? (
+                      <SetLauncher href={demo.href} name={demo.title} />
+                    ) : (
+                      <EdPill href={demo.href} variant="dark" arrow>
+                        Open demo<span className="sr-only">: {demo.title}</span>
+                      </EdPill>
+                    )}
                     {demo.postHref && (
                       <EdPill href={demo.postHref} variant="outline">
                         Read the story<span className="sr-only">: {demo.title}</span>

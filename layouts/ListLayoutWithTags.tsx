@@ -147,7 +147,7 @@ export default function ListLayoutWithTags({
 
       {!displayPosts.length && (
         <section className="ed-list-empty" aria-live="polite">
-          <div className="ed-shell">
+          <div className="ed-shell" data-reveal="">
             <p className="ed-list-empty__title">Nothing matches that.</p>
             <p className="ed-lede">Try fewer topics or a shorter search.</p>
             <div className="ed-section-actions">
@@ -177,7 +177,7 @@ export default function ListLayoutWithTags({
             aria-labelledby={`${id}-title`}
           >
             <div className="ed-shell">
-              <header className="ed-year__head">
+              <header className="ed-year__head" data-reveal="">
                 <h2 id={`${id}-title`} className="ed-year__title">
                   {group.year}
                 </h2>
