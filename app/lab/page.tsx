@@ -4,6 +4,7 @@ import { genPageMetadata } from 'app/seo'
 import EdChapterHead from '@/components/edition/EdChapterHead'
 import EdNote from '@/components/edition/EdNote'
 import EdPill from '@/components/edition/EdPill'
+import SetLauncher from '@/components/SetLauncher'
 
 export const metadata = genPageMetadata({
   title: 'Lab',
@@ -71,17 +72,26 @@ export default function LabPage() {
                       </li>
                     ))}
                   </ul>
-                </div>
-                <div className="ed-demo__actions">
-                  <EdPill href={demo.href} variant="light" size="lg" arrow>
-                    Open demo<span className="sr-only">: {demo.title}</span>
-                  </EdPill>
-                  {demo.postHref && (
-                    <EdPill href={demo.postHref} variant="outline" size="lg">
-                      Read the story<span className="sr-only">: {demo.title}</span>
-                    </EdPill>
+                  {demo.setLauncher && (
+                    <div className="ed-demo__set">
+                      <SetLauncher href={demo.href} name={demo.title} variant="light" size="lg" />
+                    </div>
                   )}
                 </div>
+                {(!demo.setLauncher || demo.postHref) && (
+                  <div className="ed-demo__actions">
+                    {!demo.setLauncher && (
+                      <EdPill href={demo.href} variant="light" size="lg" arrow>
+                        Open demo<span className="sr-only">: {demo.title}</span>
+                      </EdPill>
+                    )}
+                    {demo.postHref && (
+                      <EdPill href={demo.postHref} variant="outline" size="lg">
+                        Read the story<span className="sr-only">: {demo.title}</span>
+                      </EdPill>
+                    )}
+                  </div>
+                )}
               </li>
             ))}
           </ol>

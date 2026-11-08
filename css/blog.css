@@ -2071,6 +2071,128 @@
     color: var(--ed-fg-2);
   }
 
+  .ed-demo__set {
+    margin-top: 24px;
+  }
+
+  /* Set launcher (components/SetLauncher.tsx): party name + tempo fields, then Open demo, then
+     the link they make. Sits in the homepage panel's actions (above its whole-panel link) and
+     under the demo's description on /lab. */
+  .ed-set {
+    display: grid;
+    width: 100%;
+    max-width: 460px;
+    gap: 12px;
+  }
+
+  .ed-panel__actions > .ed-set {
+    flex: 1 1 100%;
+  }
+
+  .ed-set__fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 96px;
+    gap: 8px;
+  }
+
+  .ed-set__field {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .ed-set__label {
+    font-family: var(--ed-font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ed-fg-3);
+  }
+
+  .ed-set__input {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    padding: 0 14px;
+    border: 1px solid var(--ed-line-strong);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.35);
+    font-family: var(--ed-font-body);
+    font-size: 16px; /* 16px keeps iOS from zooming in on focus */
+    color: var(--ed-fg);
+    transition: border-color 0.2s ease;
+  }
+
+  .ed-set__input::placeholder {
+    color: var(--ed-fg-3);
+    opacity: 1;
+  }
+
+  .ed-set__input:focus,
+  .ed-set__input:focus-visible {
+    border-color: var(--ed-signal);
+    outline: none;
+    box-shadow: none;
+  }
+
+  .ed-set__input:user-invalid {
+    border-color: #ff9b85;
+  }
+
+  /* The demo prints the name in capitals on the record's label; show it that way. */
+  .ed-set__input--title {
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .ed-set__input--bpm {
+    appearance: textfield;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+
+  .ed-set__input--bpm::-webkit-inner-spin-button,
+  .ed-set__input--bpm::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
+  }
+
+  .ed-set__go {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+  }
+
+  .ed-set__go .ed-pill {
+    cursor: pointer;
+  }
+
+  .ed-set__hint {
+    margin: 0;
+    font-family: var(--ed-font-mono);
+    font-size: 11px;
+    color: var(--ed-fg-3);
+  }
+
+  .ed-set__link {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0;
+    font-family: var(--ed-font-mono);
+    font-size: 11px;
+    color: var(--ed-fg-2);
+  }
+
+  .ed-set__link code {
+    min-width: 0;
+    font-family: inherit;
+    overflow-wrap: anywhere;
+    user-select: all; /* one tap selects the whole link to copy */
+  }
+
   /* ========================================================== projects */
   .ed-project .ed-panel__media {
     order: -1;
