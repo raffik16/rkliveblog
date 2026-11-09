@@ -1,13 +1,25 @@
 /** @type {import("pliny/config").PlinyConfig } */
 const siteMetadata = {
   title: 'Raffi Keklikian · Engineering, AI & Creative Code',
-  author: 'Raffik Keklikian',
+  // The same name as on raffi.website, so both sites describe one person.
+  author: 'Raffi Keklikian',
   headerTitle: 'Raffi Keklikian',
   description:
     'Deep dives into software engineering, AI-assisted development, and creative coding. Practical guides, interactive demos, and honest takes on the tools shaping modern development.',
   language: 'en-us',
   theme: 'dark', // dark only, like raffi.website (see app/theme-providers.tsx)
-  siteUrl: 'https://rkliveblog.vercel.app',
+  // The address readers and search engines should use for the blog: the one raffi.website
+  // links to. Canonical links, the sitemap, the feeds, llms.txt and the structured data are all
+  // built from it. (The project's rkliveblog.vercel.app address serves the same pages; with this
+  // set, search engines file them under the address below.)
+  siteUrl: 'https://me.raffi.website',
+  // The main site, and the author as it describes him. The one full Person record is on
+  // raffi.website/about; the blog's structured data points at it by id (lib/schema.ts) instead of
+  // describing a second person.
+  mainSite: 'https://raffi.website',
+  authorId: 'https://raffi.website/#person',
+  authorUrl: 'https://raffi.website/about',
+  authorImage: 'https://raffi.website/raffi.jpg',
   siteRepo: 'https://github.com/raffik16/rkliveblog',
   siteLogo: `${process.env.BASE_PATH || ''}/static/favicons/favicon.svg`,
   socialBanner: `${process.env.BASE_PATH || ''}/static/images/twitter-card.png`,

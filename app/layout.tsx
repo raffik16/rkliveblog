@@ -12,6 +12,7 @@ import siteMetadata from '@/data/siteMetadata'
 import { ThemeProviders } from './theme-providers'
 import { Metadata, Viewport } from 'next'
 import { twitterHandle } from './seo'
+import { authorPerson, jsonLdGraph, websiteSchema } from '@/lib/schema'
 import WebMCPTools from '@/components/WebMCPTools'
 import EdBackdrop from '@/components/edition/EdBackdrop'
 import EdRail from '@/components/edition/EdRail'
@@ -141,29 +142,11 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       </Script>
       {/* End Google Tag Manager */}
       <body className="antialiased">
-        {/* Organization Schema */}
+        {/* On every page: this blog and its author, each with an id the page's own structured
+            data (a post, the About page) points back to. See lib/schema.ts. */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'WebSite',
-              name: siteMetadata.title,
-              description: siteMetadata.description,
-              url: siteMetadata.siteUrl,
-              author: {
-                '@type': 'Person',
-                name: siteMetadata.author,
-                url: siteMetadata.siteUrl,
-                sameAs: [siteMetadata.github, siteMetadata.x, siteMetadata.linkedin],
-              },
-              publisher: {
-                '@type': 'Person',
-                name: siteMetadata.author,
-                url: siteMetadata.siteUrl,
-              },
-            }),
-          }}
+          dangerouslySetInnerHTML={{ __html: jsonLdGraph(websiteSchema(), authorPerson()) }}
         />
         {/* Google Tag Manager (noscript) */}
         <noscript>
