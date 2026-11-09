@@ -10,7 +10,7 @@ const siteMetadata = {
   theme: 'dark', // dark only, like raffi.website (see app/theme-providers.tsx)
   // The address readers and search engines should use for the blog: the one raffi.website
   // links to. Canonical links, the sitemap, the feeds, llms.txt and the structured data are all
-  // built from it. (The project's rkliveblog.vercel.app address serves the same pages; with this
+  // built from it. (The project's own *.vercel.app address may serve the same pages; with this
   // set, search engines file them under the address below.)
   siteUrl: 'https://me.raffi.website',
   // The main site, and the author as it describes him. The one full Person record is on
