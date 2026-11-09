@@ -1,4 +1,5 @@
 const { withContentlayer } = require('next-contentlayer2')
+const siteMetadata = require('./data/siteMetadata')
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
@@ -86,6 +87,23 @@ module.exports = () => {
         {
           source: '/(.*)',
           headers: securityHeaders,
+        },
+        // The Markdown copy of each post (scripts/llms.mjs) is the same writing as the post's
+        // page. This tells search engines the page is the one to list, so the two don't compete.
+        {
+          source: '/blog/:slug(.+)\\.md',
+          headers: [
+            {
+              key: 'Link',
+              value: `<${siteMetadata.siteUrl}/blog/:slug>; rel="canonical"`,
+            },
+          ],
+        },
+        // Every post in one file, for AI assistants. Search engines should list the posts
+        // themselves, not this copy of all of them.
+        {
+          source: '/llms-full.txt',
+          headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
         },
       ]
     },
