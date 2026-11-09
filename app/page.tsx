@@ -17,7 +17,10 @@ import tagData from './tag-data.json'
 
 // The root layout no longer sets a canonical (it was inherited by every page), so the
 // homepage declares its own. Setting `alternates` here replaces the root's, so keep RSS.
+// The description is the hero's sentence cut to fit a search result, with the author's name.
 export const metadata: Metadata = {
+  description:
+    "Raffi Keklikian's blog: deep dives into software engineering, AI-assisted development and creative coding, with demos that run in your browser.",
   alternates: {
     canonical: '/',
     types: {

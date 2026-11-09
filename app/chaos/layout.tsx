@@ -1,13 +1,6 @@
-import { genPageMetadata } from 'app/seo'
-
-export const metadata = genPageMetadata({
-  title: 'Chaos Is an Art Form',
-  description:
-    'A cross-plane V8, a Strandbeest and a Cessna 337 landing gear run, come apart and reassemble inside five strange attractors. Nothing here is random: full screen, no controls, three.js.',
-  image: '/static/images/og/chaos.jpg',
-  path: '/chaos',
-})
-
+// The Chaos pieces fill the whole window, so this layout adds nothing around them. Each page
+// sets its own title and description (page.tsx, hotdog/page.tsx): a title set here would stop
+// the " | Raffi Keklikian" ending from the root layout reaching the pages below.
 export default function ChaosLayout({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }

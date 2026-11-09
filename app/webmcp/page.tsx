@@ -7,7 +7,9 @@ const description =
   'Generate and check WebMCP tools against the current spec draft: document.modelContext.registerTool(), AbortSignal cleanup and experimental declarative forms.'
 
 export const metadata: Metadata = {
-  title: 'WebMCP Toolkit - Generate & Validate WebMCP Tools',
+  // On its own, without the " | Raffi Keklikian" ending: with it the title runs past what a
+  // search result shows.
+  title: { absolute: 'WebMCP Toolkit - Generate & Validate WebMCP Tools' },
   description,
   alternates: {
     canonical: '/webmcp',

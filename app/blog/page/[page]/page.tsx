@@ -15,7 +15,11 @@ export async function generateMetadata(props: {
   // Page 1 is the same listing as /blog, so it points its canonical there
   const path = pageNumber > 1 ? `/blog/page/${pageNumber}` : '/blog'
   return genPageMetadata({
-    title: pageNumber > 1 ? `Blog - Page ${pageNumber}` : 'Blog',
+    title: pageNumber > 1 ? `Blog, page ${pageNumber}` : 'Blog',
+    description:
+      pageNumber > 1
+        ? `Page ${pageNumber} of the blog's posts, newest first: web engineering, AI coding tools and creative code from Raffi Keklikian.`
+        : 'Every post on the blog, newest first: web engineering, AI coding tools and creative code from Raffi Keklikian, a web developer in Los Angeles.',
     path,
   })
 }
