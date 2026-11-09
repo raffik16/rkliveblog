@@ -25,6 +25,11 @@ public/sitemap.xml
 # rss feed
 /public/feed.xml
 
+# llms.txt, llms-full.txt and the Markdown copy of each post (scripts/llms.mjs)
+/public/llms.txt
+/public/llms-full.txt
+/public/blog/
+
 # search
 /public/search.json
 

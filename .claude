@@ -57,7 +57,7 @@ title: 'Your Post Title Here'
 date: '2025-11-02'
 tags: ['tag1', 'tag2', 'tag3']
 draft: false
-summary: 'Brief 150-200 character description for SEO and social media previews.'
+summary: 'One or two sentences, 155 characters or fewer, for search results and link previews.'
 authors: ['default']
 layout: PostLayout
 ---
@@ -71,7 +71,7 @@ layout: PostLayout
 | `date` | date | ✅ Yes | - | Publication date in YYYY-MM-DD format |
 | `tags` | array | ❌ No | `[]` | Lowercase kebab-case tags: `['next-js', 'react']` |
 | `draft` | boolean | ❌ No | `false` | Set `true` to hide from production builds |
-| `summary` | string | ⭐ Recommended | - | 150-200 chars for SEO and social sharing |
+| `summary` | string | ⭐ Recommended | - | 155 characters or fewer, for search results and link previews |
 | `authors` | array | ❌ No | `['default']` | Author slugs: `['default']` or `['sparrowhawk']` |
 | `layout` | string | ❌ No | `PostLayout` | Layout template (see Layout Guide below) |
 | `lastmod` | date | ❌ No | - | Last modified date (YYYY-MM-DD) for SEO |
@@ -104,14 +104,14 @@ layout: PostLayout
 - Set `true` for work-in-progress posts
 
 **Summary:**
-- String, 150-200 characters ideal
+- String, 155 characters or fewer (search results cut off anything longer)
 - Used in blog listings, SEO meta description, social cards
 - Should be compelling and descriptive
 - No markdown formatting in summary
 
 **Authors:**
 - Array of author slugs
-- Available: `['default']` (Raffik Keklikian), `['sparrowhawk']`
+- Available: `['default']` (Raffi Keklikian), `['sparrowhawk']`
 - Single author: `['default']`
 - Multiple: `['default', 'sparrowhawk']`
 
@@ -235,9 +235,9 @@ Reference `/app/tag-data.json` for counts. Active tags include:
 frontmatter here
 ---
 
-# Introduction / Opening
-
-Brief introduction that hooks the reader and establishes context.
+Brief introduction that hooks the reader and establishes context. No heading above it:
+the `title` in the frontmatter is the page's one H1, so the body never uses a single `#`.
+Start sections at `##`.
 
 ## Main Section 1
 
@@ -454,7 +454,7 @@ bibliography: references-data.bib
 ```yaml
 authors: ['default']
 ```
-- Name: Raffik Keklikian
+- Name: Raffi Keklikian (the same name as on raffi.website)
 - Avatar: `/static/images/avatar.png`
 - Occupation: Developer & Writer
 - Company: rkRanched
@@ -591,7 +591,7 @@ draft: false
    - Code blocks with language specified
 
 6. **Generate compelling summary**:
-   - 150-200 characters
+   - 155 characters or fewer
    - Descriptive and engaging
    - No markdown formatting
 
@@ -631,7 +631,10 @@ Before considering a post complete, verify:
 - [ ] Required fields present: `title`, `date`
 - [ ] Date in correct format: `YYYY-MM-DD`
 - [ ] Tags in array format and kebab-case: `['tag1', 'tag2']`
-- [ ] Summary present and 150-200 characters
+- [ ] Summary present and 155 characters or fewer
+- [ ] No single-`#` heading in the body (sections start at `##`)
+- [ ] `lastmod` set to today when an existing post is edited
+- [ ] Referral links: disclosed near the top of the post, and their host listed in `data/referralLinks.ts`
 - [ ] Images paths correct (start with `/static/images/`)
 - [ ] Draft status set correctly (`true` or `false`)
 - [ ] Layout appropriate for content type
@@ -687,7 +690,7 @@ yarn format
 
 ### Optimize SEO By:
 1. Writing compelling titles (<60 chars)
-2. Adding descriptive summaries (150-200 chars)
+2. Adding descriptive summaries (155 characters or fewer)
 3. Using relevant tags
 4. Including featured images
 5. Using proper heading hierarchy
@@ -732,12 +735,32 @@ yarn format
 
 ---
 
+## Search Engines and AI Assistants
+
+What the site does on its own, so a post only needs good frontmatter:
+
+- **One H1 per page.** The post's `title` is the H1. A `# Heading` in the body is rendered as an H2, but write `##` anyway.
+- **Titles.** A post title goes out on its own when adding ` | Raffi Keklikian` would pass 60 characters.
+- **Structured data.** Every post gets `BlogPosting` and breadcrumb data, with the author pointing at the same person raffi.website describes (`lib/schema.ts`).
+- **llms.txt.** The build writes `/llms.txt` (the post index), `/llms-full.txt` (every post in full) and `/blog/<slug>.md` for each post (`scripts/llms.mjs`). Drafts are left out.
+- **Topic pages.** A tag with a single post is kept out of search results until a second post uses it, so prefer existing tags.
+- **Referral links.** Links to the hosts in `data/referralLinks.ts` are marked `rel="sponsored nofollow"`. A post with referral links needs the disclosure note near the top:
+
+  ```markdown
+  > [!NOTE]
+  > Some links in this post are referral links. If you sign up through them I may earn a commission, at no extra cost to you.
+  ```
+
+- **Dates.** Set `lastmod` whenever a published post changes. The sitemap, the "Updated" note and the structured data all read it.
+
+---
+
 ## Site Configuration Reference
 
 **Site Details:**
 - Title: "rkRanched - Daily Moments & Insights"
-- Author: Raffik Keklikian
-- URL: `https://rkliveblog.vercel.app`
+- Author: Raffi Keklikian
+- URL: `https://me.raffi.website` (`siteUrl` in `data/siteMetadata.js`; canonical links, the sitemap, the feeds and `llms.txt` are all built from it)
 
 **Features Enabled:**
 - Comments: Giscus (GitHub Discussions)
@@ -762,7 +785,7 @@ rkliveblog/
 │   │       ├── part-1.mdx
 │   │       └── part-2.mdx
 │   ├── authors/                      ← Author profiles
-│   │   ├── default.mdx              ← Default author (Raffik)
+│   │   ├── default.mdx              ← Default author (Raffi)
 │   │   └── sparrowhawk.mdx          ← Example author
 │   └── siteMetadata.js               ← Site configuration
 ├── public/
@@ -795,8 +818,6 @@ summary: 'A comprehensive guide to starting your first Next.js project, covering
 authors: ['default']
 layout: PostLayout
 ---
-
-# Introduction to Next.js
 
 Next.js has become the go-to framework for React developers who want to build fast, production-ready applications. In this guide, I'll walk you through everything you need to get started.
 
@@ -895,6 +916,6 @@ You now have a solid foundation for building with Next.js. Experiment with routi
 
 ---
 
-**Last Updated**: 2025-11-02
-**Maintained By**: Raffik Keklikian
+**Last Updated**: 2026-11-09
+**Maintained By**: Raffi Keklikian
 **Repository**: rkliveblog

@@ -1,6 +1,9 @@
+import siteMetadata from '@/data/siteMetadata'
+
 // Links back to raffi.website, the main site this blog belongs to. The blog uses the same
 // design system (css/edition.css); these are the places the two sites hand off to each other.
-const mainSite = 'https://raffi.website'
+// The address itself is set once, in data/siteMetadata.js (the build scripts read it there too).
+const mainSite: string = siteMetadata.mainSite
 
 const brand = {
   name: 'Raffi Keklikian',

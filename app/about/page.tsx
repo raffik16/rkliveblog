@@ -4,34 +4,37 @@ import AuthorLayout from '@/layouts/AuthorLayout'
 import { coreContent } from 'pliny/utils/contentlayer'
 import { genPageMetadata } from 'app/seo'
 import siteMetadata from '@/data/siteMetadata'
+import { LANGUAGE, WEBSITE_ID, authorPerson, breadcrumbSchema, jsonLdGraph } from '@/lib/schema'
+
+const description =
+  "I'm Raffi Keklikian, a web developer in Los Angeles. On this blog I write about AI-assisted development, creative coding and the tools behind the work."
 
 export const metadata = genPageMetadata({
   title: 'About',
-  description:
-    'Raffik Keklikian - Software engineer and writer exploring AI-assisted development, creative coding, and building tools that matter. Based in the intersection of engineering and creativity.',
+  description,
   path: '/about',
 })
 
 export default function Page() {
   const author = allAuthors.find((p) => p.slug === 'default') as Authors
   const mainContent = coreContent(author)
+  const pageUrl = `${siteMetadata.siteUrl}/about`
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
+  // A profile page about the same Person the main site declares (raffi.website/about holds the
+  // full record: employer, past roles, languages). Only what this page itself says is repeated
+  // here, so the two sites never describe him differently.
+  const profile = {
     '@type': 'ProfilePage',
+    '@id': `${pageUrl}#profile`,
+    url: pageUrl,
+    name: `About ${author.name}`,
+    description,
+    inLanguage: LANGUAGE,
+    isPartOf: { '@id': WEBSITE_ID },
     mainEntity: {
-      '@type': 'Person',
-      name: author.name,
+      ...authorPerson(),
       description:
-        'Software engineer and writer exploring AI-assisted development, creative coding, and building tools that matter.',
-      url: `${siteMetadata.siteUrl}/about`,
-      image: `${siteMetadata.siteUrl}${author.avatar}`,
-      jobTitle: author.occupation,
-      worksFor: {
-        '@type': 'Organization',
-        name: author.company,
-      },
-      sameAs: [author.github, author.linkedin, author.x, author.instagram].filter(Boolean),
+        'Web developer in Los Angeles. He writes about AI-assisted development, creative coding and developer tools on this blog, and builds websites for clients at raffi.website.',
     },
   }
 
@@ -39,7 +42,9 @@ export default function Page() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{
+          __html: jsonLdGraph(profile, breadcrumbSchema([['About', '/about']])),
+        }}
       />
       <AuthorLayout content={mainContent}>
         <MDXLayoutRenderer code={author.body.code} />

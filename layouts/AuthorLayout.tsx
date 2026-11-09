@@ -42,12 +42,14 @@ export default function AuthorLayout({ children, content }: Props) {
             <span className="ed-meta__rule" aria-hidden="true" />
             <span>{brand.place}, CA</span>
           </div>
+          {/* The space between the two lines keeps the heading's text as "Raffi Keklikian" for
+              search engines and screen readers. Each line is a block, so it is never drawn. */}
           <h1 id="about-title" className="ed-about__name">
             <span className="ed-hero__line">
               <span className="ed-rise" style={{ ['--d' as string]: 120 }}>
                 {first}
               </span>
-            </span>
+            </span>{' '}
             {rest.length > 0 && (
               <span className="ed-hero__line">
                 <span className="ed-rise" style={{ ['--d' as string]: 220 }}>

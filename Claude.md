@@ -61,7 +61,7 @@ Every blog post MUST have:
 
 For better SEO and organization:
 
-- **summary**: Brief description (150-200 characters)
+- **summary**: Brief description (155 characters or fewer, so search results show all of it)
 - **tags**: Array of relevant tags
 - **draft**: Set to `true` for unpublished posts
 
@@ -106,7 +106,7 @@ bibliography: references-data.bib
 | `tags`         | array   | ❌ No    | List of tags for categorization                   |
 | `lastmod`      | date    | ❌ No    | Last modified date (for SEO)                      |
 | `draft`        | boolean | ❌ No    | `true` to hide from production builds             |
-| `summary`      | string  | ❌ No    | Brief description (shown in listings, SEO)        |
+| `summary`      | string  | ❌ No    | Brief description, 155 characters or fewer        |
 | `images`       | array   | ❌ No    | Featured images for Open Graph/Twitter cards      |
 | `authors`      | array   | ❌ No    | Author slugs (e.g., `['default', 'sparrowhawk']`) |
 | `layout`       | string  | ❌ No    | Layout template (see below)                       |
@@ -221,6 +221,8 @@ Claude will set `draft: true` automatically.
 After creating a post, verify:
 
 - [ ] Frontmatter is properly formatted (no YAML errors)
+- [ ] The body has no single-`#` heading (the title is the page's H1; sections start at `##`)
+- [ ] `lastmod` is today's date if you edited an existing post
 - [ ] Date is in correct format (YYYY-MM-DD)
 - [ ] Tags are in array format: `['tag1', 'tag2']`
 - [ ] Images paths are correct (if used)
@@ -391,6 +393,30 @@ The blog uses the same visual system as the main site, [raffi.website](https://r
 
 ---
 
+## Search Engines and AI Assistants
+
+How the blog describes itself to Google, Bing and AI assistants. Keep new pages on it:
+
+- **Address.** `siteUrl` in `data/siteMetadata.js` is the blog's public address
+  (`https://me.raffi.website`). Canonical links, the sitemap, the feeds, `llms.txt` and the
+  structured data are all built from it, so change it there and nowhere else.
+- **One author, two sites.** The author is the Person that raffi.website/about declares
+  (`https://raffi.website/#person`). `lib/schema.ts` builds every JSON-LD block from that id, so
+  the blog never describes a second person. Use its helpers (`authorRef`, `breadcrumbSchema`,
+  `jsonLdGraph`) rather than writing JSON-LD by hand.
+- **Page metadata.** Use `genPageMetadata({ title, description, path })` from `app/seo.tsx`.
+  Descriptions are 155 characters or fewer. Topic pages get theirs from `lib/tagMetadata.ts`;
+  a topic with one post is `noindex` until a second post uses the tag.
+- **One H1 per page.** A post's `title` is its H1; a `# Heading` in the body renders as an H2
+  (`components/MDXComponents.tsx`).
+- **llms.txt.** After the build, `scripts/llms.mjs` writes `/llms.txt`, `/llms-full.txt` and a
+  Markdown copy of each post at `/blog/<slug>.md`. They are build output (ignored by git).
+- **Referral links.** Add the programme's host to `data/referralLinks.ts` and the disclosure note
+  to the post; `components/Link.tsx` then marks those links `rel="sponsored nofollow"`.
+- **New top-level pages** go in `app/sitemap.ts` (`OTHER_PAGES`).
+
+---
+
 ## Quick Reference: File Structure
 
 ```
@@ -428,8 +454,6 @@ summary: 'Welcome to my new blog! This is my first post using the Next.js starte
 authors: ['default']
 layout: PostLayout
 ---
-
-# Welcome!
 
 This is my first blog post using this awesome Next.js starter template.
 

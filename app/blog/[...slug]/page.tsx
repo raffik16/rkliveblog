@@ -13,7 +13,12 @@ import { Metadata } from 'next'
 import siteMetadata from '@/data/siteMetadata'
 import { twitterHandle } from 'app/seo'
 import { notFound } from 'next/navigation'
-import { postNumber } from '@/lib/posts'
+import { postNumber, readMinutes } from '@/lib/posts'
+import { tagLabel } from '@/lib/tags'
+import { LANGUAGE, authorRef, blogRef, breadcrumbSchema, jsonLdGraph } from '@/lib/schema'
+
+/** Where search results cut a page title off. */
+const TITLE_MAX = 60
 
 const defaultLayout = 'PostLayout'
 const layouts = {
@@ -51,12 +56,25 @@ export async function generateMetadata(props: {
   })
 
   const postUrl = post.canonicalUrl || `${siteMetadata.siteUrl}/blog/${slug}`
+  // Search results cut a title off at about 60 characters, so a long post title goes out on its
+  // own; a short one keeps the " | Raffi Keklikian" ending from the root layout's template.
+  const suffixed = `${post.title} | ${siteMetadata.headerTitle}`
 
   return {
-    title: post.title,
+    title: suffixed.length <= TITLE_MAX ? post.title : { absolute: post.title },
     description: post.summary,
+    authors: authorDetails.map((author) =>
+      author.slug === 'default'
+        ? { name: author.name, url: siteMetadata.authorUrl }
+        : { name: author.name }
+    ),
     alternates: {
       canonical: postUrl,
+      // The same post as plain Markdown, for AI assistants and other tools that would rather not
+      // read the page's HTML (written by scripts/llms.mjs after the build).
+      types: {
+        'text/markdown': `${siteMetadata.siteUrl}/blog/${slug}.md`,
+      },
     },
     openGraph: {
       title: post.title,
@@ -107,25 +125,36 @@ export default async function Page(props: { params: Promise<{ slug: string[] }> 
   })
   const mainContent = coreContent(post)
   const postUrl = post.canonicalUrl || `${siteMetadata.siteUrl}/blog/${slug}`
+  // The post, described for search engines and AI assistants: what it is, when it was written
+  // and updated, how long it is, and who wrote it. `structuredData` (contentlayer.config.ts)
+  // supplies the headline, dates, description and image; the layout already sets the context.
+  const { '@context': _context, ...article } = post.structuredData as Record<string, unknown>
+  const minutes = readMinutes(post.readingTime)
+  const words = (post.readingTime as { words?: number } | undefined)?.words
   const jsonLd = {
-    ...post.structuredData,
+    ...article,
+    '@id': `${postUrl}#article`,
     url: postUrl,
     mainEntityOfPage: {
       '@type': 'WebPage',
       '@id': postUrl,
     },
-    keywords: post.tags?.join(', '),
-    author: authorDetails.map((author) => ({
-      '@type': 'Person',
-      name: author.name,
-      url: siteMetadata.siteUrl,
-    })),
-    publisher: {
-      '@type': 'Person',
-      name: siteMetadata.author,
-      url: siteMetadata.siteUrl,
-    },
+    isPartOf: blogRef(),
+    inLanguage: LANGUAGE,
+    keywords: post.tags?.map(tagLabel).join(', '),
+    articleSection: post.tags?.[0] ? tagLabel(post.tags[0]) : undefined,
+    wordCount: words,
+    timeRequired: minutes ? `PT${minutes}M` : undefined,
+    // Raffi is the Person raffi.website declares; a guest author is just a name.
+    author: authorDetails.map((author) =>
+      author.slug === 'default' ? authorRef() : { '@type': 'Person', name: author.name }
+    ),
+    publisher: authorRef(),
   }
+  const breadcrumbs = breadcrumbSchema([
+    ['Blog', '/blog'],
+    [post.title, `/blog/${slug}`],
+  ])
 
   const Layout = layouts[post.layout || defaultLayout]
 
@@ -133,7 +162,7 @@ export default async function Page(props: { params: Promise<{ slug: string[] }> 
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdGraph(jsonLd, breadcrumbs) }}
       />
       <Layout
         content={mainContent}

@@ -62,12 +62,15 @@ export default function HomeHero({ posts, topics, demos, chapters }: Props) {
             <p className="ed-hero__name ed-intro" style={{ ['--ed-in' as string]: 1 }}>
               {brand.name}, notes from a web developer in {brand.place}
             </p>
+            {/* The space between the two lines keeps the heading's text as "Engineering, AI and
+                creative code." for search engines and screen readers. Each line is a block, so
+                it is never drawn. */}
             <h1 id="home-title" className="ed-hero__title">
               <span className="ed-hero__line">
                 <span className="ed-rise" style={{ ['--d' as string]: 180 }}>
                   Engineering, AI
                 </span>
-              </span>
+              </span>{' '}
               <span className="ed-hero__line">
                 <span className="ed-rise" style={{ ['--d' as string]: 280 }}>
                   and <em>creative code.</em>
