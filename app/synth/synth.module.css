@@ -1,0 +1,1247 @@
+/* /synth: a hardware-style instrument drawn in CSS, on the Edition tokens (css/edition.css).
+
+   The page is exactly one window tall. The instrument is drawn to a fixed design, in one of
+   four arrangements, and scaled to the largest size that fits the space it is given:
+
+     wide    everything on show, the shape of a desktop synth      (desktops, tablets on their side)
+     tall    everything on show, stacked                           (tablets upright)
+     phone   screen, pads, and one page of controls at a time      (phones upright)
+     flat    the same pages beside the screen, over two octaves    (phones on their side)
+
+   Every size inside the instrument is a multiple of --u, one design pixel. Each arrangement
+   sets --u from the size of the space (.fit), so the whole thing grows and shrinks as one
+   object and never needs to scroll. */
+
+/* Registered as a colour so the body can fade from one colourway to the next */
+@property --synth-body {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #7b55d9;
+}
+
+/* Registered as a length so it is worked out once, on the body, and inherited as a number */
+@property --u {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 1px;
+}
+
+/* ------------------------------------------------------------------ the page */
+.stage {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  height: 100vh;
+  /* The part of the window that is really visible, as a phone's toolbars come and go */
+  height: 100dvh;
+  min-height: 330px;
+  padding: calc(var(--ed-nav-h) + 8px) max(12px, env(safe-area-inset-right, 0px)) 12px
+    max(12px, env(safe-area-inset-left, 0px));
+  color: var(--ed-fg);
+  font-family: var(--ed-font-body);
+}
+
+@media (min-width: 720px) {
+  .stage {
+    gap: 12px;
+    padding-right: max(24px, env(safe-area-inset-right, 0px));
+    padding-bottom: 20px;
+    padding-left: max(24px, env(safe-area-inset-left, 0px));
+  }
+}
+
+.head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 16px;
+  min-height: 36px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--ed-font-display);
+  font-size: clamp(22px, 2.5vw, 32px);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.title em {
+  font-family: var(--ed-font-serif);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.hint {
+  display: none;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--ed-fg-3);
+  font-family: var(--ed-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 1100px) {
+  .hint {
+    display: block;
+  }
+}
+
+.hint kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--ed-line);
+  border-radius: 3px;
+  color: var(--ed-fg-2);
+  font: inherit;
+}
+
+/* The letter keys and Shift mean nothing on a touch screen */
+@media (hover: none) {
+  .desk,
+  .hotkey {
+    display: none;
+  }
+}
+
+.headSide {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.colours {
+  display: none;
+  gap: 8px;
+}
+
+.colour {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid var(--ed-ink);
+  border-radius: 50%;
+  background: var(--synth-body);
+  box-shadow: 0 0 0 1px var(--ed-line-strong);
+  cursor: pointer;
+  transition:
+    transform 0.2s var(--ed-ease),
+    box-shadow 0.2s,
+    --synth-body 0.6s var(--ed-ease);
+}
+
+.colour:hover {
+  transform: scale(1.15);
+}
+
+.colour[aria-pressed='true'],
+.cycle {
+  box-shadow: 0 0 0 2px var(--ed-fg);
+}
+
+@media (min-width: 520px) {
+  .colours {
+    display: flex;
+  }
+
+  .cycle {
+    display: none;
+  }
+}
+
+/* A phone on its side has no height to spare: the instrument takes all of it. The heading
+   stays for screen readers and search engines. */
+@media (max-height: 480px) and (orientation: landscape) {
+  .stage {
+    gap: 0;
+    padding-top: calc(var(--ed-nav-h) + 4px);
+    padding-bottom: 6px;
+  }
+
+  .head {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .headSide {
+    display: none;
+  }
+}
+
+/* The space the instrument has. Its size is what the four arrangements are chosen by, and
+   what 100cqw and 100cqh below are measured against. */
+.fit {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  place-items: center;
+  container-type: size;
+}
+
+/* ------------------------------------------------------------------ colourways */
+/* The site's chapter colours, lightened only as far as white lettering stays readable on
+   them: each is deep enough that the legends reach a contrast of 4.5:1 on the keys, and the
+   lime of a lit legend does too. */
+.device[data-colour='violet'],
+.colour[data-colour='violet'] {
+  --synth-body: color-mix(in oklab, var(--ed-violet) 86%, white);
+}
+
+.device[data-colour='cobalt'],
+.colour[data-colour='cobalt'] {
+  --synth-body: color-mix(in oklab, var(--ed-cobalt) 82%, white);
+}
+
+.device[data-colour='raspberry'],
+.colour[data-colour='raspberry'] {
+  --synth-body: color-mix(in oklab, var(--ed-raspberry) 94%, white);
+}
+
+.device[data-colour='ember'],
+.colour[data-colour='ember'] {
+  --synth-body: var(--ed-ember);
+}
+
+.device[data-colour='forest'],
+.colour[data-colour='forest'] {
+  --synth-body: color-mix(in oklab, var(--ed-forest) 86%, white);
+}
+
+.device[data-colour='ink'],
+.colour[data-colour='ink'] {
+  --synth-body: #23262f;
+}
+
+/* ------------------------------------------------------------------ the body */
+.device {
+  --u: 1px;
+  /* Raised parts (pads, buttons), the text printed on the body, and how far a key travels */
+  /* The highlight on a key is spent by half way down, so its legend sits on the body colour */
+  --raised:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03) 46%, transparent),
+    var(--synth-body);
+  --print: rgba(255, 255, 255, 0.96);
+  --depth: max(2px, calc(3 * var(--u)));
+  /* Text follows the scale, down to the smallest size that can still be read */
+  --label: max(8px, calc(9 * var(--u)));
+  --legend: max(8.5px, calc(10 * var(--u)));
+
+  position: relative;
+  display: grid;
+  box-sizing: border-box;
+  border-radius: calc(30 * var(--u));
+  background:
+    radial-gradient(120% 70% at 15% 0%, rgba(255, 255, 255, 0.13), transparent 60%),
+    linear-gradient(180deg, transparent 40%, rgba(0, 0, 0, 0.26)), var(--synth-body);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 calc(-1 * var(--depth)) 0 rgba(0, 0, 0, 0.28),
+    0 40px 80px -40px rgba(0, 0, 0, 0.9),
+    0 0 140px -50px var(--synth-body);
+  transition: --synth-body 0.6s var(--ed-ease);
+  animation: arrive 0.9s var(--ed-ease) both;
+  /* An instrument, not a document: no double-tap zoom, no text selection, no tap flash */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.975);
+  }
+}
+
+/* A recess in the body that buttons and pads sit in */
+.well {
+  border-radius: calc(20 * var(--u));
+  background: rgba(0, 0, 0, 0.17);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* ------------------------------------------------------------------ screen */
+.bezel {
+  position: relative;
+  grid-area: screen;
+  min-width: 0;
+  min-height: 0;
+  border-radius: calc(24 * var(--u));
+  background: #05060a;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.25),
+    0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Glass: a soft reflection across the top-left corner */
+.bezel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.09), transparent 38%);
+  pointer-events: none;
+}
+
+/* Fills the bezel whatever shape that is; Screen.tsx lays its drawing out to suit */
+.screen {
+  position: absolute;
+  top: calc(10 * var(--u));
+  left: calc(10 * var(--u));
+  width: calc(100% - 20 * var(--u));
+  height: calc(100% - 20 * var(--u));
+  border-radius: calc(12 * var(--u));
+  /* Read by the canvas for its text */
+  font-family: var(--ed-font-mono);
+}
+
+/* ------------------------------------------------------------------ knobs */
+.knobs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-content: space-evenly;
+  justify-items: center;
+  min-width: 0;
+  min-height: 0;
+}
+
+.knobsLeft {
+  grid-area: knobsL;
+}
+
+.knobsRight {
+  grid-area: knobsR;
+}
+
+.knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(3 * var(--u));
+  min-width: 0;
+}
+
+.knobLabel,
+.button,
+.tab,
+.stepNote,
+.padLabel {
+  font-family: var(--ed-font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.knobLabel {
+  color: var(--print);
+  font-size: var(--label);
+  line-height: 1.25;
+}
+
+.dial {
+  position: relative;
+  width: calc(56 * var(--u));
+  height: calc(56 * var(--u));
+  border-radius: 50%;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.dial:focus {
+  outline: none;
+}
+
+.dial svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ringTrack,
+.ringValue {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.ringTrack {
+  stroke: rgba(0, 0, 0, 0.32);
+}
+
+.ringValue {
+  stroke: #fff;
+  stroke-dasharray: 100;
+  /* Slow enough that choosing a preset sweeps every knob to its new place */
+  transition:
+    stroke-dashoffset 0.5s var(--ed-ease),
+    stroke 0.2s;
+}
+
+.cap {
+  position: absolute;
+  inset: 18%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.22), transparent 55%), #14161d;
+  box-shadow:
+    0 calc(4 * var(--u)) calc(8 * var(--u)) rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.6);
+  transform: rotate(var(--turn));
+  transition: transform 0.5s var(--ed-ease);
+}
+
+/* The pointer line */
+.cap::after {
+  content: '';
+  position: absolute;
+  top: 10%;
+  left: 46.5%;
+  width: 7%;
+  height: 26%;
+  border-radius: 2px;
+  background: #fff;
+}
+
+/* While it is being turned the dial follows the hand exactly, with no easing */
+.dial[data-dragging] .cap,
+.dial[data-dragging] .ringValue {
+  transition: none;
+}
+
+.dial[data-dragging] .ringValue,
+.dial:focus-visible .ringValue {
+  stroke: var(--ed-signal);
+  filter: drop-shadow(0 0 4px var(--ed-signal));
+}
+
+.dial[data-dragging] .cap::after,
+.dial:focus-visible .cap::after {
+  background: var(--ed-signal);
+  box-shadow: 0 0 6px var(--ed-signal);
+}
+
+@media (hover: hover) {
+  .dial:hover .cap {
+    box-shadow:
+      0 calc(6 * var(--u)) calc(12 * var(--u)) rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.32),
+      inset 0 -2px 3px rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* ------------------------------------------------------------------ buttons */
+.sound,
+.transport {
+  display: grid;
+  gap: calc(8 * var(--u));
+  min-width: 0;
+  min-height: 0;
+  padding: calc(10 * var(--u));
+}
+
+.sound {
+  grid-area: sound;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.transport {
+  grid-area: transport;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: calc(8 * var(--u));
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Buttons take the height of the row they are in. The margin is the room the key needs
+   underneath it for its edge, which is also how far it travels when pressed. */
+.button,
+.step,
+.tab {
+  min-width: 0;
+  min-height: 0;
+  margin: 0 0 var(--depth);
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+
+.button,
+.step {
+  background: var(--raised);
+  box-shadow:
+    0 var(--depth) 0 rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition:
+    transform 0.08s,
+    box-shadow 0.08s,
+    color 0.2s,
+    filter 0.2s,
+    text-shadow 0.2s;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(11 * var(--u));
+  color: var(--print);
+  font-size: var(--legend);
+  font-weight: 600;
+}
+
+.button svg {
+  width: calc(26 * var(--u));
+  height: calc(16 * var(--u));
+  overflow: visible;
+}
+
+.button path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (hover: hover) {
+  .button:hover:not(:disabled),
+  .step:hover {
+    filter: brightness(1.1);
+  }
+}
+
+.button:active:not(:disabled),
+.step:active {
+  transform: translateY(var(--depth));
+  box-shadow:
+    0 0 0 rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* A button that switches something on and off has a light above its legend. The legend
+   itself stays white: lime lettering is not readable enough on a coloured body. Lime is the
+   system's "live" colour. */
+.button[aria-pressed] {
+  position: relative;
+  padding-top: calc(8 * var(--u));
+}
+
+.button[aria-pressed]::before {
+  content: '';
+  position: absolute;
+  top: 17%;
+  left: 50%;
+  width: calc(14 * var(--u));
+  height: max(3px, calc(3.5 * var(--u)));
+  margin-left: calc(-7 * var(--u));
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.42);
+  transition:
+    background 0.25s,
+    box-shadow 0.25s;
+}
+
+.button[aria-pressed='true']::before {
+  background: var(--ed-signal);
+  box-shadow: 0 0 10px 1px var(--ed-signal);
+  transition-duration: 0s;
+}
+
+/* Armed, REC is a red key with a white light */
+.button[data-tone='rec'][aria-pressed='true'] {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03) 46%, transparent),
+    #c2183a;
+}
+
+.button[data-tone='rec'][aria-pressed='true']::before {
+  background: #fff;
+  box-shadow: 0 0 10px 1px #ff5c7a;
+}
+
+/* PLAY flashes on each beat (set by the lights loop in Synth.tsx) */
+.button[data-tone='play'][data-beat] {
+  filter: brightness(1.25);
+  transition-duration: 0s;
+}
+
+.button[data-tone='play'][data-beat]::before {
+  box-shadow: 0 0 14px 4px var(--ed-signal);
+}
+
+.button:disabled {
+  color: rgba(255, 255, 255, 0.3);
+  cursor: default;
+}
+
+.button:focus-visible,
+.tab:focus-visible,
+.step:focus-visible,
+.colour:focus-visible {
+  outline: 2px solid var(--ed-signal);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ tabs (phone layouts) */
+.tabs {
+  display: none;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: calc(4 * var(--u));
+  min-width: 0;
+  min-height: 0;
+  padding: calc(4 * var(--u));
+  border-radius: calc(13 * var(--u));
+  background: rgba(0, 0, 0, 0.22);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+
+.tab {
+  margin: 0;
+  border-radius: calc(9 * var(--u));
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: var(--legend);
+  font-weight: 600;
+  transition:
+    background 0.25s var(--ed-ease),
+    color 0.25s;
+}
+
+.tab[aria-pressed='true'] {
+  background: var(--raised);
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
+/* ------------------------------------------------------------------ sequencer steps */
+.steps {
+  display: grid;
+  grid-area: steps;
+  grid-template-columns: repeat(16, minmax(0, 1fr));
+  gap: calc(6 * var(--u));
+  min-width: 0;
+  min-height: 0;
+}
+
+/* A wider gap after every beat */
+.step:nth-child(4n + 1):not(:first-child) {
+  margin-left: calc(5 * var(--u));
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(4 * var(--u));
+  border-radius: calc(9 * var(--u));
+  color: var(--print);
+}
+
+.stepLed {
+  width: calc(14 * var(--u));
+  height: max(3px, calc(4 * var(--u)));
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.42);
+  transition:
+    background 0.25s,
+    box-shadow 0.25s;
+  /* Power-on: the lights run left to right once */
+  animation: sweep 0.5s calc(0.5s + var(--i) * 45ms) both;
+}
+
+@keyframes sweep {
+  40% {
+    background: var(--ed-signal);
+    box-shadow: 0 0 10px var(--ed-signal);
+  }
+}
+
+.stepNote {
+  font-size: max(7px, calc(8 * var(--u)));
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-transform: none;
+}
+
+.step[data-on] .stepNote {
+  font-weight: 700;
+}
+
+.step[data-on] .stepLed {
+  background: #fff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+}
+
+/* The step being played: on instantly, fading out slowly, like a real LED chase */
+.step[data-now] {
+  filter: brightness(1.22);
+}
+
+.step[data-now] .stepLed {
+  background: var(--ed-signal);
+  box-shadow: 0 0 12px 2px var(--ed-signal);
+  transition-duration: 0s;
+}
+
+.step[data-cursor] {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+
+/* ------------------------------------------------------------------ pads */
+.pads {
+  /* How many lower pads are on show, which is what the upper ones are placed against */
+  --lower: 15;
+
+  display: flex;
+  grid-area: pads;
+  flex-direction: column;
+  gap: calc(6 * var(--u));
+  min-width: 0;
+  min-height: 0;
+  padding: calc(10 * var(--u));
+  border-radius: calc(24 * var(--u));
+  touch-action: none;
+}
+
+.padsUpper {
+  position: relative;
+  flex: 0.76 1 0;
+  min-height: 0;
+}
+
+.padsLower {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* Each upper pad is centred on the gap between the two lower pads it sits above */
+.padsUpper .pad {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--before) * 100% / var(--lower));
+  width: calc(100% / var(--lower));
+  transform: translateX(-50%);
+}
+
+.padsLower .pad {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* The element is the touch target; the pill drawn inside it leaves a gap to its neighbours */
+.pad {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(5 * var(--u));
+  cursor: pointer;
+  animation: pop 0.5s calc(0.25s + var(--i) * 16ms) var(--ed-ease) both;
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+}
+
+.pad::before {
+  content: '';
+  position: absolute;
+  inset: 0 calc(3 * var(--u)) var(--depth);
+  border-radius: 999px;
+  background: var(--raised);
+  box-shadow:
+    0 var(--depth) 0 rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  transition:
+    translate 0.07s,
+    box-shadow 0.07s,
+    filter 0.2s;
+}
+
+@media (hover: hover) {
+  .pad:hover::before {
+    filter: brightness(1.08);
+  }
+}
+
+.pad[data-held]::before {
+  translate: 0 var(--depth);
+  box-shadow:
+    0 0 0 rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.padLight,
+.padLabel {
+  position: relative;
+  pointer-events: none;
+}
+
+.pad[data-held] .padLabel {
+  translate: 0 var(--depth);
+}
+
+/* A finger moving on a held pad (Pads in Synth.tsx sets --bend, -1..1, and --bloom, 0..1):
+   the light leans the way the pitch is being bent */
+.pad[data-held] .padLight {
+  translate: calc(var(--bend, 0) * 9 * var(--u)) var(--depth);
+}
+
+.padLight {
+  width: max(3px, calc(5 * var(--u)));
+  height: 42%;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.42);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.4);
+  /* Fades out slowly after the note; switches on at once (below) */
+  transition:
+    background 0.35s,
+    box-shadow 0.35s;
+}
+
+/* ...and its glow swells with how much of the note is going to the reverb */
+.pad[data-lit] .padLight {
+  background: var(--ed-signal);
+  box-shadow:
+    0 0 calc(14px + var(--bloom, 0) * 26px) calc(3px + var(--bloom, 0) * 7px) var(--ed-signal),
+    0 0 2px #fff;
+  transition-duration: 0s;
+}
+
+.padLabel {
+  height: var(--label);
+  color: var(--print);
+  font-size: var(--label);
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+/* ================================================================== the four arrangements */
+
+/* wide: knobs either side of the screen, buttons under the knobs, steps, pads */
+@container (min-aspect-ratio: 5/4) and (min-height: 430px) {
+  .device {
+    --u: min(calc(100cqw / 1120), calc(100cqh / 664), 1.3px);
+    --layout: wide;
+
+    grid-template-columns: minmax(0, 1fr) calc(300 * var(--u)) minmax(0, 1fr);
+    grid-template-rows: calc(158 * var(--u)) calc(116 * var(--u)) calc(42 * var(--u)) calc(
+        232 * var(--u)
+      );
+    grid-template-areas:
+      'knobsL screen knobsR'
+      'sound screen transport'
+      'steps steps steps'
+      'pads pads pads';
+    gap: calc(20 * var(--u)) calc(26 * var(--u));
+    width: calc(1120 * var(--u));
+    height: calc(664 * var(--u));
+    padding: calc(28 * var(--u));
+    border-radius: calc(36 * var(--u));
+  }
+}
+
+/* tall: screen beside the buttons, then steps, pads (which take any spare height), knobs */
+@container (not (min-aspect-ratio: 5/4)) and (min-width: 620px) {
+  .device {
+    --u: min(calc(100cqw / 760), calc(100cqh / 786), 1.35px);
+    --layout: tall;
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows:
+      calc(116 * var(--u)) calc(116 * var(--u)) calc(44 * var(--u)) minmax(0, 1fr)
+      calc(158 * var(--u));
+    grid-template-areas:
+      'screen sound'
+      'screen transport'
+      'steps steps'
+      'pads pads'
+      'knobsL knobsR';
+    gap: calc(18 * var(--u));
+    width: calc(760 * var(--u));
+    height: min(100cqh, calc(940 * var(--u)));
+    padding: calc(24 * var(--u));
+    border-radius: calc(36 * var(--u));
+  }
+}
+
+/* phone: screen, pads (which take any spare height), PLAY and the tabs, one page of controls.
+   Eight columns; the page is the last three rows. */
+@container (not (min-aspect-ratio: 5/4)) and (not (min-width: 620px)) {
+  .device {
+    --u: min(calc(100cqw / 370), calc(100cqh / 540), 1.6px);
+    --layout: phone;
+
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-rows:
+      calc(144 * var(--u)) minmax(0, 1fr) calc(38 * var(--u))
+      repeat(3, calc(46 * var(--u)));
+    gap: calc(8 * var(--u));
+    width: calc(370 * var(--u));
+    height: min(100cqh, calc(720 * var(--u)));
+    padding: calc(10 * var(--u));
+  }
+
+  .bezel {
+    grid-area: 1 / 1 / 2 / -1;
+  }
+
+  .pads {
+    --lower: 8;
+
+    grid-area: 2 / 1 / 3 / -1;
+  }
+
+  /* One octave: the second is not drawn */
+  .pad[data-far] {
+    display: none;
+  }
+
+  .device [data-b='play'] {
+    grid-area: 3 / 1 / 4 / 3;
+  }
+
+  .tabs {
+    display: grid;
+    grid-area: 3 / 3 / 4 / -1;
+  }
+
+  /* Seq: four buttons, then the sixteen steps in two rows of eight */
+  .device [data-b='rec'] {
+    grid-area: 4 / 1 / 5 / 3;
+  }
+
+  .device [data-b='clear'] {
+    grid-area: 4 / 3 / 5 / 5;
+  }
+
+  .device [data-b='octDown'] {
+    grid-area: 4 / 5 / 5 / 7;
+  }
+
+  .device [data-b='octUp'] {
+    grid-area: 4 / 7 / 5 / 9;
+  }
+
+  .steps {
+    grid-area: 5 / 1 / 7 / -1;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
+    row-gap: calc(8 * var(--u));
+  }
+
+  .step:nth-child(4n + 1):not(:first-child) {
+    margin-left: 0;
+  }
+
+  .step:nth-child(8n + 5) {
+    margin-left: calc(5 * var(--u));
+  }
+
+  /* Sound: waveforms, presets, arpeggiator */
+  .device [data-g='waves'] {
+    grid-area: 4 / 1 / 5 / -1;
+  }
+
+  .device [data-g='presets'] {
+    grid-area: 5 / 1 / 6 / -1;
+  }
+
+  .device [data-b='arp'] {
+    grid-area: 6 / 1 / 7 / 3;
+  }
+
+  .device [data-b='hold'] {
+    grid-area: 6 / 3 / 7 / 5;
+  }
+
+  .device [data-b='mode'] {
+    grid-area: 6 / 5 / 7 / 9;
+  }
+
+  /* Tone and Shape: eight knobs each */
+  .knobs {
+    grid-area: 4 / 1 / 7 / -1;
+  }
+}
+
+/* flat: screen top left with PLAY and the tabs under it; the page of controls top right
+   with two octaves of pads under it. Three columns for the left block, eight for the right. */
+@container (min-aspect-ratio: 5/4) and (not (min-height: 430px)) {
+  .device {
+    --u: min(calc(100cqw / 840), calc(100cqh / 264), 1.5px);
+    --layout: flat;
+
+    grid-template-columns: repeat(3, calc(66 * var(--u))) repeat(8, minmax(0, 1fr));
+    grid-template-rows: calc(52 * var(--u)) calc(52 * var(--u)) minmax(0, 1fr) minmax(0, 1fr);
+    gap: calc(8 * var(--u));
+    width: calc(840 * var(--u));
+    height: min(100cqh, calc(320 * var(--u)));
+    padding: calc(10 * var(--u));
+    border-radius: calc(26 * var(--u));
+  }
+
+  .bezel {
+    grid-area: 1 / 1 / 3 / 4;
+    border-radius: calc(18 * var(--u));
+  }
+
+  .screen {
+    top: calc(7 * var(--u));
+    left: calc(7 * var(--u));
+    width: calc(100% - 14 * var(--u));
+    height: calc(100% - 14 * var(--u));
+    border-radius: calc(10 * var(--u));
+  }
+
+  .device [data-b='play'] {
+    grid-area: 3 / 1 / 5 / 2;
+  }
+
+  /* The tabs become four keys in a square beside PLAY */
+  .tabs {
+    display: contents;
+  }
+
+  .tab {
+    margin-bottom: var(--depth);
+    border-radius: calc(11 * var(--u));
+    background: var(--raised);
+    box-shadow:
+      0 var(--depth) 0 rgba(0, 0, 0, 0.38),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    color: var(--print);
+  }
+
+  .tab[aria-pressed='true'] {
+    box-shadow:
+      0 var(--depth) 0 rgba(0, 0, 0, 0.38),
+      inset 0 0 0 max(1.5px, calc(2 * var(--u))) rgba(255, 255, 255, 0.8);
+    color: #fff;
+  }
+
+  .device [data-t='seq'] {
+    grid-area: 3 / 2 / 4 / 3;
+  }
+
+  .device [data-t='sound'] {
+    grid-area: 3 / 3 / 4 / 4;
+  }
+
+  .device [data-t='tone'] {
+    grid-area: 4 / 2 / 5 / 3;
+  }
+
+  .device [data-t='shape'] {
+    grid-area: 4 / 3 / 5 / 4;
+  }
+
+  .pads {
+    grid-area: 3 / 4 / 5 / -1;
+    padding: calc(8 * var(--u));
+    border-radius: calc(20 * var(--u));
+  }
+
+  /* Seq: four buttons over the sixteen steps in one row */
+  .device [data-b='rec'] {
+    grid-area: 1 / 4 / 2 / 6;
+  }
+
+  .device [data-b='clear'] {
+    grid-area: 1 / 6 / 2 / 8;
+  }
+
+  .device [data-b='octDown'] {
+    grid-area: 1 / 8 / 2 / 10;
+  }
+
+  .device [data-b='octUp'] {
+    grid-area: 1 / 10 / 2 / 12;
+  }
+
+  .steps {
+    grid-area: 2 / 4 / 3 / -1;
+    gap: calc(4 * var(--u));
+  }
+
+  /* Sound: waveforms and presets side by side over the arpeggiator */
+  .device [data-g='waves'] {
+    grid-area: 1 / 4 / 2 / 8;
+  }
+
+  .device [data-g='presets'] {
+    grid-area: 1 / 8 / 2 / 12;
+  }
+
+  .device [data-b='arp'] {
+    grid-area: 2 / 4 / 3 / 6;
+  }
+
+  .device [data-b='hold'] {
+    grid-area: 2 / 6 / 3 / 8;
+  }
+
+  .device [data-b='mode'] {
+    grid-area: 2 / 8 / 3 / 12;
+  }
+
+  /* Tone and Shape: eight knobs in one row */
+  .knobs {
+    grid-area: 1 / 4 / 3 / -1;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+}
+
+/* The two phone arrangements share this: the button wells dissolve so each button can be
+   placed on the body's own grid, and only the chosen page of controls is drawn. */
+@container (not (min-aspect-ratio: 5/4)) and (not (min-width: 620px)) {
+  .sound,
+  .transport {
+    display: contents;
+  }
+
+  .device:not([data-tab='seq']) [data-page='seq'],
+  .device:not([data-tab='sound']) [data-page='sound'],
+  .device:not([data-tab='tone']) [data-page='tone'],
+  .device:not([data-tab='shape']) [data-page='shape'] {
+    display: none;
+  }
+
+  /* The page a tab brings in rises into place */
+  .device [data-page] {
+    animation: page 0.3s var(--ed-ease) both;
+  }
+}
+
+@container (min-aspect-ratio: 5/4) and (not (min-height: 430px)) {
+  .sound,
+  .transport {
+    display: contents;
+  }
+
+  .device:not([data-tab='seq']) [data-page='seq'],
+  .device:not([data-tab='sound']) [data-page='sound'],
+  .device:not([data-tab='tone']) [data-page='tone'],
+  .device:not([data-tab='shape']) [data-page='shape'] {
+    display: none;
+  }
+
+  .device [data-page] {
+    animation: page 0.3s var(--ed-ease) both;
+  }
+}
+
+@keyframes page {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+/* Browsers from before 2023 cannot size things against a container. They get the instrument
+   at a fixed size in one column, on a page that scrolls. */
+@supports not (container-type: size) {
+  .stage {
+    height: auto;
+  }
+
+  .fit {
+    display: block;
+  }
+
+  .device {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: min(100%, 440px);
+    margin-inline: auto;
+    padding: 12px;
+  }
+
+  .bezel {
+    order: -2;
+    height: 160px;
+  }
+
+  .pads {
+    --lower: 8;
+
+    order: -1;
+    height: 200px;
+  }
+
+  .pad[data-far] {
+    display: none;
+  }
+
+  .sound,
+  .transport {
+    grid-template-rows: none;
+    grid-auto-rows: 44px;
+  }
+
+  .row {
+    grid-auto-rows: 44px;
+  }
+
+  .steps {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-auto-rows: 42px;
+  }
+
+  .knobs {
+    row-gap: 12px;
+    padding-block: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .device,
+  .device [data-page],
+  .pad,
+  .stepLed {
+    animation: none;
+  }
+
+  .cap,
+  .ringValue {
+    transition: none;
+  }
+}

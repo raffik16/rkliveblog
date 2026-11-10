@@ -28,6 +28,15 @@ const demosData: Demo[] = [
     tech: ['three.js', 'WebGL 2', 'GLSL', 'teardown'],
   },
   {
+    slug: 'synth',
+    title: 'Pocket Synth',
+    href: '/synth',
+    postHref: '/blog/pocket-synth-web-audio',
+    description:
+      'A synthesizer shaped like a piece of hardware, sized to fit one screen on a phone or a desktop: sixteen knobs, pads that light up and bend under a moving finger, a sixteen-step sequencer, an arpeggiator and a screen that draws whatever you are changing. Two oscillators, a filter with its own envelope and LFO, echo and reverb, built on the Web Audio API with no audio library.',
+    tech: ['Web Audio', 'Canvas 2D', 'React', 'TypeScript'],
+  },
+  {
     slug: 'alien',
     title: 'Alien Spacecraft Command Center',
     href: '/alien',
