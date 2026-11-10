@@ -1,0 +1,433 @@
+/* /synth, on the Edition tokens (css/edition.css). */
+
+.synth {
+  max-width: 1080px;
+  margin-inline: auto;
+  padding-top: clamp(16px, 4vw, 40px);
+  color: var(--ed-fg);
+  font-family: var(--ed-font-body);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.kicker,
+.label,
+.sliderHead,
+.chip,
+.wave,
+.hint,
+.octaveValue,
+.keyLabel {
+  font-family: var(--ed-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kicker {
+  margin: 0 0 6px;
+  color: var(--ed-fg-3);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--ed-font-display);
+  font-size: clamp(40px, 8vw, 72px);
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+
+.title em {
+  font-family: var(--ed-font-serif);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.body {
+  border: 1px solid var(--ed-line);
+  border-radius: var(--ed-radius);
+  background: rgba(7, 8, 12, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+}
+
+.top {
+  border-bottom: 1px solid var(--ed-line);
+}
+
+/* On a phone the controls stack into a long column, so the keys go above them: the thing you
+   play stays next to the scope instead of four panels further down. */
+@media (max-width: 719.98px) {
+  .keysBar {
+    order: 1;
+  }
+
+  .keys {
+    order: 2;
+  }
+
+  .panels {
+    order: 3;
+    border-top: 1px solid var(--ed-line);
+  }
+
+  .panel:last-child {
+    border-bottom: 0;
+  }
+}
+
+.scope {
+  display: block;
+  width: 100%;
+  height: clamp(110px, 20vw, 170px);
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--ed-line);
+}
+
+.label {
+  margin: 0;
+  color: var(--ed-fg-3);
+  font-weight: 400;
+}
+
+.presets .label {
+  margin-right: 4px;
+}
+
+.chip {
+  min-width: 40px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--ed-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ed-fg-2);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    background 0.15s;
+}
+
+.chip:hover:not(:disabled) {
+  border-color: var(--ed-line-strong);
+  color: var(--ed-fg);
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--ed-fg);
+  background: var(--ed-fg);
+  color: var(--ed-ink);
+}
+
+.chip:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.chip:focus-visible,
+.wave:focus-visible {
+  outline: 2px solid var(--ed-signal);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------- controls */
+.panels {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-bottom: 1px solid var(--ed-line);
+}
+
+@media (min-width: 720px) {
+  .panels {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .panel:nth-child(odd) {
+    border-right: 1px solid var(--ed-line);
+  }
+}
+
+@media (min-width: 1000px) {
+  .panels {
+    grid-template-columns: 1fr 1fr 1.6fr 1fr;
+  }
+
+  .panel:not(:last-child) {
+    border-right: 1px solid var(--ed-line);
+  }
+
+  .envelope {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-content: start;
+    column-gap: 20px;
+  }
+
+  .envelope .label {
+    grid-column: 1 / -1;
+  }
+}
+
+.waves {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.wave {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 4px 8px;
+  border: 1px solid var(--ed-line);
+  border-radius: var(--ed-radius);
+  background: transparent;
+  color: var(--ed-fg-3);
+  font-size: 10px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    background 0.15s;
+}
+
+.wave svg {
+  width: 34px;
+  height: 20px;
+  overflow: visible;
+}
+
+.wave path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.wave:hover {
+  border-color: var(--ed-line-strong);
+  color: var(--ed-fg);
+}
+
+.wave[aria-pressed='true'] {
+  border-color: var(--ed-fg);
+  background: var(--ed-panel);
+  color: var(--ed-fg);
+}
+
+.slider {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sliderHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ed-fg-2);
+}
+
+.sliderValue {
+  color: var(--ed-fg-3);
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.slider input {
+  appearance: none;
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.slider input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.slider input::-webkit-slider-runnable-track {
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    var(--ed-fg) var(--fill),
+    var(--ed-line-strong) var(--fill)
+  );
+}
+
+.slider input::-moz-range-track {
+  height: 2px;
+  background: var(--ed-line-strong);
+}
+
+.slider input::-moz-range-progress {
+  height: 2px;
+  background: var(--ed-fg);
+}
+
+.slider input::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -6px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ed-fg);
+}
+
+.slider input::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ed-fg);
+}
+
+.slider input:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--ed-signal);
+  outline-offset: 2px;
+}
+
+.slider input:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--ed-signal);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------- keyboard */
+.keysBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  padding: 12px 16px;
+}
+
+.octave {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.octaveValue {
+  min-width: 78px;
+  color: var(--ed-fg-2);
+  text-align: center;
+}
+
+.hint {
+  margin: 0;
+  color: var(--ed-fg-3);
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.hint kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--ed-line);
+  border-radius: 3px;
+  color: var(--ed-fg-2);
+  font: inherit;
+}
+
+/* The letter keys mean nothing on a touch screen */
+@media (hover: none) {
+  .hint,
+  .hotkey {
+    display: none;
+  }
+}
+
+.keys {
+  position: relative;
+  display: flex;
+  height: clamp(150px, 24vw, 220px);
+  margin: 0 16px 16px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.key {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.white {
+  border: 1px solid var(--ed-ink);
+  border-radius: 0 0 var(--ed-radius) var(--ed-radius);
+  background: var(--ed-paper);
+  color: rgba(7, 8, 12, 0.55);
+}
+
+.black {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  height: 60%;
+  transform: translateX(-50%);
+  border: 1px solid var(--ed-line-strong);
+  border-top: 0;
+  border-radius: 0 0 var(--ed-radius) var(--ed-radius);
+  background: var(--ed-ink);
+  color: var(--ed-fg-3);
+}
+
+/* Lime is the system's "live" colour: a key is lit exactly while its note sounds */
+.key[data-held] {
+  background: var(--ed-signal);
+  color: var(--ed-ink);
+}
+
+.keyLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-bottom: 8px;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.hotkey {
+  opacity: 0.75;
+}

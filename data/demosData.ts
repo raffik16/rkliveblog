@@ -28,6 +28,15 @@ const demosData: Demo[] = [
     tech: ['three.js', 'WebGL 2', 'GLSL', 'teardown'],
   },
   {
+    slug: 'synth',
+    title: 'Pocket Synth',
+    href: '/synth',
+    postHref: '/blog/pocket-synth-web-audio',
+    description:
+      'A polyphonic synthesizer you play with the mouse, a finger or the computer keyboard: four waveforms, a low-pass filter, an ADSR envelope, echo and a live oscilloscope, built on the Web Audio API with no audio library.',
+    tech: ['Web Audio', 'Canvas 2D', 'React', 'TypeScript'],
+  },
+  {
     slug: 'alien',
     title: 'Alien Spacecraft Command Center',
     href: '/alien',

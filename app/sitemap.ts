@@ -18,6 +18,7 @@ const OTHER_PAGES = [
   'alien',
   'clocks',
   'climb',
+  'synth',
   'chaos',
   'chaos/hotdog',
 ]
