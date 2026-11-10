@@ -105,8 +105,12 @@ interface PadsProps {
 // they are not tab stops, since Tab-then-Enter is no way to play a tune. Keyboard users play
 // on the letter keys.
 const Pads = memo(function Pads({ base, held, press, release, express }: PadsProps) {
-  // Where each finger landed, and on which pad. Every finger is its own pointer.
-  const fingers = useRef(new Map<number, { pad: HTMLElement; x: number; y: number }>())
+  // Where each finger landed, on which pad, and the note that pad was then. Every finger is
+  // its own pointer. The note is kept because the pads can change under a finger: the octave
+  // buttons renumber them, and a held note is still the note it was.
+  const fingers = useRef(
+    new Map<number, { pad: HTMLElement; midi: number; x: number; y: number }>()
+  )
   const padAt = (x: number, y: number) =>
     document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-midi]') ?? null
   const settle = (pad: HTMLElement) => {
@@ -125,8 +129,9 @@ const Pads = memo(function Pads({ base, held, press, release, express }: PadsPro
     } catch {
       // The pointer is already gone: the note still plays, and pointerup still ends it
     }
-    fingers.current.set(e.pointerId, { pad, x: e.clientX, y: e.clientY })
-    press(`p${e.pointerId}`, Number(pad.dataset.midi))
+    const midi = Number(pad.dataset.midi)
+    fingers.current.set(e.pointerId, { pad, midi, x: e.clientX, y: e.clientY })
+    press(`p${e.pointerId}`, midi)
   }
 
   // A pad is an instrument's key, not a switch: what the finger does after it lands matters.
@@ -144,8 +149,9 @@ const Pads = memo(function Pads({ base, held, press, release, express }: PadsPro
     const under = padAt(x, y)
     if (under && under !== finger.pad && outside > width * LEAVE) {
       settle(finger.pad)
-      fingers.current.set(e.pointerId, { pad: under, x, y })
-      press(`p${e.pointerId}`, Number(under.dataset.midi))
+      const midi = Number(under.dataset.midi)
+      fingers.current.set(e.pointerId, { pad: under, midi, x, y })
+      press(`p${e.pointerId}`, midi)
       return
     }
 
@@ -157,7 +163,7 @@ const Pads = memo(function Pads({ base, held, press, release, express }: PadsPro
     const sideways = Math.max(0, Math.abs(dx) - slack) * Math.sign(dx)
     const bend = clamp((sideways / width) * BEND_PER_PAD, -MAX_BEND, MAX_BEND)
     const amount = clamp((Math.hypot(dx, dy) - slack) / (width * REACH - slack), 0, 1)
-    if (!express(Number(finger.pad.dataset.midi), bend, amount)) return
+    if (!express(finger.midi, bend, amount)) return
     // The pad's light leans with the bend and swells with the reverb (synth.module.css)
     finger.pad.style.setProperty('--bend', (bend / MAX_BEND).toFixed(3))
     finger.pad.style.setProperty('--bloom', amount.toFixed(3))
@@ -520,9 +526,62 @@ export default function Synth() {
     }
     stage.addEventListener('mousedown', keepFocus)
 
+    // A finger that is not alone on the glass never clicks. A browser turns a touch into a
+    // click only when it is the one finger down, so with a pad held, a tap on PLAY or on a tab
+    // would do nothing, and holding a note while reaching for a control is how an instrument
+    // is played. So a finger that shared the screen, and lifts off the button it landed on,
+    // presses that button.
+    const touches = new Map<number, { button: HTMLButtonElement | null; shared: boolean }>()
+    // The press made for a finger, so that the browser's own click for it, should one come
+    // after all, is not a second press
+    let made: { button: HTMLButtonElement; pointerId: number; at: number } | null = null
+    const touchDown = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return
+      const shared = touches.size > 0
+      if (shared) touches.forEach((touch) => (touch.shared = true))
+      const button = e.target instanceof Element ? e.target.closest('button') : null
+      touches.set(e.pointerId, { button: button && stage.contains(button) ? button : null, shared })
+    }
+    const touchUp = (e: PointerEvent) => {
+      const touch = touches.get(e.pointerId)
+      if (!touch) return
+      touches.delete(e.pointerId)
+      const { button, shared } = touch
+      if (e.type !== 'pointerup' || !shared || !button || button.disabled) return
+      // A finger that slid off the button before lifting changed its mind
+      const box = button.getBoundingClientRect()
+      const { clientX: x, clientY: y } = e
+      if (x < box.left || x > box.right || y < box.top || y > box.bottom) return
+      made = { button, pointerId: e.pointerId, at: e.timeStamp }
+      button.click()
+    }
+    const pressOnce = (e: MouseEvent) => {
+      const last = made
+      if (!last || !e.isTrusted || e.timeStamp - last.at > 700) return
+      if (!(e.target instanceof Node) || !last.button.contains(e.target)) return
+      // Where the browser says which finger a click came from, only that finger's is dropped
+      const finger = (e as Partial<PointerEvent>).pointerId
+      if (finger !== undefined && finger !== last.pointerId) return
+      made = null
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    // A touch that ended while the page was elsewhere is never heard of again
+    const forget = () => touches.clear()
+    window.addEventListener('pointerdown', touchDown, true)
+    window.addEventListener('pointerup', touchUp, true)
+    window.addEventListener('pointercancel', touchUp, true)
+    window.addEventListener('blur', forget)
+    stage.addEventListener('click', pressOnce, true)
+
     return () => {
       events.forEach((name) => stage.removeEventListener(name, unlock, { capture: true }))
       stage.removeEventListener('mousedown', keepFocus)
+      window.removeEventListener('pointerdown', touchDown, true)
+      window.removeEventListener('pointerup', touchUp, true)
+      window.removeEventListener('pointercancel', touchUp, true)
+      window.removeEventListener('blur', forget)
+      stage.removeEventListener('click', pressOnce, true)
     }
   }, [engine])
 

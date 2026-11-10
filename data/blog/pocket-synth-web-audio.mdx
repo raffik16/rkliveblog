@@ -274,6 +274,8 @@ Older versions of iOS have no `audioSession`. There, an `<audio>` element that i
 
 **Sliding across the pads.** The pad area captures the pointer on press. A drag plays each pad it moves onto, and a release that happens off the pads still ends the note. Every finger is tracked separately, so chords work on a touch screen, and each finger bends its own note.
 
+**A second finger never clicks.** A browser turns a touch into a `click` only when it is the one finger on the screen. Hold a pad with one finger and tap **Play** or a tab with another, and the button gets a `pointerdown` and a `pointerup` and no click, so nothing happens. Holding a note while reaching for a control is how an instrument is played. The page keeps count of the fingers that are down, and when one that shared the screen lifts off the button it landed on, the page presses that button itself.
+
 ## Things to Try
 
 - Press **Play**, then sweep **Cutoff** and **Reso** while the pattern runs.
