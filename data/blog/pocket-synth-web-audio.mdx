@@ -4,7 +4,7 @@ date: '2026-11-10'
 lastmod: '2026-11-10'
 tags: ['web-audio', 'javascript', 'interactive', 'react', 'nextjs', 'web-platform']
 draft: false
-summary: 'A polyphonic synth that runs in a browser tab with no audio library: oscillators, one filter, an ADSR envelope, echo and a scope. How each part works.'
+summary: 'A synth with a step sequencer and arpeggiator that runs in a browser tab with no audio library. How the sound, the timing and the knobs work.'
 images: ['/static/images/og/pocket-synth.jpg']
 authors: ['default']
 layout: PostLayout
@@ -12,23 +12,27 @@ layout: PostLayout
 
 [**Play the Pocket Synth**](/synth)
 
-Hold down <kbd>A</kbd>, <kbd>D</kbd> and <kbd>G</kbd> on that page and you get a C major chord. Drag the cutoff slider while you hold it and the chord goes from muffled to bright. There is no audio file behind any of it and no synth library: the browser is generating the sound sample by sample, from a graph of about a dozen nodes.
+Press **Play** on that page and a sixteen-step pattern starts. Now drag the **Cutoff** knob upward while it runs. The riff goes from muffled to bright, the screen swaps its oscilloscope for a drawing of the filter you are moving, and the pads light up in time with the notes.
 
-This post walks through that graph. The whole engine is one file of around 200 lines, most of them comments, and every part of it is something you can hear by moving one control.
+There is no audio file behind any of it and no synth library. The browser generates the sound sample by sample from a graph of audio nodes, and a 25 millisecond timer keeps it in time. This post walks through how.
 
 ## The Signal Chain
 
-Pocket Synth is a _subtractive_ synth, the design most classic analog synthesizers share: start with a waveform that has more harmonics than you want, then take some away with a filter and shape the loudness over time.
+Pocket Synth is a _subtractive_ synth, the design most classic analog synthesizers share: start with a waveform that has more harmonics than you want, take some away with a filter, and shape the loudness over time.
 
 ```text
-one oscillator + one gain (the envelope) per held note
-     └─> low-pass filter ─┬─────────────> master gain ─> limiter ─> analyser ─> speakers
-                          └─> delay ⟲ ─> echo gain ─┘
+per note:  osc ─┐
+           osc ─┴─> low-pass filter ─> gain (envelope) ─┐
+                      ▲ filter envelope + LFO           │
+                                                        ▼
+bus ─┬──────────────────────────────> master ─> limiter ─> analyser ─> speakers
+     ├─> delay ⟲ ─> echo gain ───────────┤
+     └─> convolver ─> reverb gain ───────┘
 ```
 
-In Web Audio, each box is a node and each arrow is a `connect()` call. You build the graph once, then play it by scheduling changes to its parameters.
+In Web Audio, each box is a node and each arrow is a `connect()` call. The top row is built fresh for every note. Everything below it is built once.
 
-## One Oscillator per Note
+## Two Oscillators per Note
 
 An `OscillatorNode` produces one of four basic waves. They differ in which harmonics they contain, and that is the whole reason they sound different:
 
@@ -39,102 +43,156 @@ An `OscillatorNode` produces one of four basic waves. They differ in which harmo
 | Saw      | All of them             | Brass, strings, buzz     |
 | Square   | Odd ones, fading slowly | Hollow, like a clarinet  |
 
-A sine has nothing for the filter to remove, so the cutoff slider barely does anything to it. Saw and square are where a subtractive synth earns its name.
+A sine has nothing for the filter to remove, so the cutoff knob barely does anything to it. Saw and square are where a subtractive synth earns its name.
 
-Oscillators are cheap and single-use: once stopped, one can never be started again. So each key press creates a new one, tuned from its MIDI note number:
+Each note gets two oscillators tuned a few cents apart, one flat and one sharp. Two nearly identical waves drift in and out of phase, and that slow shimmer is most of what people mean by a "fat" synth sound. The **Detune** knob sets how far apart they are; at zero the synth uses a single oscillator.
 
 ```typescript
 const midiToHz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12)
 
-const osc = ctx.createOscillator()
-osc.type = patch.wave
-osc.frequency.value = midiToHz(midi)
+const tunings = patch.detune > 0 ? [-patch.detune, patch.detune] : [0]
+const oscs = tunings.map((cents) => {
+  const osc = ctx.createOscillator()
+  osc.type = patch.wave
+  osc.frequency.value = midiToHz(midi)
+  osc.detune.value = cents
+  return osc
+})
 ```
 
-Note 69 is the A above middle C at 440 Hz, and every semitone multiplies the frequency by the twelfth root of two. Polyphony is then nothing more than a `Map` from note number to the oscillator currently playing it.
+Note 69 is the A above middle C at 440 Hz, and every semitone multiplies the frequency by the twelfth root of two. Oscillators are single-use: once stopped, one can never be started again, so every key press builds new ones.
 
 ## The Envelope Is What Makes It an Instrument
 
-Connect an oscillator straight to the speakers and you get a click, a drone and another click. What turns a drone into a pluck or a pad is the _envelope_: a gain node per note whose level is scheduled over time. Attack, decay, sustain and release are four numbers describing that curve.
+Connect an oscillator straight to the speakers and you get a click, a drone and another click. What turns a drone into a pluck or a pad is the _envelope_: a level that is scheduled over time. Attack, decay, sustain and release are four numbers describing that curve.
 
 ```typescript
-const amp = ctx.createGain()
-amp.gain.setValueAtTime(0, now)
-// Attack: a straight ramp up to the peak
-amp.gain.linearRampToValueAtTime(VOICE_PEAK, now + attack)
-// Decay: ease down to the sustain level and stay there while the key is held
-amp.gain.setTargetAtTime(VOICE_PEAK * sustain, now + attack, decay / 3)
+const shape = (param: AudioParam, peak: number) => {
+  param.setValueAtTime(0, time)
+  // Attack: a straight ramp up to the peak
+  param.linearRampToValueAtTime(peak, time + attack)
+  // Decay: ease down to the sustain level and stay there while the key is held
+  param.setTargetAtTime(peak * sustain, time + attack, decay / 3)
+}
+
+shape(amp.gain, VOICE_PEAK) // loudness
+shape(filter.detune, envCents) // brightness
 ```
 
 None of this runs on a JavaScript timer. The calls hand the audio thread a schedule and it follows that schedule with sample accuracy, even if the page is busy rendering.
 
-Release happens when the key comes up, and it has to start from wherever the envelope is at that moment, which may be halfway up the attack:
+The same shape is used twice. On the gain it makes the note louder and then quieter. On the filter it makes the note brighter and then darker, which is the "pew" at the front of a synth bass. The **Env** knob sets how far the filter is thrown open, up to four octaves above the cutoff.
+
+Release starts when the key comes up, from wherever the envelope has got to, which may be halfway up the attack:
 
 ```typescript
-gain.cancelAndHoldAtTime(now) // freeze at the current level
-gain.setTargetAtTime(0, now, release / 5)
-osc.stop(now + (release / 5) * 7)
+param.cancelAndHoldAtTime(now) // freeze at the current level
+param.setTargetAtTime(0, now, release / 5)
 ```
 
-`setTargetAtTime` approaches its target exponentially and never quite arrives. After five time constants it is within 1% of it, so the oscillator is stopped a little after that, when the cut is too quiet to click.
+`setTargetAtTime` approaches its target exponentially and never quite arrives. After five time constants it is within 1% of it, so the oscillators are stopped a little after that, when the cut is too quiet to click.
 
-The four presets are almost entirely envelope settings. **Pluck** is a 5 ms attack with sustain at 15%. **Pad** is the same saw wave with a 600 ms attack and a 1.6 second release. Same oscillator, same filter, a completely different instrument.
+The four presets are mostly envelope settings. **Pluck** is a 3 ms attack with sustain at 10%. **Pad** is the same saw wave with a 600 ms attack and a 1.8 second release.
 
-## One Filter for Every Note
+## A Filter per Note
 
-The low-pass filter is a `BiquadFilterNode`. Cutoff sets where it starts removing harmonics; resonance boosts the band right at the cutoff, which is the nasal, vowel-like edge you hear on the Bass preset.
+The low-pass filter is a `BiquadFilterNode`. Cutoff sets where it starts removing harmonics; resonance boosts the band right at the cutoff, which is the nasal, vowel-like edge on the Bass preset.
 
-A hardware polysynth has a filter per voice. This one has a single filter that all the notes feed into. That is fine here because the filter's settings are the same for every note and a filter is linear: filtering the sum of the notes gives the same signal as filtering each note and then adding them up. One node instead of one per voice, with no audible difference. (It stops being true the moment each note wants its own filter movement, such as an envelope on the cutoff.)
+My first version had one filter that every note fed into. That is cheaper, and with a filter that never moves it sounds identical, because a filter is linear: filtering the sum of the notes gives the same signal as filtering each note and adding them up. It stopped being an option the moment the filter got its own envelope. A note struck now should be bright while a note held for a second has already gone dark, and one filter cannot be in both places.
 
-The cutoff slider is not linear. Pitch perception is logarithmic, so a slider that moved in equal steps of hertz would cram everything interesting into its first tenth. The slider runs from 0 to 1 and is mapped so that equal distances are equal musical intervals:
+So each note has its own filter, and three things move it at once:
+
+- **The cutoff knob** sets `filter.frequency`.
+- **The filter envelope** is scheduled on `filter.detune`, in cents above the cutoff.
+- **The LFO**, a single slow oscillator shared by every note, is connected into `filter.detune` as well.
+
+An `AudioParam` adds together its scheduled value and anything connected to it, so the envelope and the LFO stack without any code to combine them. Working in cents rather than hertz means a sweep is the same musical distance wherever the cutoff sits.
+
+The cutoff knob is not linear either. Pitch perception is logarithmic, so a knob that moved in equal steps of hertz would cram everything interesting into its first tenth:
 
 ```typescript
 const cutoffHz = (cutoff: number) => 60 * Math.pow(12000 / 60, cutoff)
 ```
 
-## Echo Is a Loop
+## Echo and Reverb
 
-The echo is three nodes. A `DelayNode` holds the signal for 300 ms. Its output goes through a gain of 0.38 and back into its own input, so each repeat is quieter than the last. A second gain sets how much of that is mixed into the output.
+The echo is a `DelayNode` whose output goes through a gain of 0.42 and back into its own input, so each repeat is quieter than the last. Web Audio allows a cycle in the graph as long as there is a delay in it.
 
 ```typescript
-filter.connect(delay)
+bus.connect(delay)
 delay.connect(feedback)
 feedback.connect(delay) // the loop
 delay.connect(echo)
-echo.connect(master)
 ```
 
-Web Audio allows a cycle in the graph as long as there is a delay in it. Keep the feedback gain under 1 and the repeats die away; at 1 or above they would build forever.
+The delay time is three sequencer steps, a dotted eighth note, so the repeats land between the notes of a pattern instead of on top of them. Turn the **Tempo** knob and the delay time glides to its new length. A delay line that changes length bends the pitch of whatever is inside it, which is why the echoes wobble like tape for a moment.
 
-## Keeping It From Clipping
+Reverb is a `ConvolverNode`, which stamps the sound of a room onto a signal. The usual way to get a room is to load a recording of one. This one is generated in a loop: 2.6 seconds of random noise that fades out, different in the left and right channels so it sounds wide.
 
-Each note peaks at 0.22 of full scale, so a handful of notes sum to less than 1.0. Resonance and echo add level on top of that, so the last node before the speakers is a `DynamicsCompressorNode` set up as a limiter: a high ratio, a fast attack and a threshold just under full scale. Hold six notes on the Pad preset and it stays clean.
+```typescript
+data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.4)
+```
+
+Each note peaks at 0.2 of full scale, and resonance, echo and reverb all add level on top, so the last node before the speakers is a `DynamicsCompressorNode` set up as a limiter.
+
+## Keeping Time Without a Timer You Can Trust
+
+This is the part that looks easy. A sequencer plays a note every sixteenth, so `setInterval` at the step length should do it.
+
+It does not. JavaScript timers fire when the main thread gets round to them. A 25 ms timer can arrive 10 ms late or 50 ms late, and a rhythm that is 30 ms off sounds drunk.
+
+The fix is to never let the timer play anything. It wakes up every 25 ms, looks 120 ms ahead on the audio clock, and schedules every step that starts inside that window at its exact time:
+
+```typescript
+private tick = () => {
+  while (this.nextTime < this.ctx.currentTime + LOOKAHEAD) {
+    this.scheduleStep(this.nextTime)
+    this.nextTime += this.stepSeconds
+  }
+}
+```
+
+The timer can be as sloppy as it likes. As long as it wakes up at least once inside each window, every note has already been handed to the audio thread with a precise start time. A sequenced note is scheduled whole, release included, because its length is known up front.
+
+Swing falls out of the same code: every second step is scheduled a little late. The arpeggiator is the same clock playing the notes you are holding instead of the pattern.
+
+One consequence: a note is scheduled up to 120 ms before it sounds. If the pads lit up when their note was scheduled, the lights would run ahead of the music. So the engine keeps a list of when each note starts and ends, and on every animation frame the interface asks what is sounding on the audio clock _right now_ and switches the lights to match.
+
+## The Knobs and the Screen
+
+Each knob is a `div` with `role="slider"`: drag up and down to turn it, hold Shift for fine steps, double-click to reset, or focus it and use the arrow keys. A screen reader hears "Cutoff, 1.1 kHz", not a percentage.
+
+Choosing a preset moves every knob at once. The dials are styled with a half-second CSS transition, so they sweep to their new positions together, and that transition is switched off while a knob is being dragged so it follows the hand exactly.
+
+The screen is one canvas with three jobs:
+
+- **At rest** it is an oscilloscope over a faint spectrum, both read from an `AnalyserNode` every frame. Drawn as the samples come, the wave would start at a random point in its cycle each frame and shiver sideways. Real scopes solve this with a trigger, and so does this one: each frame starts where the signal crosses zero on the way up.
+- **While a knob turns** it shows that control: the envelope's shape with the segment you are changing lit, or the filter's frequency response. The filter curve is computed from the same formula the browser's filter uses, so it is the real response for those settings. The dashed line is where the envelope opens it to, and the curve sways at the LFO's actual rate and depth.
+- **Along the bottom** is the pattern, with the playing step lit.
 
 ## The Parts the Browser Makes Interesting
 
-The audio graph was the easy half. Most of the care went into the edges.
+**Sound needs a gesture.** Browsers do not let a page make noise until the visitor has clicked, tapped or pressed a key. The `AudioContext` is created on the first note or the first press of Play, and that press is itself the gesture.
 
-**Sound needs a gesture.** Browsers do not let a page make noise until the visitor has clicked, tapped or pressed a key. The `AudioContext` is therefore created on the first note rather than on page load, and that first note is itself the gesture.
+**`cancelAndHoldAtTime` is not everywhere.** Where it is missing, the engine works out where the envelope has got to from when the note started, cancels the schedule and sets that value.
 
-**`cancelAndHoldAtTime` is not everywhere.** Where it is missing, the engine cancels the schedule and re-sets the value the parameter currently reports. It is slightly less exact and I could not hear the difference.
+**Stuck notes.** If you hold a key and switch tabs, the `keyup` goes to the other tab and the note rings forever. The page releases every note when the window loses focus, and stops the sequencer when the tab is hidden, since a background tab's timers are throttled to once a second and no lookahead window survives that.
 
-**Stuck notes.** If you hold a key and switch tabs, the `keyup` goes to the other tab and the note rings forever. The page releases every note when the window loses focus or the tab is hidden.
+**Physical keys, not letters.** The keyboard mapping uses `event.code` rather than `event.key`, so the home row is the lower pads and the row above is the upper pads on any layout, including AZERTY and Dvorak.
 
-**Physical keys, not letters.** The keyboard mapping uses `event.code` rather than `event.key`, so the home row is the white keys and the row above is the black keys on any layout, including AZERTY and Dvorak.
-
-**Sliding across the keys.** The on-screen keyboard captures the pointer on press. A drag plays each key it passes over, and a release that happens off the keyboard still ends the note. Every finger is tracked separately, so chords work on a touch screen.
-
-**A scope that holds still.** The oscilloscope reads the latest samples from an `AnalyserNode` every frame. Drawn as they come, the wave starts at a random point in its cycle each frame and the trace shivers sideways. Real scopes solve this with a trigger, and so does this one: each frame starts drawing where the signal crosses zero on the way up.
+**Sliding across the pads.** The pad area captures the pointer on press. A drag plays each pad it passes over, and a release that happens off the pads still ends the note. Every finger is tracked separately, so chords work on a touch screen.
 
 ## Things to Try
 
-- Pick **Saw**, hold a chord and sweep the cutoff from left to right. That is the sound of half the electronic music ever made.
-- Turn resonance all the way up and move the cutoff slowly. You can pick out individual harmonics as the peak passes over them.
-- Choose **Sine** and watch the scope while switching to **Square**. The picture is the waveform; the filter rounds its corners as you lower the cutoff.
-- Set attack to 2 seconds and release to 4, add echo, and hold anything.
+- Press **Play**, then sweep **Cutoff** and **Reso** while the pattern runs.
+- Turn on **Arp** and **Hold**, press three pads and let go. Now you have both hands free for the knobs. Try the **Pad** preset with the arpeggiator set to **Rand**.
+- Press **Clear**, then **Rec**, and play notes one at a time: each lands on the next step. Or leave the pattern playing with Rec on and play along; notes land on the nearest step.
+- Turn **Tempo** while notes are echoing and listen to the repeats bend.
+- Push **Swing** to about 30% for a shuffle.
+- Turn **LFO depth** up and watch the filter curve on the screen sway in time with what you hear.
 
 ## What Is Not in It
 
-It is a simple synth on purpose. There is no LFO, no second oscillator to detune against the first, no envelope on the filter, no MIDI input and no way to save a sound. Each of those is a few more nodes on the same graph, and the first one I would add is the filter envelope, since it is the difference between a pluck that gets quieter and one that also gets darker.
+There is no MIDI input, no way to save a sound or a pattern, and the sequencer holds one pattern of one note per step. Each of those is more interface than audio code; the graph would not change.
 
 [**Play the Pocket Synth**](/synth)

@@ -3,7 +3,7 @@ import { genPageMetadata } from 'app/seo'
 export const metadata = genPageMetadata({
   title: 'Pocket Synth',
   description:
-    'A polyphonic synthesizer in the browser, built on the Web Audio API: four waveforms, a low-pass filter, an ADSR envelope, echo and a live oscilloscope.',
+    'A synthesizer in your browser with knobs, light-up pads, a step sequencer and an arpeggiator, built on the Web Audio API with no audio library.',
   image: '/static/images/og/pocket-synth.jpg',
   path: '/synth',
 })

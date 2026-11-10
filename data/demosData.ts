@@ -33,7 +33,7 @@ const demosData: Demo[] = [
     href: '/synth',
     postHref: '/blog/pocket-synth-web-audio',
     description:
-      'A polyphonic synthesizer you play with the mouse, a finger or the computer keyboard: four waveforms, a low-pass filter, an ADSR envelope, echo and a live oscilloscope, built on the Web Audio API with no audio library.',
+      'A synthesizer shaped like a piece of hardware: sixteen knobs, light-up pads, a sixteen-step sequencer, an arpeggiator and a screen that draws whatever you are changing. Two oscillators, a filter with its own envelope and LFO, echo and reverb, built on the Web Audio API with no audio library.',
     tech: ['Web Audio', 'Canvas 2D', 'React', 'TypeScript'],
   },
   {

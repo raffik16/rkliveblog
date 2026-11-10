@@ -1,82 +1,31 @@
 'use client'
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { cx } from '@/lib/edition/cx'
-import { SynthEngine, cutoffHz, type Patch, type Wave } from './engine'
-import Scope from './Scope'
+import { STEPS, SynthEngine, type ArpMode, type Pattern } from './engine'
+import Knob from './Knob'
+import Screen, { type ScreenState } from './Screen'
+import {
+  INITIAL,
+  INITIAL_PATTERN,
+  KNOBS_LEFT,
+  KNOBS_RIGHT,
+  PRESETS,
+  WAVES,
+  fromPosition,
+  noteName,
+  toPosition,
+  type KnobDef,
+  type Settings,
+  type Sound,
+} from './params'
 import styles from './synth.module.css'
 
 const POST_HREF = '/blog/pocket-synth-web-audio'
 
-const WAVES: { id: Wave; label: string; path: string }[] = [
-  { id: 'sine', label: 'Sine', path: 'M1 8 C 5 -2, 9 -2, 13 8 S 21 18, 25 8' },
-  { id: 'triangle', label: 'Triangle', path: 'M1 8 L7 2 L19 14 L25 8' },
-  { id: 'sawtooth', label: 'Saw', path: 'M1 14 L13 2 L13 14 L25 2 L25 14' },
-  { id: 'square', label: 'Square', path: 'M1 14 L1 2 L13 2 L13 14 L25 14 L25 2' },
-]
-
-type Sound = Omit<Patch, 'volume'>
-
-const PRESETS: { name: string; sound: Sound }[] = [
-  {
-    name: 'Pluck',
-    sound: {
-      wave: 'sawtooth',
-      cutoff: 0.55,
-      resonance: 4,
-      attack: 0.005,
-      decay: 0.25,
-      sustain: 0.15,
-      release: 0.3,
-      echo: 0.3,
-    },
-  },
-  {
-    name: 'Pad',
-    sound: {
-      wave: 'sawtooth',
-      cutoff: 0.45,
-      resonance: 1,
-      attack: 0.6,
-      decay: 0.8,
-      sustain: 0.8,
-      release: 1.6,
-      echo: 0.35,
-    },
-  },
-  {
-    name: 'Bass',
-    sound: {
-      wave: 'square',
-      cutoff: 0.35,
-      resonance: 6,
-      attack: 0.005,
-      decay: 0.2,
-      sustain: 0.6,
-      release: 0.12,
-      echo: 0,
-    },
-  },
-  {
-    name: 'Lead',
-    sound: {
-      wave: 'square',
-      cutoff: 0.7,
-      resonance: 2,
-      attack: 0.02,
-      decay: 0.1,
-      sustain: 0.9,
-      release: 0.25,
-      echo: 0.25,
-    },
-  },
-]
-
-const INITIAL: Patch = { ...PRESETS[0].sound, volume: 0.7 }
-
-// Two rows of the computer keyboard laid out like a piano: the home row is the white keys,
-// the row above is the black ones. Matched on the physical key (event.code), so it is the
+// Two rows of the computer keyboard laid out like a piano: the home row is the lower pads,
+// the row above is the upper ones. Matched on the physical key (event.code), so it is the
 // same shape on any keyboard layout.
 const KEY_ROW: [code: string, label: string][] = [
   ['KeyA', 'A'],
@@ -100,75 +49,84 @@ const KEY_ROW: [code: string, label: string][] = [
 ]
 const CODE_TO_STEP = new Map(KEY_ROW.map(([code], step) => [code, step]))
 
-const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']
-const isBlack = (step: number) => [1, 3, 6, 8, 10].includes(step % 12)
-const noteName = (midi: number) => `${NOTE_NAMES[midi % 12]}${Math.floor(midi / 12) - 1}`
+const isUpper = (step: number) => [1, 3, 6, 8, 10].includes(step % 12)
 
 const MIN_OCTAVE = 1
 const MAX_OCTAVE = 6
-// Below this width two octaves of keys are too narrow for a thumb, so the keyboard shows one.
+// Below this width two octaves of pads are too narrow for a thumb, so the keyboard shows one.
 const WIDE = '(min-width: 720px)'
 
-const ms = (seconds: number) =>
-  seconds < 1 ? `${Math.round(seconds * 1000)} ms` : `${seconds.toFixed(2)} s`
-const hz = (value: number) =>
-  value < 1000 ? `${Math.round(value)} Hz` : `${(value / 1000).toFixed(1)} kHz`
-const pct = (value: number) => `${Math.round(value * 100)}%`
+const ARP_MODES: { id: ArpMode; label: string }[] = [
+  { id: 'up', label: 'Up' },
+  { id: 'down', label: 'Down' },
+  { id: 'updown', label: 'Up-Dn' },
+  { id: 'random', label: 'Rand' },
+]
 
-interface SliderProps {
-  label: string
-  value: number
-  min: number
-  max: number
-  step: number
-  display: string
-  onChange: (value: number) => void
-}
-
-function Slider({ label, value, min, max, step, display, onChange }: SliderProps) {
-  const id = useId()
-  return (
-    <div className={styles.slider}>
-      <label htmlFor={id} className={styles.sliderHead}>
-        <span>{label}</span>
-        <span className={styles.sliderValue}>{display}</span>
-      </label>
-      <input
-        id={id}
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        aria-label={label}
-        aria-valuetext={display}
-        onChange={(e) => onChange(Number(e.target.value))}
-        style={{ '--fill': `${((value - min) / (max - min)) * 100}%` } as React.CSSProperties}
-      />
-    </div>
-  )
-}
+// The body comes in the six colours of the site's palette
+const COLOURS = ['violet', 'cobalt', 'raspberry', 'ember', 'forest', 'ink'] as const
+type Colour = (typeof COLOURS)[number]
+const COLOUR_KEY = 'pocket-synth-colour'
 
 export default function Synth() {
-  const [patch, setPatch] = useState<Patch>(INITIAL)
+  const [settings, setSettings] = useState<Settings>(INITIAL)
+  const [pattern, setPattern] = useState<Pattern>(INITIAL_PATTERN)
+  const [playing, setPlaying] = useState(false)
+  const [recording, setRecording] = useState(false)
+  const [cursor, setCursor] = useState(0)
+  const [arp, setArp] = useState(false)
+  const [arpMode, setArpMode] = useState<ArpMode>('up')
+  const [hold, setHold] = useState(false)
   const [octave, setOctave] = useState(3)
   const [wide, setWide] = useState(true)
+  const [colour, setColour] = useState<Colour>('violet')
   const [held, setHeld] = useState<ReadonlySet<number>>(new Set())
 
   const engineRef = useRef<SynthEngine | null>(null)
-  if (!engineRef.current) engineRef.current = new SynthEngine(INITIAL)
+  if (!engineRef.current) engineRef.current = new SynthEngine(INITIAL, INITIAL)
   const engine = engineRef.current
+
+  const deviceRef = useRef<HTMLDivElement>(null)
+  const playRef = useRef<HTMLButtonElement>(null)
 
   // What is holding each note down: a finger ("p<pointerId>") or a key ("k<code>"). A note
   // sounds while at least one of them is on it, so a key and a finger on the same note don't
   // cut each other off.
   const sources = useRef(new Map<string, number>())
-  const octaveRef = useRef(octave)
-  octaveRef.current = octave
+  // With HOLD on, the notes the arpeggiator keeps cycling after the keys are let go
+  const latch = useRef(new Set<number>())
+  const lastNote = useRef(60)
+  const focus = useRef<ScreenState['focus']>(null)
+
+  // Event handlers registered once (keyboard, pointer) read the latest values from here
+  const live = useRef({ octave, playing, recording, cursor, arp, hold })
+  live.current = { octave, playing, recording, cursor, arp, hold }
+
+  const preset = PRESETS.find(({ sound }) =>
+    (Object.keys(sound) as (keyof Sound)[]).every((key) => sound[key] === settings[key])
+  )?.name
+
+  const screenState = useRef<ScreenState>(null!)
+  screenState.current = {
+    settings,
+    pattern,
+    preset,
+    playing,
+    recording,
+    cursor,
+    arp,
+    arpMode,
+    focus: focus.current,
+  }
 
   useEffect(() => {
-    engine.setPatch(patch)
-  }, [engine, patch])
+    engine.setPatch(settings)
+    engine.setTransport(settings)
+  }, [engine, settings])
+
+  useEffect(() => engine.setPattern(pattern), [engine, pattern])
+  useEffect(() => engine.setArp(arp, arpMode), [engine, arp, arpMode])
+  useEffect(() => () => engine.dispose(), [engine])
 
   useEffect(() => {
     const query = window.matchMedia(WIDE)
@@ -178,18 +136,91 @@ export default function Synth() {
     return () => query.removeEventListener('change', update)
   }, [])
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(COLOUR_KEY) as Colour | null
+      if (saved && COLOURS.includes(saved)) setColour(saved)
+    } catch {
+      // Storage is blocked: the default colour is fine
+    }
+  }, [])
+
+  const pickColour = (next: Colour) => {
+    setColour(next)
+    try {
+      localStorage.setItem(COLOUR_KEY, next)
+    } catch {
+      // Not remembered, still applied
+    }
+  }
+
+  // Lights. A sequenced note is scheduled a moment before it sounds, so React state would
+  // light its pad early. Each frame asks the engine what is sounding on the audio clock
+  // right now and switches the lights on the elements directly.
+  useEffect(() => {
+    let frame = 0
+    const loop = () => {
+      frame = requestAnimationFrame(loop)
+      const device = deviceRef.current
+      if (!device) return
+      const lit = engine.litNotes()
+      if (!live.current.arp) for (const midi of sources.current.values()) lit.add(midi)
+      const step = engine.currentStep()
+      device
+        .querySelectorAll<HTMLElement>('[data-midi]')
+        .forEach((pad) => pad.toggleAttribute('data-lit', lit.has(Number(pad.dataset.midi))))
+      device
+        .querySelectorAll<HTMLElement>('[data-step]')
+        .forEach((el) => el.toggleAttribute('data-now', Number(el.dataset.step) === step))
+      playRef.current?.toggleAttribute('data-beat', step >= 0 && step % 4 === 0)
+    }
+    loop()
+    return () => cancelAnimationFrame(frame)
+  }, [engine])
+
+  // ----------------------------------------------------------------------------- playing
+  const arpNotes = () =>
+    live.current.hold ? [...latch.current] : [...new Set(sources.current.values())]
+
+  // REC while the pattern runs: the note lands on the nearest step. REC while stopped: it
+  // lands on the cursor, which moves on one step.
+  const record = useCallback(
+    (midi: number) => {
+      const { recording, playing, cursor } = live.current
+      if (!recording) return
+      const at = playing ? engine.nearestStep() : cursor
+      if (at < 0) return
+      setPattern((p) => p.map((note, i) => (i === at ? midi : note)))
+      if (!playing) setCursor((cursor + 1) % STEPS)
+    },
+    [engine]
+  )
+
   const press = useCallback(
     (source: string, midi: number) => {
       const map = sources.current
-      if (map.get(source) === midi) return
       const previous = map.get(source)
+      if (previous === midi) return
+      const nothingHeld = map.size === 0
       const alreadySounding = [...map.values()].includes(midi)
       map.set(source, midi)
-      if (!alreadySounding) engine.noteOn(midi)
-      if (previous !== undefined && ![...map.values()].includes(previous)) engine.noteOff(previous)
+      lastNote.current = midi
+
+      if (live.current.arp) {
+        // The first key of a new chord replaces what HOLD was keeping
+        if (live.current.hold && nothingHeld) latch.current.clear()
+        latch.current.add(midi)
+        engine.setArpNotes(arpNotes())
+      } else {
+        if (!alreadySounding) engine.noteOn(midi)
+        if (previous !== undefined && ![...map.values()].includes(previous)) {
+          engine.noteOff(previous)
+        }
+      }
+      record(midi)
       setHeld(new Set(map.values()))
     },
-    [engine]
+    [engine, record]
   )
 
   const release = useCallback(
@@ -198,7 +229,8 @@ export default function Synth() {
       const midi = map.get(source)
       if (midi === undefined) return
       map.delete(source)
-      if (![...map.values()].includes(midi)) engine.noteOff(midi)
+      if (live.current.arp) engine.setArpNotes(arpNotes())
+      else if (![...map.values()].includes(midi)) engine.noteOff(midi)
       setHeld(new Set(map.values()))
     },
     [engine]
@@ -206,8 +238,16 @@ export default function Synth() {
 
   const releaseAll = useCallback(() => {
     sources.current.clear()
+    latch.current.clear()
     engine.allNotesOff()
+    engine.setArpNotes([])
     setHeld(new Set())
+  }, [engine])
+
+  const togglePlay = useCallback(() => {
+    if (live.current.playing) engine.stop()
+    else engine.play()
+    setPlaying(!live.current.playing)
   }, [engine])
 
   const shiftOctave = useCallback((by: number) => {
@@ -219,20 +259,31 @@ export default function Synth() {
     const down = (e: KeyboardEvent) => {
       if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return
       const target = e.target as HTMLElement | null
-      if (target?.closest('input:not([type="range"]), textarea, select, [contenteditable]')) return
+      if (target?.closest('input, textarea, select, [contenteditable]')) return
 
+      if (e.code === 'Space') {
+        // On a focused button or knob, Space already means "press this"
+        if (target?.closest('button, a, [role="slider"]')) return
+        e.preventDefault()
+        return togglePlay()
+      }
       if (e.code === 'KeyZ') return shiftOctave(-1)
       if (e.code === 'KeyX') return shiftOctave(1)
 
       const step = CODE_TO_STEP.get(e.code)
       if (step === undefined) return
       e.preventDefault() // ' opens quick find in Firefox
-      press(`k${e.code}`, (octaveRef.current + 1) * 12 + step)
+      press(`k${e.code}`, (live.current.octave + 1) * 12 + step)
     }
     const up = (e: KeyboardEvent) => release(`k${e.code}`)
-    // A key released while the tab is in the background never sends keyup: stop everything
-    // rather than leave a note ringing.
-    const hidden = () => document.hidden && releaseAll()
+    // A key released while the tab is in the background never sends keyup, and a background
+    // tab's timers are too slow to keep a pattern in time: stop everything.
+    const halt = () => {
+      releaseAll()
+      engine.stop()
+      setPlaying(false)
+    }
+    const hidden = () => document.hidden && halt()
 
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
@@ -244,15 +295,13 @@ export default function Synth() {
       window.removeEventListener('blur', releaseAll)
       document.removeEventListener('visibilitychange', hidden)
     }
-  }, [press, release, releaseAll, shiftOctave])
+  }, [engine, press, release, releaseAll, shiftOctave, togglePlay])
 
-  useEffect(() => () => engine.dispose(), [engine])
-
-  // Mouse and touch. The keyboard element captures the pointer, so a drag that leaves it
-  // still ends the note, and sliding across keys plays each one in turn.
+  // Mouse and touch. The pad area captures the pointer, so a drag that leaves it still ends
+  // the note, and sliding across pads plays each one in turn.
   const midiAt = (x: number, y: number) => {
-    const key = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-midi]')
-    return key ? Number(key.dataset.midi) : undefined
+    const pad = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-midi]')
+    return pad ? Number(pad.dataset.midi) : undefined
   }
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
@@ -270,18 +319,73 @@ export default function Synth() {
   }
   const onPointerEnd = (e: React.PointerEvent<HTMLDivElement>) => release(`p${e.pointerId}`)
 
-  const set = <K extends keyof Patch>(key: K, value: Patch[K]) =>
-    setPatch((p) => ({ ...p, [key]: value }))
+  // ---------------------------------------------------------------------------- controls
+  const show = (key: NonNullable<ScreenState['focus']>['key']) => {
+    focus.current = { key, at: performance.now() }
+  }
 
-  const activePreset = PRESETS.find(({ sound }) =>
-    (Object.keys(sound) as (keyof Sound)[]).every((key) => sound[key] === patch[key])
-  )?.name
+  const turn = (def: KnobDef, position: number) => {
+    show(def.key)
+    setSettings((s) => ({ ...s, [def.key]: fromPosition(def, position) }))
+  }
 
-  // Keys on screen: C to C, one octave on a phone and two on anything wider
+  const toggleStep = (index: number) => {
+    const filled = pattern[index] !== null
+    if (!filled && !playing) engine.preview(lastNote.current)
+    setPattern((p) => p.map((note, i) => (i === index ? (filled ? null : lastNote.current) : note)))
+    setCursor((index + 1) % STEPS)
+  }
+
+  // ARP changes what a held key means, so nothing is left held across the switch
+  const toggleArp = () => {
+    releaseAll()
+    setArp(!arp)
+  }
+  const toggleHold = () => {
+    releaseAll()
+    setHold(!hold)
+  }
+
+  const knobs = (defs: KnobDef[]) =>
+    defs.map((def) => (
+      <Knob
+        key={def.key}
+        label={def.label}
+        position={toPosition(def, settings[def.key])}
+        display={def.format(settings[def.key])}
+        resetTo={toPosition(def, INITIAL[def.key])}
+        onChange={(position) => turn(def, position)}
+      />
+    ))
+
+  // Pads on screen: C to C, one octave on a phone and two on anything wider
   const base = (octave + 1) * 12
   const steps = Array.from({ length: wide ? 25 : 13 }, (_, step) => step)
-  const whites = steps.filter((step) => !isBlack(step))
-  const whiteWidth = 100 / whites.length
+  const lower = steps.filter((step) => !isUpper(step))
+  const padWidth = 100 / lower.length
+
+  const pad = (step: number, style?: React.CSSProperties) => {
+    const midi = base + step
+    const hotkey = KEY_ROW[step]?.[1]
+    return (
+      <div
+        key={step}
+        data-midi={midi}
+        data-held={held.has(midi) || undefined}
+        className={styles.pad}
+        style={{ ...style, '--i': step } as React.CSSProperties}
+      >
+        <span className={styles.padLight} />
+        <span className={styles.padLabel}>
+          {step % 12 === 0 ? noteName(midi) : <span className={styles.hotkey}>{hotkey}</span>}
+        </span>
+      </div>
+    )
+  }
+
+  const arpLabel = ARP_MODES.find((m) => m.id === arpMode)!.label
+  const nextArpMode =
+    ARP_MODES[(ARP_MODES.findIndex((m) => m.id === arpMode) + 1) % ARP_MODES.length].id
 
   return (
     <div className={styles.synth}>
@@ -292,27 +396,70 @@ export default function Synth() {
             Pocket <em>Synth</em>
           </h1>
         </div>
-        <Link href={POST_HREF} className="ed-pill ed-pill--outline">
-          How it works
-          <span className="ed-pill__arrow" aria-hidden="true">
-            →
-          </span>
-        </Link>
+        <div className={styles.headSide}>
+          <div className={styles.colours} role="group" aria-label="Body colour">
+            {COLOURS.map((name) => (
+              <button
+                key={name}
+                type="button"
+                className={styles.colour}
+                data-colour={name}
+                aria-label={name}
+                aria-pressed={colour === name}
+                onClick={() => pickColour(name)}
+              />
+            ))}
+          </div>
+          <Link href={POST_HREF} className="ed-pill ed-pill--outline">
+            How it works
+            <span className="ed-pill__arrow" aria-hidden="true">
+              →
+            </span>
+          </Link>
+        </div>
       </header>
 
-      <div className={styles.body}>
-        <div className={styles.top}>
-          <Scope engine={engine} />
+      <div className={styles.device} data-colour={colour} ref={deviceRef}>
+        <section className={cx(styles.knobs, styles.knobsLeft)} aria-label="Tone">
+          {knobs(KNOBS_LEFT)}
+        </section>
 
-          <div className={styles.presets} role="group" aria-label="Presets">
-            <span className={styles.label}>Preset</span>
+        <div className={styles.bezel}>
+          <Screen engine={engine} state={screenState} />
+        </div>
+
+        <section className={cx(styles.knobs, styles.knobsRight)} aria-label="Envelope and effects">
+          {knobs(KNOBS_RIGHT)}
+        </section>
+
+        <div className={cx(styles.well, styles.soundButtons)}>
+          <div className={styles.buttonRow} role="group" aria-label="Waveform">
+            {WAVES.map((w) => (
+              <button
+                key={w.id}
+                type="button"
+                className={styles.button}
+                aria-pressed={settings.wave === w.id}
+                aria-label={`${w.label} wave`}
+                onClick={() => {
+                  show('wave')
+                  setSettings((s) => ({ ...s, wave: w.id }))
+                }}
+              >
+                <svg viewBox="0 0 26 16" aria-hidden="true">
+                  <path d={w.path} />
+                </svg>
+              </button>
+            ))}
+          </div>
+          <div className={styles.buttonRow} role="group" aria-label="Presets">
             {PRESETS.map(({ name, sound }) => (
               <button
                 key={name}
                 type="button"
-                className={styles.chip}
-                aria-pressed={activePreset === name}
-                onClick={() => setPatch((p) => ({ ...sound, volume: p.volume }))}
+                className={styles.button}
+                aria-pressed={preset === name}
+                onClick={() => setSettings((s) => ({ ...s, ...sound }))}
               >
                 {name}
               </button>
@@ -320,149 +467,105 @@ export default function Synth() {
           </div>
         </div>
 
-        <div className={styles.panels}>
-          <section className={styles.panel} aria-label="Oscillator">
-            <h2 className={styles.label}>Oscillator</h2>
-            <div className={styles.waves} role="group" aria-label="Waveform">
-              {WAVES.map((wave) => (
-                <button
-                  key={wave.id}
-                  type="button"
-                  className={styles.wave}
-                  aria-pressed={patch.wave === wave.id}
-                  onClick={() => set('wave', wave.id)}
-                >
-                  <svg viewBox="0 0 26 16" aria-hidden="true">
-                    <path d={wave.path} />
-                  </svg>
-                  {wave.label}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className={styles.panel} aria-label="Filter">
-            <h2 className={styles.label}>Filter</h2>
-            <Slider
-              label="Cutoff"
-              value={patch.cutoff}
-              min={0}
-              max={1}
-              step={0.005}
-              display={hz(cutoffHz(patch.cutoff))}
-              onChange={(v) => set('cutoff', v)}
-            />
-            <Slider
-              label="Resonance"
-              value={patch.resonance}
-              min={0.1}
-              max={18}
-              step={0.1}
-              display={patch.resonance.toFixed(1)}
-              onChange={(v) => set('resonance', v)}
-            />
-          </section>
-
-          <section className={cx(styles.panel, styles.envelope)} aria-label="Envelope">
-            <h2 className={styles.label}>Envelope</h2>
-            <Slider
-              label="Attack"
-              value={patch.attack}
-              min={0.005}
-              max={2}
-              step={0.005}
-              display={ms(patch.attack)}
-              onChange={(v) => set('attack', v)}
-            />
-            <Slider
-              label="Decay"
-              value={patch.decay}
-              min={0.01}
-              max={2}
-              step={0.01}
-              display={ms(patch.decay)}
-              onChange={(v) => set('decay', v)}
-            />
-            <Slider
-              label="Sustain"
-              value={patch.sustain}
-              min={0}
-              max={1}
-              step={0.01}
-              display={pct(patch.sustain)}
-              onChange={(v) => set('sustain', v)}
-            />
-            <Slider
-              label="Release"
-              value={patch.release}
-              min={0.02}
-              max={4}
-              step={0.01}
-              display={ms(patch.release)}
-              onChange={(v) => set('release', v)}
-            />
-          </section>
-
-          <section className={styles.panel} aria-label="Output">
-            <h2 className={styles.label}>Output</h2>
-            <Slider
-              label="Echo"
-              value={patch.echo}
-              min={0}
-              max={0.8}
-              step={0.01}
-              display={pct(patch.echo)}
-              onChange={(v) => set('echo', v)}
-            />
-            <Slider
-              label="Volume"
-              value={patch.volume}
-              min={0}
-              max={1}
-              step={0.01}
-              display={pct(patch.volume)}
-              onChange={(v) => set('volume', v)}
-            />
-          </section>
-        </div>
-
-        <div className={styles.keysBar}>
-          <div className={styles.octave} role="group" aria-label="Octave">
+        <div className={cx(styles.well, styles.transport)}>
+          <div className={styles.buttonRow} role="group" aria-label="Sequencer">
+            <button
+              ref={playRef}
+              type="button"
+              className={styles.button}
+              data-tone="play"
+              aria-pressed={playing}
+              onClick={togglePlay}
+            >
+              {playing ? 'Stop' : 'Play'}
+            </button>
             <button
               type="button"
-              className={styles.chip}
+              className={styles.button}
+              data-tone="rec"
+              aria-pressed={recording}
+              onClick={() => setRecording(!recording)}
+            >
+              Rec
+            </button>
+            <button
+              type="button"
+              className={styles.button}
+              onClick={() => setPattern(new Array(STEPS).fill(null))}
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              className={styles.button}
               onClick={() => shiftOctave(-1)}
               disabled={octave <= MIN_OCTAVE}
               aria-label="Octave down"
             >
-              −
+              Oct −
             </button>
-            <span className={styles.octaveValue} aria-live="polite">
-              Octave {octave}
-            </span>
+          </div>
+          <div className={styles.buttonRow} role="group" aria-label="Arpeggiator">
+            <button type="button" className={styles.button} aria-pressed={arp} onClick={toggleArp}>
+              Arp
+            </button>
             <button
               type="button"
-              className={styles.chip}
+              className={styles.button}
+              aria-pressed={hold}
+              onClick={toggleHold}
+              disabled={!arp}
+            >
+              Hold
+            </button>
+            <button
+              type="button"
+              className={styles.button}
+              disabled={!arp}
+              aria-label={`Arpeggiator direction: ${arpLabel}`}
+              onClick={() => setArpMode(nextArpMode)}
+            >
+              {arpLabel}
+            </button>
+            <button
+              type="button"
+              className={styles.button}
               onClick={() => shiftOctave(1)}
               disabled={octave >= MAX_OCTAVE}
               aria-label="Octave up"
             >
-              +
+              Oct +
             </button>
           </div>
-          <p className={styles.hint}>
-            Play with the mouse, a finger or the keys <kbd>A</kbd>–<kbd>&apos;</kbd>. <kbd>Z</kbd>{' '}
-            and <kbd>X</kbd> change octave.
-          </p>
         </div>
 
-        {/* The keys are a picture of what the pointer and the computer keyboard play; they are
+        <div className={styles.steps} role="group" aria-label="Sequencer steps">
+          {pattern.map((midi, i) => (
+            <button
+              key={i}
+              type="button"
+              className={styles.step}
+              data-step={i}
+              data-on={midi !== null || undefined}
+              data-cursor={(recording && !playing && cursor === i) || undefined}
+              aria-pressed={midi !== null}
+              aria-label={`Step ${i + 1}: ${midi !== null ? noteName(midi) : 'empty'}`}
+              style={{ '--i': i } as React.CSSProperties}
+              onClick={() => toggleStep(i)}
+            >
+              <span className={styles.stepLed} />
+              <span className={styles.stepNote}>{midi !== null ? noteName(midi) : i + 1}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* The pads are a picture of what the pointer and the computer keyboard play; they are
             not tab stops, since Tab-then-Enter is no way to play a tune. Keyboard users play
-            on the letter keys, as the hint above says. */}
+            on the letter keys, as the hint below says. */}
         <div
-          className={styles.keys}
+          className={cx(styles.well, styles.pads)}
           role="group"
-          aria-label="Piano keyboard"
+          aria-label={`Keyboard, octave ${octave}`}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerEnd}
@@ -470,32 +573,25 @@ export default function Synth() {
           onLostPointerCapture={onPointerEnd}
           onContextMenu={(e) => e.preventDefault()}
         >
-          {steps.map((step) => {
-            const midi = base + step
-            const black = isBlack(step)
-            const whitesBefore = steps.filter((s) => s < step && !isBlack(s)).length
-            const hotkey = KEY_ROW[step]?.[1]
-            return (
-              <div
-                key={step}
-                data-midi={midi}
-                data-held={held.has(midi) || undefined}
-                className={cx(styles.key, black ? styles.black : styles.white)}
-                style={
-                  black
-                    ? { left: `${whitesBefore * whiteWidth}%`, width: `${whiteWidth * 0.62}%` }
-                    : { width: `${whiteWidth}%` }
-                }
-              >
-                <span className={styles.keyLabel}>
-                  {hotkey && <span className={styles.hotkey}>{hotkey}</span>}
-                  {step % 12 === 0 && <span>{noteName(midi)}</span>}
-                </span>
-              </div>
-            )
-          })}
+          <div className={styles.padsUpper}>
+            {steps.filter(isUpper).map((step) =>
+              pad(step, {
+                left: `${steps.filter((s) => s < step && !isUpper(s)).length * padWidth}%`,
+                width: `${padWidth}%`,
+              })
+            )}
+          </div>
+          <div className={styles.padsLower}>{lower.map((step) => pad(step))}</div>
         </div>
       </div>
+
+      <p className={styles.hint}>
+        <span>
+          Play the pads, or the keys <kbd>A</kbd>–<kbd>&apos;</kbd>. <kbd>Z</kbd> <kbd>X</kbd>{' '}
+          octave. <kbd>Space</kbd> play/stop.
+        </span>
+        <span>Drag a knob up or down. Shift for fine steps, double-click to reset.</span>
+      </p>
     </div>
   )
 }

@@ -1,32 +1,38 @@
-/* /synth, on the Edition tokens (css/edition.css). */
+/* /synth: a hardware-style instrument drawn in CSS, on the Edition tokens (css/edition.css). */
+
+/* Registered as a colour so the body can fade from one colourway to the next */
+@property --synth-body {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #6410c4;
+}
 
 .synth {
-  max-width: 1080px;
+  max-width: 1120px;
   margin-inline: auto;
   padding-top: clamp(16px, 4vw, 40px);
   color: var(--ed-fg);
   font-family: var(--ed-font-body);
 }
 
+/* ------------------------------------------------------------------ page head */
 .head {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .kicker,
-.label,
-.sliderHead,
-.chip,
-.wave,
-.hint,
-.octaveValue,
-.keyLabel {
+.knobLabel,
+.button,
+.stepNote,
+.padLabel,
+.hint {
   font-family: var(--ed-font-mono);
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -34,6 +40,7 @@
 .kicker {
   margin: 0 0 6px;
   color: var(--ed-fg-3);
+  font-size: 11px;
 }
 
 .title {
@@ -51,309 +58,641 @@
   letter-spacing: -0.01em;
 }
 
-.body {
-  border: 1px solid var(--ed-line);
-  border-radius: var(--ed-radius);
-  background: rgba(7, 8, 12, 0.72);
-  backdrop-filter: blur(10px);
-}
-
-.body {
-  display: flex;
-  flex-direction: column;
-}
-
-.top {
-  border-bottom: 1px solid var(--ed-line);
-}
-
-/* On a phone the controls stack into a long column, so the keys go above them: the thing you
-   play stays next to the scope instead of four panels further down. */
-@media (max-width: 719.98px) {
-  .keysBar {
-    order: 1;
-  }
-
-  .keys {
-    order: 2;
-  }
-
-  .panels {
-    order: 3;
-    border-top: 1px solid var(--ed-line);
-  }
-
-  .panel:last-child {
-    border-bottom: 0;
-  }
-}
-
-.scope {
-  display: block;
-  width: 100%;
-  height: clamp(110px, 20vw, 170px);
-}
-
-.presets {
+.headSide {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  gap: 14px 18px;
+}
+
+.colours {
+  display: flex;
   gap: 8px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--ed-line);
 }
 
-.label {
-  margin: 0;
-  color: var(--ed-fg-3);
-  font-weight: 400;
-}
-
-.presets .label {
-  margin-right: 4px;
-}
-
-.chip {
-  min-width: 40px;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid var(--ed-line);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--ed-fg-2);
+.colour {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid var(--ed-ink);
+  border-radius: 50%;
+  background: var(--synth-body);
+  box-shadow: 0 0 0 1px var(--ed-line-strong);
   cursor: pointer;
   transition:
-    border-color 0.15s,
-    color 0.15s,
-    background 0.15s;
+    transform 0.2s var(--ed-ease),
+    box-shadow 0.2s;
 }
 
-.chip:hover:not(:disabled) {
-  border-color: var(--ed-line-strong);
-  color: var(--ed-fg);
+.colour:hover {
+  transform: scale(1.15);
 }
 
-.chip[aria-pressed='true'] {
-  border-color: var(--ed-fg);
-  background: var(--ed-fg);
-  color: var(--ed-ink);
+.colour[aria-pressed='true'] {
+  box-shadow: 0 0 0 2px var(--ed-fg);
 }
 
-.chip:disabled {
-  opacity: 0.35;
-  cursor: default;
+/* ------------------------------------------------------------------ colourways */
+.device[data-colour='violet'],
+.colour[data-colour='violet'] {
+  --synth-body: color-mix(in oklab, var(--ed-violet) 74%, white);
 }
 
-.chip:focus-visible,
-.wave:focus-visible {
-  outline: 2px solid var(--ed-signal);
-  outline-offset: 2px;
+.device[data-colour='cobalt'],
+.colour[data-colour='cobalt'] {
+  --synth-body: color-mix(in oklab, var(--ed-cobalt) 72%, white);
 }
 
-/* ------------------------------------------------------------- controls */
-.panels {
+.device[data-colour='raspberry'],
+.colour[data-colour='raspberry'] {
+  --synth-body: color-mix(in oklab, var(--ed-raspberry) 78%, white);
+}
+
+.device[data-colour='ember'],
+.colour[data-colour='ember'] {
+  --synth-body: color-mix(in oklab, var(--ed-ember) 80%, white);
+}
+
+.device[data-colour='forest'],
+.colour[data-colour='forest'] {
+  --synth-body: color-mix(in oklab, var(--ed-forest) 78%, white);
+}
+
+.device[data-colour='ink'],
+.colour[data-colour='ink'] {
+  --synth-body: #23262f;
+}
+
+/* ------------------------------------------------------------------ the body */
+.device {
+  /* Raised parts (pads, buttons) and the text printed on the body */
+  --raised:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.03) 70%),
+    var(--synth-body);
+  --print: rgba(255, 255, 255, 0.82);
+
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'screen'
+    'transport'
+    'steps'
+    'pads'
+    'sound'
+    'knobsL'
+    'knobsR';
+  gap: 16px;
+  padding: 16px;
+  border-radius: 28px;
+  background:
+    radial-gradient(120% 70% at 15% 0%, rgba(255, 255, 255, 0.2), transparent 60%),
+    linear-gradient(180deg, transparent 40%, rgba(0, 0, 0, 0.26)), var(--synth-body);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.28),
+    0 50px 90px -40px rgba(0, 0, 0, 0.9),
+    0 0 140px -50px var(--synth-body);
+  transition: --synth-body 0.6s var(--ed-ease);
+  animation: arrive 0.9s var(--ed-ease) both;
 }
 
-.panel {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 16px;
-  border-bottom: 1px solid var(--ed-line);
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.975);
+  }
 }
 
 @media (min-width: 720px) {
-  .panels {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .panel:nth-child(odd) {
-    border-right: 1px solid var(--ed-line);
+  .device {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'screen screen'
+      'sound transport'
+      'steps steps'
+      'pads pads'
+      'knobsL knobsR';
+    gap: 20px;
+    padding: 24px;
+    border-radius: 36px;
   }
 }
 
 @media (min-width: 1000px) {
-  .panels {
-    grid-template-columns: 1fr 1fr 1.6fr 1fr;
-  }
-
-  .panel:not(:last-child) {
-    border-right: 1px solid var(--ed-line);
-  }
-
-  .envelope {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    align-content: start;
-    column-gap: 20px;
-  }
-
-  .envelope .label {
-    grid-column: 1 / -1;
+  .device {
+    grid-template-columns: minmax(0, 1fr) 300px minmax(0, 1fr);
+    grid-template-areas:
+      'knobsL screen knobsR'
+      'sound screen transport'
+      'steps steps steps'
+      'pads pads pads';
+    gap: 22px 28px;
+    padding: 30px;
   }
 }
 
-.waves {
+/* A recess in the body that buttons and pads sit in */
+.well {
+  padding: 10px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.17);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* ------------------------------------------------------------------ screen */
+.bezel {
+  position: relative;
+  grid-area: screen;
+  align-self: center;
+  justify-self: center;
+  width: 100%;
+  max-width: 340px;
+  padding: 12px;
+  border-radius: 26px;
+  background: #05060a;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.25),
+    0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Glass: a soft reflection across the top-left corner */
+.bezel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.09), transparent 38%);
+  pointer-events: none;
+}
+
+.screen {
+  display: block;
+  width: 100%;
+  aspect-ratio: 320 / 300;
+  border-radius: 12px;
+  /* Read by the canvas for its text (Screen.tsx) */
+  font-family: var(--ed-font-mono);
+}
+
+/* ------------------------------------------------------------------ knobs */
+.knobs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px 6px;
+  align-content: center;
 }
 
-.wave {
+.knobsLeft {
+  grid-area: knobsL;
+}
+
+.knobsRight {
+  grid-area: knobsR;
+}
+
+.knob {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 10px 4px 8px;
-  border: 1px solid var(--ed-line);
-  border-radius: var(--ed-radius);
-  background: transparent;
-  color: var(--ed-fg-3);
-  font-size: 10px;
-  cursor: pointer;
-  transition:
-    border-color 0.15s,
-    color 0.15s,
-    background 0.15s;
+  gap: 4px;
+  min-width: 0;
 }
 
-.wave svg {
-  width: 34px;
-  height: 20px;
+.knobLabel {
+  color: var(--print);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.dial {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.dial:focus {
+  outline: none;
+}
+
+.dial svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ringTrack,
+.ringValue {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.ringTrack {
+  stroke: rgba(0, 0, 0, 0.32);
+}
+
+.ringValue {
+  stroke: #fff;
+  stroke-dasharray: 100;
+  /* Slow enough that choosing a preset sweeps every knob to its new place */
+  transition:
+    stroke-dashoffset 0.5s var(--ed-ease),
+    stroke 0.2s;
+}
+
+.cap {
+  position: absolute;
+  inset: 11px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.22), transparent 55%), #14161d;
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.6);
+  transform: rotate(var(--turn));
+  transition: transform 0.5s var(--ed-ease);
+}
+
+/* The pointer line */
+.cap::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 2.5px;
+  height: 9px;
+  margin-left: -1.25px;
+  border-radius: 2px;
+  background: #fff;
+}
+
+/* While it is being turned the dial follows the hand exactly, with no easing */
+.dial[data-dragging] .cap,
+.dial[data-dragging] .ringValue {
+  transition: none;
+}
+
+.dial[data-dragging] .ringValue,
+.dial:focus-visible .ringValue {
+  stroke: var(--ed-signal);
+  filter: drop-shadow(0 0 4px var(--ed-signal));
+}
+
+.dial[data-dragging] .cap::after,
+.dial:focus-visible .cap::after {
+  background: var(--ed-signal);
+  box-shadow: 0 0 6px var(--ed-signal);
+}
+
+.dial:hover .cap {
+  box-shadow:
+    0 6px 12px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* ------------------------------------------------------------------ buttons */
+.soundButtons {
+  grid-area: sound;
+}
+
+.transport {
+  grid-area: transport;
+}
+
+.soundButtons,
+.transport {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-self: start;
+}
+
+.buttonRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--raised);
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  color: var(--print);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 0.08s,
+    box-shadow 0.08s,
+    color 0.2s,
+    filter 0.2s,
+    text-shadow 0.2s;
+}
+
+.button svg {
+  width: 26px;
+  height: 16px;
   overflow: visible;
 }
 
-.wave path {
+.button path {
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.5;
+  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-.wave:hover {
-  border-color: var(--ed-line-strong);
-  color: var(--ed-fg);
+.button:hover:not(:disabled) {
+  filter: brightness(1.1);
 }
 
-.wave[aria-pressed='true'] {
-  border-color: var(--ed-fg);
-  background: var(--ed-panel);
-  color: var(--ed-fg);
+.button:active:not(:disabled),
+.step:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 0 0 rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
-.slider {
+/* Switched on: the legend lights up. Lime is the system's "live" colour. */
+.button[aria-pressed='true'] {
+  color: var(--ed-signal);
+  text-shadow: 0 0 10px var(--ed-signal);
+}
+
+.button[aria-pressed='true'] svg {
+  filter: drop-shadow(0 0 4px var(--ed-signal));
+}
+
+.button[data-tone='rec'][aria-pressed='true'] {
+  color: #ff8fa3;
+  text-shadow: 0 0 10px #ff2e55;
+}
+
+/* PLAY flashes on each beat (set by the lights loop in Synth.tsx) */
+.button[data-tone='play'][data-beat] {
+  filter: brightness(1.3);
+  transition-duration: 0s;
+}
+
+.button:disabled {
+  color: rgba(255, 255, 255, 0.3);
+  cursor: default;
+}
+
+.button:focus-visible,
+.step:focus-visible,
+.colour:focus-visible {
+  outline: 2px solid var(--ed-signal);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ sequencer steps */
+.steps {
+  display: grid;
+  grid-area: steps;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px;
+}
+
+@media (min-width: 720px) {
+  .steps {
+    grid-template-columns: repeat(16, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  /* A wider gap after every beat */
+  .step:nth-child(4n + 1):not(:first-child) {
+    margin-left: 6px;
+  }
+}
+
+.step {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.sliderHead {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--ed-fg-2);
-}
-
-.sliderValue {
-  color: var(--ed-fg-3);
-  font-variant-numeric: tabular-nums;
-  text-transform: none;
-  letter-spacing: 0.02em;
-}
-
-.slider input {
-  appearance: none;
-  width: 100%;
-  height: 20px;
-  margin: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 42px;
   padding: 0;
   border: 0;
-  background: transparent;
+  border-radius: 10px;
+  background: var(--raised);
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.55);
   cursor: pointer;
+  transition:
+    transform 0.08s,
+    box-shadow 0.08s,
+    filter 0.2s;
 }
 
-.slider input:focus {
-  outline: none;
-  box-shadow: none;
+.step:hover {
+  filter: brightness(1.1);
 }
 
-.slider input::-webkit-slider-runnable-track {
-  height: 2px;
-  background: linear-gradient(
-    to right,
-    var(--ed-fg) var(--fill),
-    var(--ed-line-strong) var(--fill)
-  );
-}
-
-.slider input::-moz-range-track {
-  height: 2px;
-  background: var(--ed-line-strong);
-}
-
-.slider input::-moz-range-progress {
-  height: 2px;
-  background: var(--ed-fg);
-}
-
-.slider input::-webkit-slider-thumb {
-  appearance: none;
+.stepLed {
   width: 14px;
-  height: 14px;
-  margin-top: -6px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--ed-fg);
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.42);
+  transition:
+    background 0.25s,
+    box-shadow 0.25s;
+  /* Power-on: the lights run left to right once */
+  animation: sweep 0.5s calc(0.5s + var(--i) * 45ms) both;
 }
 
-.slider input::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--ed-fg);
+@keyframes sweep {
+  40% {
+    background: var(--ed-signal);
+    box-shadow: 0 0 10px var(--ed-signal);
+  }
 }
 
-.slider input:focus-visible::-webkit-slider-thumb {
-  outline: 2px solid var(--ed-signal);
-  outline-offset: 2px;
+.stepNote {
+  font-size: 8px;
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 
-.slider input:focus-visible::-moz-range-thumb {
-  outline: 2px solid var(--ed-signal);
-  outline-offset: 2px;
+.step[data-on] {
+  color: #fff;
 }
 
-/* ------------------------------------------------------------- keyboard */
-.keysBar {
+.step[data-on] .stepLed {
+  background: #fff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+}
+
+/* The step being played: on instantly, fading out slowly, like a real LED chase */
+.step[data-now] {
+  filter: brightness(1.22);
+}
+
+.step[data-now] .stepLed {
+  background: var(--ed-signal);
+  box-shadow: 0 0 12px 2px var(--ed-signal);
+  transition-duration: 0s;
+}
+
+.step[data-cursor] {
+  outline: 2px solid #ff8fa3;
+  outline-offset: 1px;
+}
+
+/* ------------------------------------------------------------------ pads */
+.pads {
+  grid-area: pads;
+  padding: 12px;
+  border-radius: 26px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.padsUpper {
+  position: relative;
+  height: clamp(72px, 10vw, 96px);
+  margin-bottom: 8px;
+}
+
+.padsUpper .pad {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  /* Centred on the gap between the two lower pads it sits above */
+  transform: translateX(-50%);
+}
+
+.padsLower {
+  display: flex;
+  height: clamp(96px, 13vw, 124px);
+}
+
+.padsLower .pad {
+  flex: 1 1 0;
+}
+
+/* The element is the touch target; the pill drawn inside it leaves a gap to its neighbours */
+.pad {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  animation: pop 0.5s calc(0.25s + var(--i) * 16ms) var(--ed-ease) both;
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+}
+
+.pad::before {
+  content: '';
+  position: absolute;
+  inset: 0 3px 3px;
+  border-radius: 999px;
+  background: var(--raised);
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  transition:
+    translate 0.07s,
+    box-shadow 0.07s,
+    filter 0.2s;
+}
+
+.pad:hover::before {
+  filter: brightness(1.08);
+}
+
+.pad[data-held]::before {
+  translate: 0 3px;
+  box-shadow:
+    0 0 0 rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.padLight,
+.padLabel {
+  position: relative;
+  pointer-events: none;
+}
+
+.pad[data-held] .padLight,
+.pad[data-held] .padLabel {
+  translate: 0 3px;
+}
+
+.padLight {
+  width: 5px;
+  height: 42%;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.42);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.4);
+  /* Fades out slowly after the note; switches on at once (below) */
+  transition:
+    background 0.35s,
+    box-shadow 0.35s;
+}
+
+.pad[data-lit] .padLight {
+  background: var(--ed-signal);
+  box-shadow:
+    0 0 14px 3px var(--ed-signal),
+    0 0 2px #fff;
+  transition-duration: 0s;
+}
+
+.padLabel {
+  height: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  line-height: 10px;
+}
+
+/* ------------------------------------------------------------------ hint */
+.hint {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   justify-content: space-between;
-  gap: 10px 20px;
-  padding: 12px 16px;
-}
-
-.octave {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.octaveValue {
-  min-width: 78px;
-  color: var(--ed-fg-2);
-  text-align: center;
-}
-
-.hint {
-  margin: 0;
+  gap: 8px 24px;
+  margin: 18px 4px 0;
   color: var(--ed-fg-3);
-  text-transform: none;
+  font-size: 11px;
+  line-height: 1.9;
   letter-spacing: 0.02em;
+  text-transform: none;
 }
 
 .hint kbd {
@@ -366,68 +705,21 @@
 
 /* The letter keys mean nothing on a touch screen */
 @media (hover: none) {
-  .hint,
+  .hint span:first-child,
   .hotkey {
     display: none;
   }
 }
 
-.keys {
-  position: relative;
-  display: flex;
-  height: clamp(150px, 24vw, 220px);
-  margin: 0 16px 16px;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-}
+@media (prefers-reduced-motion: reduce) {
+  .device,
+  .pad,
+  .stepLed {
+    animation: none;
+  }
 
-.key {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.white {
-  border: 1px solid var(--ed-ink);
-  border-radius: 0 0 var(--ed-radius) var(--ed-radius);
-  background: var(--ed-paper);
-  color: rgba(7, 8, 12, 0.55);
-}
-
-.black {
-  position: absolute;
-  top: 0;
-  z-index: 1;
-  height: 60%;
-  transform: translateX(-50%);
-  border: 1px solid var(--ed-line-strong);
-  border-top: 0;
-  border-radius: 0 0 var(--ed-radius) var(--ed-radius);
-  background: var(--ed-ink);
-  color: var(--ed-fg-3);
-}
-
-/* Lime is the system's "live" colour: a key is lit exactly while its note sounds */
-.key[data-held] {
-  background: var(--ed-signal);
-  color: var(--ed-ink);
-}
-
-.keyLabel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding-bottom: 8px;
-  font-size: 10px;
-  letter-spacing: 0.02em;
-  pointer-events: none;
-}
-
-.hotkey {
-  opacity: 0.75;
+  .cap,
+  .ringValue {
+    transition: none;
+  }
 }
