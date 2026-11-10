@@ -147,15 +147,15 @@ tube(0.33, 1.2, 101.4, 104.2, METAL, gLes);
 // Plumes: one cone per cluster, sized from the model.
 const plume = (color, parent, y) => {
   const m = new THREE.Mesh(
-    new THREE.ConeGeometry(1, 1, 32, 1, true),
-    new THREE.MeshBasicMaterial({color, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide}),
+    new THREE.CylinderGeometry(0.72, 1, 1, 32, 1, true),
+    new THREE.MeshBasicMaterial({color, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide}),
   );
   m.userData.y = y;
   parent.add(m);
   return m;
 };
-const plumes = [plume(0xff8a2a, g1, 0.5), plume(0x9cc9ff, g2, 43), plume(0x9cc9ff, g3, 67.7)];
-const cores = [plume(0xfff1c2, g1, 0.5), plume(0xe6f2ff, g2, 43), plume(0xe6f2ff, g3, 67.7)];
+const plumes = [plume(0xf0531c, g1, 0.5), plume(0x9cc9ff, g2, 43), plume(0x9cc9ff, g3, 67.7)];
+const cores = [plume(0xffd27a, g1, 0.5), plume(0xe6f2ff, g2, 43), plume(0xe6f2ff, g3, 67.7)];
 
 // Pad: mobile launcher deck and the umbilical tower, at true scale, falling away with altitude.
 const pad = new THREE.Group();
@@ -163,7 +163,7 @@ scene.add(pad);
 const padMat = new THREE.MeshStandardMaterial({color: 0x8a8d92, roughness: 0.9});
 const deck = new THREE.Mesh(new THREE.BoxGeometry(49, 7.6, 41), padMat);
 deck.position.set(-8, -4.2, 0);
-const lut = new THREE.Mesh(new THREE.BoxGeometry(12, 116, 12), new THREE.MeshStandardMaterial({color: 0xb5442a, roughness: 0.8, wireframe: false, transparent: true, opacity: 0.85}));
+const lut = new THREE.Mesh(new THREE.BoxGeometry(12, 116, 12, 2, 16, 2), new THREE.MeshBasicMaterial({color: 0xa33a22, wireframe: true}));
 lut.position.set(-24, 58, 0);
 const ground = new THREE.Mesh(new THREE.CircleGeometry(4000, 48), new THREE.MeshStandardMaterial({color: 0xb9bdb2, roughness: 1}));
 ground.rotation.x = -Math.PI / 2;
@@ -204,8 +204,8 @@ const TANKS = [['S-IC RP-1', 'rp1', 'rp1'], ['S-IC LOX', 'lox', 'lox1'], ['S-II 
 $('tanks').innerHTML = TANKS.map(([n, c], i) => `<div class="tk"><span>${n}</span><i><u class="${c}" id="tk${i}"></u></i><em id="tv${i}"></em></div>`).join('');
 const fmt = (v, d = 0) => v.toLocaleString('en-US', {minimumFractionDigits: d, maximumFractionDigits: d});
 const READ = [
-  ['Altitude', (s) => `${fmt(s.alt / 1000, 1)} km`], ['Speed, inertial', (s) => `${fmt(s.vSpace)} m/s`], ['Mach', (s) => (s.alt > 90000 ? 'vacuum' : fmt(s.mach, 2))],
-  ['Downrange', (s) => `${fmt(s.range / 1000)} km`], ['Load', (s) => `${fmt(s.g, 2)} g`], ['Dynamic pressure', (s) => `${fmt(s.q / 1000, 1)} kPa`],
+  ['Altitude', (s) => `${fmt(s.alt / 1000, 1)} km`], ['Speed', (s) => `${fmt(s.vSpace)} m/s`], ['Mach', (s) => (s.alt > 90000 ? 'vacuum' : fmt(s.mach, 2))],
+  ['Downrange', (s) => `${fmt(Math.max(0, s.range / 1000))} km`], ['Load', (s) => `${fmt(s.g, 2)} g`], ['Dynamic pressure', (s) => `${fmt(s.q / 1000, 1)} kPa`],
   ['Thrust', (s) => `${fmt(s.thrust / 1e6, 2)} MN`], ['Mass', (s) => `${fmt(s.mass / 1000)} t`], ['Burning', (s) => `${fmt(s.flow)} kg/s`],
   ['Pitch', (s) => `${fmt(s.pitch, 1)}°`], ['Engines lit', (s) => (s.eng[0] ? `${s.eng[0]} × F-1` : s.eng[1] ? `${s.eng[1]} × J-2` : s.eng[2] ? '1 × J-2' : 'none')],
 ];
@@ -368,9 +368,10 @@ function pose(s, wall) {
   gLes.position.set(lt > 0 ? 9 * lt : 0, lt > 0 ? 14 * lt : 0, 0);
   // Exploded view spreads the stages along the axis.
   const e = st.explode;
-  if (e > 0.001) {
-    g1.position.y -= 22 * e; gRing.position.y -= 11 * e; g3.position.y = 12 * e; gLes.position.y += 22 * e;
-  } else g3.position.y = 0;
+  gRing.position.y += 10 * e;
+  g2.position.y += 20 * e;
+  g3.position.y = 32 * e;
+  gLes.position.y += 44 * e;
   tanks.forEach((k, i) => {
     const f = Math.max(0.001, s.fill[i]);
     k.liquid.scale.y = k.h * f;
@@ -380,14 +381,14 @@ function pose(s, wall) {
   // Plumes: longer and wider as the outside pressure falls.
   const wide = 1 + 5 * smooth(8000, 70000, s.alt);
   const flick = 1 + 0.05 * Math.sin(wall * 47) + 0.03 * Math.sin(wall * 113);
-  const sizes = [[s.eng[0] / 5, 4.6 * wide, 70 + 60 * smooth(0, 60000, s.alt)], [s.eng[1] / 5, 9, 46], [s.eng[2], 5, 30]];
+  const sizes = [[s.eng[0] / 5, 5.6 * wide, 90 + 60 * smooth(0, 60000, s.alt)], [s.eng[1] / 5, 6.5, 46], [s.eng[2], 2.6, 30]];
   sizes.forEach(([on, r, len], i) => {
     const ramp = i === 0 && t < 0 ? smooth(T.start + 3, -0.5, t) : 1;
     for (const [m, k] of [[plumes[i], 1], [cores[i], 0.45]]) {
       m.visible = on > 0;
       m.scale.set(r * k * Math.sqrt(on), len * k * flick * ramp, r * k * Math.sqrt(on));
       m.position.y = m.userData.y - (len * k * flick * ramp) / 2;
-      m.material.opacity = (i === 0 ? 0.62 : 0.3) * (k === 1 ? 1 : 1.2);
+      m.material.opacity = (i === 0 ? 0.55 : 0.28) * (k === 1 ? 1 : 1.5);
     }
   });
   rig.rotation.z = (-(90 - s.pitch) * Math.PI) / 180;
@@ -398,7 +399,7 @@ function pose(s, wall) {
 }
 const camState = {yc: 55, dist: 262};
 function aim(s, dt) {
-  const top = st.explode > 0.5 ? 110 : 101;
+  const top = 101 + 54 * st.explode;
   const base = s.stage === 0 ? 0 : s.stage === 1 ? 43 : 68;
   const mid = (base + top) / 2;
   const span = top - base;
@@ -411,7 +412,7 @@ function aim(s, dt) {
   controls.target.copy(tmp);
   camera.position.add(delta);
   if (camGoal) {
-    const want = st.view === 'stack' ? Math.max(120, span * 2.5 + (st.explode > 0.5 ? 80 : 0)) * (innerWidth < 820 ? 1.5 : 1) : camGoal.dist;
+    const want = st.view === 'stack' ? Math.max(120, span * 2.5) * (innerWidth < 820 ? 1.5 : 1) : camGoal.dist;
     const off = camera.position.clone().sub(controls.target);
     const d = off.length();
     const nd = d + (want - d) * k;

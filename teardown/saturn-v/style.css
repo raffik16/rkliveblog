@@ -42,9 +42,10 @@ input[type='range'] { width: 100%; accent-color: var(--accent); margin: 4px 0 8p
   .right { display: none; }
   .hd { left: 10px; top: 8px; }
   .ttl { font-size: 15px; } .clk { font-size: 28px; margin-top: 2px; } .cap { font-size: 12px; padding: 6px 8px; }
-  .left { left: 10px; right: auto; top: auto; bottom: 178px; width: 150px; padding: 6px 9px; }
-  .rd:nth-child(n + 6) { display: none; }
-  .rd span { font-size: 8px; } .rd b { font-size: 11px; }
+  .left { left: 8px; right: 8px; top: auto; bottom: 172px; width: auto; padding: 6px 9px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .rd { flex-direction: column; align-items: flex-start; gap: 2px; border: 0; padding: 0; }
+  .rd:nth-child(3), .rd:nth-child(n + 7) { display: none; }
+  .rd span { font-size: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; } .rd b { font-size: 11px; white-space: nowrap; }
   .ft { left: 8px; right: 8px; bottom: 8px; padding: 8px; }
   button { padding: 5px 8px; font-size: 11px; }
   .rowb { gap: 6px 8px; }
