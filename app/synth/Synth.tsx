@@ -433,8 +433,21 @@ export default function Synth() {
     const unlock = () => engine.unlock()
     const events = ['pointerdown', 'pointerup', 'touchend', 'click'] as const
     events.forEach((name) => stage.addEventListener(name, unlock, { capture: true, passive: true }))
-    return () =>
+
+    // Pressing a button with the mouse does not move keyboard focus to it (as on a Mac, where
+    // buttons never take focus from a click). The keys here are for playing: left on the last
+    // button clicked, focus would make Space press that button again instead of starting and
+    // stopping the pattern, and would draw a focus ring round it the moment a note key was
+    // pressed. Tabbing to a button works as it always does.
+    const keepFocus = (e: MouseEvent) => {
+      if (e.target instanceof Element && e.target.closest('button')) e.preventDefault()
+    }
+    stage.addEventListener('mousedown', keepFocus)
+
+    return () => {
       events.forEach((name) => stage.removeEventListener(name, unlock, { capture: true }))
+      stage.removeEventListener('mousedown', keepFocus)
+    }
   }, [engine])
 
   // Computer keyboard, and leaving the page
@@ -446,8 +459,8 @@ export default function Synth() {
       if (target?.closest('input, textarea, select, [contenteditable]')) return
 
       if (e.code === 'Space') {
-        // On a focused button or knob, Space already means "press this"
-        if (target?.closest('button, a, [role="slider"]')) return
+        // On a button or link someone has tabbed to, Space already means "press this"
+        if (target?.closest('button, a')) return
         e.preventDefault()
         return togglePlay()
       }

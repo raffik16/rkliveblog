@@ -238,6 +238,8 @@ Older versions of iOS have no `audioSession`. There, an `<audio>` element that i
 
 **Stuck notes.** If you hold a key and switch windows, the `keyup` goes to the other window and the note rings forever. The page lets go of every key when the window loses focus. When the tab is hidden it also stops the sequencer and suspends the audio clock: a background tab's timers are throttled to once a second, no lookahead window survives that, and nobody is listening.
 
+**Keys are for playing.** Click a button in Chrome and it takes keyboard focus. On most pages nobody notices. Here the next thing you do is press a key to play a note, and two things go wrong: a focus ring appears around the button you clicked a minute ago, and Space, which should start and stop the pattern, presses that button again. So a click or a drag with the pointer leaves focus where it was, the way buttons on a Mac never take focus from a click. Tab still reaches every control, and the arrow keys turn whichever knob has focus.
+
 **Physical keys, not letters.** The keyboard mapping uses `event.code` rather than `event.key`, so the home row is the lower pads and the row above is the upper pads on any layout, including AZERTY and Dvorak.
 
 **Sliding across the pads.** The pad area captures the pointer on press. A drag plays each pad it passes over, and a release that happens off the pads still ends the note. Every finger is tracked separately, so chords work on a touch screen.

@@ -22,7 +22,7 @@ const DOUBLE_PRESS_MS = 320
 const clamp = (n: number) => Math.min(1, Math.max(0, n))
 
 // A rotary knob. Drag up and down to turn it (hold Shift for fine steps), press it twice
-// quickly to reset it, or focus it and use the arrow keys. To assistive technology it is a
+// quickly to reset it, or tab to it and use the arrow keys. To assistive technology it is a
 // slider. Memoised: dragging one knob re-renders that knob, not the other fifteen.
 function Knob({ def, value, onTurn, onReset }: Props) {
   // Rounded, because the server and the browser can disagree about the last digit of a cube
@@ -36,7 +36,10 @@ function Knob({ def, value, onTurn, onReset }: Props) {
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
     e.currentTarget.setPointerCapture(e.pointerId)
-    e.currentTarget.focus({ preventScroll: true })
+    // Turning a knob with the pointer does not move keyboard focus to it: the keys are for
+    // playing, and a knob left focused would show a focus ring as soon as a note was played.
+    // Tab still reaches every knob, and the arrow keys turn the one that has focus.
+    e.preventDefault()
 
     // Timed by hand rather than with dblclick, which touch screens do not reliably send
     if (e.timeStamp - lastPress.current < DOUBLE_PRESS_MS) {
