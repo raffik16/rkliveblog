@@ -22,8 +22,10 @@ export interface ScreenState {
 
 // The screen is drawn on a 320 x 300 grid and scaled to whatever size the canvas is
 const W = 320
-const H = 300
-const MAIN = { top: 38, bottom: 196 }
+// Two layouts. The full one has the pattern along the bottom. The compact one, for phones,
+// drops it (the step buttons show the same thing) so the screen takes less of a small window.
+const FULL = { height: 300, main: { top: 38, bottom: 196 }, graph: { top: 104, bottom: 190 } }
+const COMPACT = { height: 172, main: { top: 38, bottom: 166 }, graph: { top: 70, bottom: 160 } }
 const SEQ = { top: 212, bottom: 286 }
 // How long a control's page stays up after it was last moved, and how long it takes to fade
 const PAGE_HOLD = 1400
@@ -67,15 +69,21 @@ function lowpassDb(freq: number, cutoff: number, resonanceDb: number, sampleRate
 interface Props {
   engine: SynthEngine
   state: React.RefObject<ScreenState>
+  /** The phone layout: shorter, without the pattern */
+  compact: boolean
 }
 
-export default function Screen({ engine, state }: Props) {
+export default function Screen({ engine, state, compact }: Props) {
+  const layout = compact ? COMPACT : FULL
+
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
     const g = canvas?.getContext('2d')
     if (!canvas || !g) return
+    const H = layout.height
+    const MAIN = layout.main
 
     const css = getComputedStyle(canvas)
     const mono = css.fontFamily
@@ -84,6 +92,7 @@ export default function Screen({ engine, state }: Props) {
     const red = '#ff4d6d'
     const white = (alpha: number) => `rgba(255, 255, 255, ${alpha})`
     const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const touch = window.matchMedia('(hover: none)').matches
 
     let frame = 0
     let scale = 1
@@ -143,7 +152,7 @@ export default function Screen({ engine, state }: Props) {
       g.stroke()
 
       if (!analyser) {
-        text('PRESS A KEY', W / 2, mid - 14, 10, white(0.45), 'center')
+        text(touch ? 'TAP A PAD' : 'PRESS A KEY', W / 2, mid - 14, 10, white(0.45), 'center')
         return
       }
 
@@ -191,7 +200,7 @@ export default function Screen({ engine, state }: Props) {
     }
 
     // ------------------------------------------------- the control being moved, as a picture
-    const GRAPH = { left: 14, right: W - 14, top: 104, bottom: 190 }
+    const GRAPH = { left: 14, right: W - 14, ...layout.graph }
 
     const drawWavePage = (s: Settings, now: number) => {
       const mid = (GRAPH.top + GRAPH.bottom) / 2
@@ -306,8 +315,19 @@ export default function Screen({ engine, state }: Props) {
         g.globalAlpha *= 1 - (beat - Math.floor(beat))
         g.fillStyle = lime
         g.beginPath()
-        g.arc(GRAPH.right - 6, 62, 5, 0, Math.PI * 2)
+        g.arc(GRAPH.right - 6, compact ? GRAPH.top + 10 : 62, 5, 0, Math.PI * 2)
         g.fill()
+      }
+    }
+
+    // The control's name and its value: stacked and large, or on one line when compact
+    const heading = (name: string, value: string) => {
+      if (compact) {
+        text(name, 14, 56, 9, white(0.5))
+        text(value, W - 14, 58, 17, white(0.96), 'right', 600)
+      } else {
+        text(name, 14, 56, 9, white(0.5))
+        text(value, 14, 88, 28, white(0.96), 'left', 600)
       }
     }
 
@@ -315,23 +335,13 @@ export default function Screen({ engine, state }: Props) {
       const key = st.focus!.key
       const s = st.settings
       if (key === 'wave') {
-        text('WAVEFORM', 14, 56, 9, white(0.5))
-        text(
-          WAVES.find((w) => w.id === s.wave)!.label.toUpperCase(),
-          14,
-          88,
-          28,
-          white(0.96),
-          'left',
-          600
-        )
+        heading('WAVEFORM', WAVES.find((w) => w.id === s.wave)!.label.toUpperCase())
         drawWavePage(s, now)
         return
       }
       const def = KNOBS.find((k) => k.key === key)!
       const value = s[key]
-      text(def.name.toUpperCase(), 14, 56, 9, white(0.5))
-      text(def.format(value), 14, 88, 28, white(0.96), 'left', 600)
+      heading(def.name.toUpperCase(), def.format(value))
       if (def.page === 'wave') drawWavePage(s, now)
       else if (def.page === 'filter') drawFilterPage(s, now)
       else if (def.page === 'env') drawEnvPage(s, key)
@@ -421,14 +431,14 @@ export default function Screen({ engine, state }: Props) {
       if (st.arp) text(`ARP ${ARP_GLYPH[st.arpMode]}`, x, 22, 9, cyan)
       g.fillStyle = white(0.12)
       g.fillRect(0, 30, W, 1)
-      g.fillRect(0, 200, W, 1)
+      if (!compact) g.fillRect(0, 200, W, 1)
 
       // Main area: the scope, or the page of the control being moved, cross-fading
       const age = st.focus ? now - st.focus.at : Infinity
       const page = age < PAGE_HOLD ? 1 : Math.max(0, 1 - (age - PAGE_HOLD) / PAGE_FADE)
       g.save()
       g.beginPath()
-      g.rect(0, 31, W, 169)
+      g.rect(0, 31, W, (compact ? H : 200) - 31)
       g.clip()
       if (page < 1) {
         g.globalAlpha = 1 - page
@@ -441,7 +451,7 @@ export default function Screen({ engine, state }: Props) {
       g.restore()
       g.globalAlpha = 1
 
-      drawPattern(st)
+      if (!compact) drawPattern(st)
       if (boot < 1) g.restore()
     }
     draw()
@@ -450,12 +460,13 @@ export default function Screen({ engine, state }: Props) {
       cancelAnimationFrame(frame)
       observer.disconnect()
     }
-  }, [engine, state])
+  }, [engine, state, compact, layout])
 
   return (
     <canvas
       ref={canvasRef}
       className={styles.screen}
+      style={{ aspectRatio: `${W} / ${layout.height}` }}
       role="img"
       aria-label="Synth display: the waveform being played, the control being adjusted, and the sequencer pattern"
     />

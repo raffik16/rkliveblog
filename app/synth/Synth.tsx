@@ -55,6 +55,8 @@ const MIN_OCTAVE = 1
 const MAX_OCTAVE = 6
 // Below this width two octaves of pads are too narrow for a thumb, so the keyboard shows one.
 const WIDE = '(min-width: 720px)'
+// A phone, upright or on its side: the screen uses its shorter layout
+const SMALL = '(max-width: 719.98px), (max-height: 520px)'
 
 const ARP_MODES: { id: ArpMode; label: string }[] = [
   { id: 'up', label: 'Up' },
@@ -68,6 +70,15 @@ const COLOURS = ['violet', 'cobalt', 'raspberry', 'ember', 'forest', 'ink'] as c
 type Colour = (typeof COLOURS)[number]
 const COLOUR_KEY = 'pocket-synth-colour'
 
+// On a phone the controls don't all fit under the screen, so they are split into three pages
+// and one is shown at a time. Wider screens show everything and never see the tabs.
+const TABS = [
+  { id: 'seq', label: 'Seq' },
+  { id: 'tone', label: 'Tone' },
+  { id: 'shape', label: 'Shape' },
+] as const
+type Tab = (typeof TABS)[number]['id']
+
 export default function Synth() {
   const [settings, setSettings] = useState<Settings>(INITIAL)
   const [pattern, setPattern] = useState<Pattern>(INITIAL_PATTERN)
@@ -79,7 +90,9 @@ export default function Synth() {
   const [hold, setHold] = useState(false)
   const [octave, setOctave] = useState(3)
   const [wide, setWide] = useState(true)
+  const [small, setSmall] = useState(false)
   const [colour, setColour] = useState<Colour>('violet')
+  const [tab, setTab] = useState<Tab>('seq')
   const [held, setHeld] = useState<ReadonlySet<number>>(new Set())
 
   const engineRef = useRef<SynthEngine | null>(null)
@@ -129,11 +142,19 @@ export default function Synth() {
   useEffect(() => () => engine.dispose(), [engine])
 
   useEffect(() => {
-    const query = window.matchMedia(WIDE)
-    const update = () => setWide(query.matches)
+    const wideQuery = window.matchMedia(WIDE)
+    const smallQuery = window.matchMedia(SMALL)
+    const update = () => {
+      setWide(wideQuery.matches)
+      setSmall(smallQuery.matches)
+    }
     update()
-    query.addEventListener('change', update)
-    return () => query.removeEventListener('change', update)
+    wideQuery.addEventListener('change', update)
+    smallQuery.addEventListener('change', update)
+    return () => {
+      wideQuery.removeEventListener('change', update)
+      smallQuery.removeEventListener('change', update)
+    }
   }, [])
 
   useEffect(() => {
@@ -419,18 +440,32 @@ export default function Synth() {
         </div>
       </header>
 
-      <div className={styles.device} data-colour={colour} ref={deviceRef}>
+      <div className={styles.device} data-colour={colour} data-tab={tab} ref={deviceRef}>
         <section className={cx(styles.knobs, styles.knobsLeft)} aria-label="Tone">
           {knobs(KNOBS_LEFT)}
         </section>
 
         <div className={styles.bezel}>
-          <Screen engine={engine} state={screenState} />
+          <Screen engine={engine} state={screenState} compact={small} />
         </div>
 
         <section className={cx(styles.knobs, styles.knobsRight)} aria-label="Envelope and effects">
           {knobs(KNOBS_RIGHT)}
         </section>
+
+        <div className={styles.tabs} role="group" aria-label="Controls shown">
+          {TABS.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              className={styles.tab}
+              aria-pressed={tab === id}
+              onClick={() => setTab(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
         <div className={cx(styles.well, styles.soundButtons)}>
           <div className={styles.buttonRow} role="group" aria-label="Waveform">
@@ -586,11 +621,14 @@ export default function Synth() {
       </div>
 
       <p className={styles.hint}>
-        <span>
+        <span className={styles.desk}>
           Play the pads, or the keys <kbd>A</kbd>–<kbd>&apos;</kbd>. <kbd>Z</kbd> <kbd>X</kbd>{' '}
           octave. <kbd>Space</kbd> play/stop.
         </span>
-        <span>Drag a knob up or down. Shift for fine steps, double-click to reset.</span>
+        <span>
+          Drag a knob up or down<span className={styles.desk}>, Shift for fine steps</span>.
+          Double-tap it to reset.
+        </span>
       </p>
     </div>
   )

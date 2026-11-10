@@ -182,6 +182,8 @@ The screen is one canvas with three jobs:
 
 **Sliding across the pads.** The pad area captures the pointer on press. A drag plays each pad it passes over, and a release that happens off the pads still ends the note. Every finger is tracked separately, so chords work on a touch screen.
 
+**Phones.** Sixteen knobs, sixteen steps and a keyboard do not fit under a screen on a phone. There the pads sit directly below the screen, the controls are split into three tabs, and the screen stays pinned to the top of the window as you scroll, so a knob at the bottom of the body can still be watched as it turns. Knobs and pads set `touch-action: none`, which is what stops a drag on a knob from scrolling the page instead.
+
 ## Things to Try
 
 - Press **Play**, then sweep **Cutoff** and **Reso** while the pattern runs.
