@@ -22,12 +22,13 @@ Pocket Synth is a _subtractive_ synth, the design most classic analog synthesize
 
 ```text
 per note:  osc ─┐
-           osc ─┴─> low-pass filter ─> gain (envelope) ─┐
-                      ▲ filter envelope + LFO           │
-                                                        ▼
-bus ─┬──────────────────────────────> master ─> limiter ─> soft clip ─> speakers
-     ├─> delay ⟲ ─> echo gain ───────────┤
-     └─> convolver ─> reverb gain ───────┘
+           osc ─┴─> low-pass filter ─> gain (envelope) ─┬─> bus
+              ▲         ▲ filter envelope + LFO          └─> expression send ─┐
+              pitch bend (a finger moving on the pad)                         │
+                                                                              ▼
+bus ─┬──────────────────────────────────────> master ─> limiter ─> soft clip ─> speakers
+     ├─> delay ⟲ ─> echo gain ────────────────────┤
+     └─> reverb send ─> convolver ────────────────┘
 ```
 
 In Web Audio, each box is a node and each arrow is a `connect()` call. The top row is built fresh for every note. Everything below it is built once.
@@ -132,6 +133,35 @@ Reverb is a `ConvolverNode`, which stamps the sound of a room onto a signal. The
 ```typescript
 data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.4)
 ```
+
+The **Reverb** knob is a send: it sets how much of everything goes into the room. That matters in the next section, where a single note gets a way into the same room that the knob does not control.
+
+## A Pad Is Not a Switch
+
+On a hardware synth, what your finger does _after_ a key goes down is half the instrument. Press harder or rock the finger and the note swells or wobbles. Keyboards call it aftertouch; the controllers that track each finger separately call it MPE.
+
+The pads here do a version of it. A pad remembers where the finger landed, and reads its movement from that point:
+
+- **Sideways bends the pitch**, up to a semitone either way, so rocking a finger is vibrato. A quarter of a pad's width is 76 cents.
+- **Any direction opens that note's own send into the reverb.** The further the finger strays from where it landed, the more of that one note goes into the room, whatever the Reverb knob says.
+
+```typescript
+express(midi: number, bend: number, amount: number) {
+  const voice = this.voices.get(midi)
+  voice.oscs.forEach((osc, i) =>
+    osc.detune.setTargetAtTime(this.tuning(voice, i) + bend, now, 0.012)
+  )
+  const level = amount * EXPRESSION_SEND
+  // fast up, slow down: the bloom outlasts the wiggle that made it
+  voice.send.gain.setTargetAtTime(level, now, level > voice.sendLevel ? 0.03 : 0.4)
+}
+```
+
+The bend goes on `osc.detune`, the same parameter that keeps a note's two oscillators apart, so the pair moves together. The send is one more `GainNode` per held note, wired from the note's envelope straight into the convolver and closed until the finger moves. Measured, a note played with the finger pushed away from where it landed leaves about twenty times as much reverb behind as the same note played still.
+
+Two numbers keep it playable. The first 8% of a pad's width of movement counts as nothing, because a finger settles as it lands and a tap should stay in tune. And a finger has to travel 30% of a pad's width past the edge of its pad before the next pad plays. Without that, a wiggle that began near an edge would turn into a trill between two notes. With it, sliding along the row still plays every pad in turn.
+
+The screen draws the bend as you make it, and the pad's own light leans the way the pitch is going and glows wider as the reverb opens. Notes played from the computer keyboard have no position to read, so they are not affected.
 
 ## Loud Enough, and Never Too Loud
 
@@ -242,11 +272,12 @@ Older versions of iOS have no `audioSession`. There, an `<audio>` element that i
 
 **Physical keys, not letters.** The keyboard mapping uses `event.code` rather than `event.key`, so the home row is the lower pads and the row above is the upper pads on any layout, including AZERTY and Dvorak.
 
-**Sliding across the pads.** The pad area captures the pointer on press. A drag plays each pad it passes over, and a release that happens off the pads still ends the note. Every finger is tracked separately, so chords work on a touch screen.
+**Sliding across the pads.** The pad area captures the pointer on press. A drag plays each pad it moves onto, and a release that happens off the pads still ends the note. Every finger is tracked separately, so chords work on a touch screen, and each finger bends its own note.
 
 ## Things to Try
 
 - Press **Play**, then sweep **Cutoff** and **Reso** while the pattern runs.
+- Choose **Pad**, hold one pad and rock your finger from side to side. Then hold another and slide the finger up: no bend this time, only the room opening.
 - Turn on **Arp** and **Hold**, press three pads and let go. Now you have both hands free for the knobs. Try the **Pad** preset with the arpeggiator set to **Rand**.
 - Press **Clear**, then **Rec**, and play notes one at a time: each lands on the next step. Or leave the pattern playing with Rec on and play along; notes land on the nearest step.
 - Turn **Tempo** while notes are echoing and listen to the repeats bend.

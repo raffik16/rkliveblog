@@ -814,9 +814,14 @@
   pointer-events: none;
 }
 
-.pad[data-held] .padLight,
 .pad[data-held] .padLabel {
   translate: 0 var(--depth);
+}
+
+/* A finger moving on a held pad (Pads in Synth.tsx sets --bend, -1..1, and --bloom, 0..1):
+   the light leans the way the pitch is being bent */
+.pad[data-held] .padLight {
+  translate: calc(var(--bend, 0) * 9 * var(--u)) var(--depth);
 }
 
 .padLight {
@@ -831,10 +836,11 @@
     box-shadow 0.35s;
 }
 
+/* ...and its glow swells with how much of the note is going to the reverb */
 .pad[data-lit] .padLight {
   background: var(--ed-signal);
   box-shadow:
-    0 0 14px 3px var(--ed-signal),
+    0 0 calc(14px + var(--bloom, 0) * 26px) calc(3px + var(--bloom, 0) * 7px) var(--ed-signal),
     0 0 2px #fff;
   transition-duration: 0s;
 }

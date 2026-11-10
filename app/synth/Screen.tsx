@@ -5,6 +5,14 @@ import { STEPS, cutoffHz, type ArpMode, type Pattern, type SynthEngine, type Wav
 import { KNOBS, WAVES, noteName, type KnobKey, type Settings } from './params'
 import styles from './synth.module.css'
 
+/** A finger moving on a held pad */
+export interface Expression {
+  /** The pitch bend of the last two seconds: (time in ms, cents) pairs, oldest first */
+  trail: number[]
+  /** 0..1, how far the note is being pushed into the reverb right now */
+  amount: number
+}
+
 /** Everything the screen draws from. The synth keeps it up to date; the screen reads it each frame. */
 export interface ScreenState {
   settings: Settings
@@ -16,14 +24,17 @@ export interface ScreenState {
   cursor: number
   arp: boolean
   arpMode: ArpMode
+  expression: Expression
   /** The control last moved and when (performance.now), so its page can be shown for a moment */
-  focus: { key: KnobKey | 'wave'; at: number } | null
+  focus: { key: KnobKey | 'wave' | 'touch'; at: number } | null
 }
 
 // How long a control's page stays up after it was last moved, and how long it takes to fade
 const PAGE_HOLD = 1400
 const PAGE_FADE = 350
 const BOOT = 900
+// How much of a finger's recent movement the expression page shows
+const TRAIL_MS = 1500
 // With nothing sounding and nothing changing for this long, the screen stops redrawing.
 // A canvas repainted sixty times a second for no reason is a phone battery being emptied.
 const IDLE_AFTER = 700
@@ -195,6 +206,11 @@ export default function Screen({ engine, state }: Props) {
 
       if (!analyser || !data) {
         text(touch ? 'TAP A PAD' : 'PRESS A KEY', width / 2, mid - 10, 10, white(0.62), 'center')
+        // The one thing nobody would guess
+        if (half > 34) {
+          const more = touch ? 'THEN WIGGLE YOUR FINGER ON IT' : 'OR HOLD A PAD AND WIGGLE'
+          text(more, width / 2, mid + 18, 8, white(0.6), 'center')
+        }
         return
       }
 
@@ -356,6 +372,43 @@ export default function Screen({ engine, state }: Props) {
       }
     }
 
+    // A finger on a pad: the bend it has drawn over the last moment, newest at the right,
+    // over a band that swells with how much of the note is going to the reverb
+    const drawTouchPage = (st: ScreenState, now: number) => {
+      const { graph } = lay
+      const mid = (graph.top + graph.bottom) / 2
+      const half = (graph.bottom - graph.top) / 2 - 3
+      const width = graph.right - graph.left
+      const { trail, amount } = st.expression
+
+      if (amount > 0.01) {
+        const alpha = g.globalAlpha
+        g.globalAlpha = alpha * (0.12 + amount * 0.28)
+        g.fillStyle = cyan
+        g.fillRect(graph.left, mid - half * amount, width, half * amount * 2)
+        g.globalAlpha = alpha
+      }
+      g.strokeStyle = white(0.12)
+      g.lineWidth = 1
+      g.beginPath()
+      g.moveTo(graph.left, mid)
+      g.lineTo(graph.right, mid)
+      g.stroke()
+
+      glowLine(lime, 1.8, () => {
+        let drawing = false
+        for (let i = 0; i < trail.length; i += 2) {
+          const age = now - trail[i]
+          if (age > TRAIL_MS) continue
+          const x = graph.right - (age / TRAIL_MS) * width
+          const y = mid - (trail[i + 1] / 100) * half
+          if (drawing) g.lineTo(x, y)
+          else g.moveTo(x, y)
+          drawing = true
+        }
+      })
+    }
+
     // The control's name and value: stacked and large where there is room, on one line where not
     const heading = (name: string, value: string) => {
       const { main, pad, width, tall } = lay
@@ -372,6 +425,13 @@ export default function Screen({ engine, state }: Props) {
       const key = st.focus!.key
       const s = st.settings
       const room = lay.graph.bottom - lay.graph.top >= 16
+      if (key === 'touch') {
+        const trail = st.expression.trail
+        const cents = Math.round(trail.length ? trail[trail.length - 1] : 0)
+        heading('BEND', `${cents > 0 ? '+' : cents < 0 ? '−' : ''}${Math.abs(cents)} ct`)
+        if (room) drawTouchPage(st, now)
+        return
+      }
       if (key === 'wave') {
         heading('WAVEFORM', WAVES.find((w) => w.id === s.wave)!.label.toUpperCase())
         if (room) drawWavePage(s, now)

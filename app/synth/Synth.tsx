@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { cx } from '@/lib/edition/cx'
 import { STEPS, SynthEngine, type ArpMode, type Pattern } from './engine'
 import Knob from './Knob'
-import Screen, { type ScreenState } from './Screen'
+import Screen, { type Expression, type ScreenState } from './Screen'
 import {
   INITIAL,
   INITIAL_PATTERN,
@@ -82,44 +82,93 @@ type Tab = (typeof TABS)[number]['id']
 
 const NO_NOTES: ReadonlySet<number> = new Set()
 
+// How a finger moving on a held pad is read (see Pads). Sizes are in pad widths, so it feels
+// the same on a phone's narrow pads and a desktop's wide ones.
+const LEAVE = 0.3 // how far past a pad's edge a finger goes before it plays the next pad
+const SLACK = 0.08 // movement this small is a finger settling, not a gesture
+const REACH = 0.2 // this far from where it landed is full expression
+const BEND_PER_PAD = 450 // cents of pitch for one pad width of sideways movement
+const MAX_BEND = 100 // cents: a semitone either way
+const clamp = (n: number, low: number, high: number) => Math.min(high, Math.max(low, n))
+
 interface PadsProps {
   /** MIDI number of the first pad */
   base: number
   held: ReadonlySet<number>
   press: (source: string, midi: number) => void
   release: (source: string) => void
-  isDown: (source: string) => boolean
+  /** A finger moving on the pad it is holding. False when the pads are not played directly. */
+  express: (midi: number, bend: number, amount: number) => boolean
 }
 
 // The keyboard. The pads are a picture of what the pointer and the computer keyboard play;
 // they are not tab stops, since Tab-then-Enter is no way to play a tune. Keyboard users play
 // on the letter keys.
-const Pads = memo(function Pads({ base, held, press, release, isDown }: PadsProps) {
-  const midiAt = (x: number, y: number) => {
-    const pad = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-midi]')
-    return pad ? Number(pad.dataset.midi) : undefined
+const Pads = memo(function Pads({ base, held, press, release, express }: PadsProps) {
+  // Where each finger landed, and on which pad. Every finger is its own pointer.
+  const fingers = useRef(new Map<number, { pad: HTMLElement; x: number; y: number }>())
+  const padAt = (x: number, y: number) =>
+    document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-midi]') ?? null
+  const settle = (pad: HTMLElement) => {
+    pad.style.removeProperty('--bend')
+    pad.style.removeProperty('--bloom')
   }
-  // The pad area captures the pointer, so a drag that leaves it still ends the note, and
-  // sliding across pads plays each one in turn. Every finger is its own pointer.
+
+  // The pad area captures the pointer, so a drag that leaves it still ends the note
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
-    const midi = midiAt(e.clientX, e.clientY)
-    if (midi === undefined) return
+    const pad = padAt(e.clientX, e.clientY)
+    if (!pad) return
     e.preventDefault()
     try {
       e.currentTarget.setPointerCapture(e.pointerId)
     } catch {
       // The pointer is already gone: the note still plays, and pointerup still ends it
     }
-    press(`p${e.pointerId}`, midi)
+    fingers.current.set(e.pointerId, { pad, x: e.clientX, y: e.clientY })
+    press(`p${e.pointerId}`, Number(pad.dataset.midi))
   }
+
+  // A pad is an instrument's key, not a switch: what the finger does after it lands matters.
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const source = `p${e.pointerId}`
-    if (!isDown(source)) return
-    const midi = midiAt(e.clientX, e.clientY)
-    if (midi !== undefined) press(source, midi)
+    const finger = fingers.current.get(e.pointerId)
+    if (!finger) return
+    const { clientX: x, clientY: y } = e
+    const box = finger.pad.getBoundingClientRect()
+    const width = box.width
+
+    // A finger that has plainly moved onto another pad plays that pad, so sliding along
+    // the pads still plays each in turn. Straying a little over the edge does not count:
+    // a wiggle that started near the edge of a pad must not turn into a trill.
+    const outside = Math.max(box.left - x, x - box.right, box.top - y, y - box.bottom, 0)
+    const under = padAt(x, y)
+    if (under && under !== finger.pad && outside > width * LEAVE) {
+      settle(finger.pad)
+      fingers.current.set(e.pointerId, { pad: under, x, y })
+      press(`p${e.pointerId}`, Number(under.dataset.midi))
+      return
+    }
+
+    // Until then its movement is expression, measured from where it landed. Sideways bends
+    // the pitch, so rocking a finger is vibrato. Any direction pushes the note into the reverb.
+    const dx = x - finger.x
+    const dy = y - finger.y
+    const slack = Math.max(3, width * SLACK)
+    const sideways = Math.max(0, Math.abs(dx) - slack) * Math.sign(dx)
+    const bend = clamp((sideways / width) * BEND_PER_PAD, -MAX_BEND, MAX_BEND)
+    const amount = clamp((Math.hypot(dx, dy) - slack) / (width * REACH - slack), 0, 1)
+    if (!express(Number(finger.pad.dataset.midi), bend, amount)) return
+    // The pad's light leans with the bend and swells with the reverb (synth.module.css)
+    finger.pad.style.setProperty('--bend', (bend / MAX_BEND).toFixed(3))
+    finger.pad.style.setProperty('--bloom', amount.toFixed(3))
   }
-  const onPointerEnd = (e: React.PointerEvent<HTMLDivElement>) => release(`p${e.pointerId}`)
+
+  const onPointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    const finger = fingers.current.get(e.pointerId)
+    if (finger) settle(finger.pad)
+    fingers.current.delete(e.pointerId)
+    release(`p${e.pointerId}`)
+  }
 
   const pad = (step: number) => {
     const midi = base + step
@@ -228,6 +277,8 @@ export default function Synth() {
   const latch = useRef(new Set<number>())
   const lastNote = useRef(60)
   const focus = useRef<ScreenState['focus']>(null)
+  // What a finger moving on a pad is doing, for the screen to draw
+  const expression = useRef<Expression>({ trail: [], amount: 0 })
 
   // Handlers that are created once (keyboard, pointer, memoised children) read the latest
   // values from here instead of from the render they were created in
@@ -251,6 +302,7 @@ export default function Synth() {
     cursor,
     arp,
     arpMode,
+    expression: expression.current,
     focus: focus.current,
   }
 
@@ -331,6 +383,31 @@ export default function Synth() {
     return () => cancelAnimationFrame(frame)
   }, [engine])
 
+  // Put a control's page on the screen. The screen reads screenState each frame, and a new
+  // object is how it knows something changed.
+  const show = (key: NonNullable<ScreenState['focus']>['key']) => {
+    focus.current = { key, at: performance.now() }
+    screenState.current = { ...screenState.current, focus: focus.current }
+  }
+
+  // A finger moving on a held pad: bend the note, open its reverb send, and keep the last two
+  // seconds of the bend for the screen to draw.
+  const express = useCallback(
+    (midi: number, bend: number, amount: number) => {
+      // With the arpeggiator on, the pads choose its notes; nothing is held to bend
+      if (live.current.arp) return false
+      engine.express(midi, bend, amount)
+      const now = performance.now()
+      const drawn = expression.current
+      drawn.amount = amount
+      drawn.trail.push(now, bend)
+      while (drawn.trail.length > 2 && now - drawn.trail[0] > 2000) drawn.trail.splice(0, 2)
+      if (Math.abs(bend) > 1 || amount > 0.02 || focus.current?.key === 'touch') show('touch')
+      return true
+    },
+    [engine]
+  )
+
   // ----------------------------------------------------------------------------- playing
   const arpNotes = () =>
     live.current.hold ? [...latch.current] : [...new Set(sources.current.values())]
@@ -388,14 +465,13 @@ export default function Synth() {
       const midi = map.get(source)
       if (midi === undefined) return
       map.delete(source)
+      if (source[0] === 'p') expression.current.amount = 0
       if (live.current.arp) engine.setArpNotes(arpNotes())
       else if (![...map.values()].includes(midi)) engine.noteOff(midi)
       setHeld(new Set(map.values()))
     },
     [engine]
   )
-
-  const isDown = useCallback((source: string) => sources.current.has(source), [])
 
   // Let go of every key and finger. What HOLD is keeping carries on.
   const releaseKeys = useCallback(() => {
@@ -501,13 +577,6 @@ export default function Synth() {
   }, [engine, press, release, releaseKeys, releaseAll, shiftOctave, togglePlay])
 
   // ---------------------------------------------------------------------------- controls
-  // Put a control's page on the screen. The screen reads screenState each frame, and a new
-  // object is how it knows something changed.
-  const show = (key: NonNullable<ScreenState['focus']>['key']) => {
-    focus.current = { key, at: performance.now() }
-    screenState.current = { ...screenState.current, focus: focus.current }
-  }
-
   const turn = useCallback((def: KnobDef, position: number) => {
     show(def.key)
     const value = fromPosition(def, position)
@@ -568,7 +637,7 @@ export default function Synth() {
             Keys <kbd>A</kbd>–<kbd>&apos;</kbd> play · <kbd>Z</kbd> <kbd>X</kbd> octave ·{' '}
             <kbd>Space</kbd> start/stop ·{' '}
           </span>
-          Drag a knob to turn it · press it twice to reset
+          Drag a knob to turn it · Wiggle a held pad to bend it
         </p>
         <div className={styles.headSide}>
           <div className={styles.colours} role="group" aria-label="Body colour">
@@ -789,7 +858,7 @@ export default function Synth() {
             held={held}
             press={press}
             release={release}
-            isDown={isDown}
+            express={express}
           />
         </div>
       </div>

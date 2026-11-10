@@ -2,12 +2,13 @@
 // on the Web Audio API, no libraries.
 //
 //   per note:  osc ─┐
-//              osc ─┴─> low-pass filter ─> gain (envelope) ─┐
-//                         ▲ filter envelope + LFO           │
-//                                                           ▼
-//   bus ─┬──────────────────────────────> master ─> limiter ─> soft clip ─> analyser ─> out
-//        ├─> delay ⟲ ─> echo gain ───────────┤
-//        └─> convolver ─> reverb gain ───────┘
+//              osc ─┴─> low-pass filter ─> gain (envelope) ─┬─> bus
+//                 ▲         ▲ filter envelope + LFO          └─> expression send ─┐
+//                 pitch bend (a finger moving on the pad)                         │
+//                                                                                 ▼
+//   bus ─┬──────────────────────────────────────────> master ─> limiter ─> soft clip ─> out
+//        ├─> delay ⟲ ─> echo gain ───────────────────────┤
+//        └─> reverb send ─> convolver ───────────────────┘
 //
 // Every note has its own filter, because every note has its own filter envelope: a note struck
 // now is bright while one held for a second has already gone dark.
@@ -61,6 +62,12 @@ interface Voice {
   oscs: OscillatorNode[]
   filter: BiquadFilterNode
   amp: GainNode
+  /** A held note's own way into the reverb, opened by a finger moving on its pad */
+  send: GainNode | null
+  /** Cents the pad's finger is bending the note by */
+  bend: number
+  /** What the send was last asked to be, to tell opening from closing */
+  sendLevel: number
   /** What the envelope was given when the note started, to work out where it is at release */
   t0: number
   attack: number
@@ -94,6 +101,13 @@ const MAX_SCHEDULED = 20
 // line (it changes nothing) below CLIP_KNEE
 const CLIP_RANGE = 4
 const CLIP_KNEE = 0.8
+// A finger moving on a held pad (see express). How much of the note goes to the reverb at
+// full stretch, how fast the pitch follows the finger, and how the send opens and closes: fast
+// up, slow down, so the bloom outlasts the wiggle that made it.
+const EXPRESSION_SEND = 1
+const BEND_SMOOTH = 0.012
+const SEND_OPEN = 0.03
+const SEND_CLOSE = 0.4
 // How long the first tap sounds for when the browser had not let audio start yet (see noteOff)
 const FIRST_TAP = 0.18
 // One second of silence (see openSession). A file rather than a blob made here, because the
@@ -122,6 +136,7 @@ export class SynthEngine {
   private delay!: DelayNode
   private echo!: GainNode
   private reverb!: GainNode
+  private room!: ConvolverNode
   private lfo!: OscillatorNode
   private lfoGain!: GainNode
   private analyserNode!: AnalyserNode
@@ -230,9 +245,11 @@ export class SynthEngine {
     this.echo = ctx.createGain()
     this.echo.gain.value = p.echo
 
-    // Reverb: convolve the sound with the "sound of a room", here a burst of fading noise
-    const convolver = ctx.createConvolver()
-    convolver.buffer = roomImpulse(ctx, REVERB_SECONDS)
+    // Reverb: convolve the sound with the "sound of a room", here a burst of fading noise.
+    // The reverb knob sets how much of everything is sent into the room. A held note can
+    // also send itself in directly (see express), whatever the knob says.
+    this.room = ctx.createConvolver()
+    this.room.buffer = roomImpulse(ctx, REVERB_SECONDS)
     this.reverb = ctx.createGain()
     this.reverb.gain.value = p.reverb
 
@@ -273,9 +290,9 @@ export class SynthEngine {
     feedback.connect(this.delay)
     this.delay.connect(this.echo)
     this.echo.connect(this.master)
-    this.bus.connect(convolver)
-    convolver.connect(this.reverb)
-    this.reverb.connect(this.master)
+    this.bus.connect(this.reverb)
+    this.reverb.connect(this.room)
+    this.room.connect(this.master)
     this.master.connect(limiter)
     limiter.connect(trim)
     trim.connect(clip)
@@ -350,6 +367,15 @@ export class SynthEngine {
     filter.connect(amp)
     amp.connect(this.bus)
 
+    // A note held by hand gets its own send into the reverb, closed until a finger moves
+    let send: GainNode | null = null
+    if (duration === null) {
+      send = ctx.createGain()
+      send.gain.value = 0
+      amp.connect(send)
+      send.connect(this.room)
+    }
+
     // The same attack-decay-sustain shape drives loudness (amp.gain) and brightness
     // (filter.detune, in cents above the cutoff).
     const shape = (param: AudioParam, peak: number) => {
@@ -370,6 +396,9 @@ export class SynthEngine {
       oscs,
       filter,
       amp,
+      send,
+      bend: 0,
+      sendLevel: 0,
       t0: time,
       attack,
       decayTc,
@@ -387,6 +416,7 @@ export class SynthEngine {
       try {
         this.lfoGain.disconnect(voice.filter.detune)
         voice.amp.disconnect()
+        voice.send?.disconnect()
       } catch {
         // Already disconnected, or the context has been closed
       }
@@ -446,6 +476,30 @@ export class SynthEngine {
     const waiting = this.ctx.state !== 'running' && this.ctx.currentTime < 0.01
     const time = waiting ? this.ctx.currentTime + FIRST_TAP : undefined
     this.release(this.ctx, voice, this.patch.release, time)
+  }
+
+  /**
+   * A finger moving on a held pad. `bend` is cents of pitch, following the finger sideways;
+   * `amount` (0..1) is how far it has strayed from where it landed, and opens that note's own
+   * send into the reverb. Only notes held by hand have one.
+   */
+  express(midi: number, bend: number, amount: number) {
+    const voice = this.voices.get(midi)
+    if (!voice || !voice.send || !this.ctx) return
+    const now = this.ctx.currentTime
+    voice.bend = bend
+    voice.oscs.forEach((osc, i) =>
+      osc.detune.setTargetAtTime(this.tuning(voice, i) + bend, now, BEND_SMOOTH)
+    )
+    const level = amount * EXPRESSION_SEND
+    voice.send.gain.setTargetAtTime(level, now, level > voice.sendLevel ? SEND_OPEN : SEND_CLOSE)
+    voice.sendLevel = level
+  }
+
+  // Where one of a note's oscillators sits before any bend: the two are spread either side
+  private tuning(voice: Voice, index: number) {
+    if (voice.oscs.length < 2) return 0
+    return index === 0 ? -this.patch.detune : this.patch.detune
   }
 
   allNotesOff() {
@@ -644,9 +698,7 @@ export class SynthEngine {
       if (resonance) glide(voice.filter.Q, patch.resonance)
       voice.oscs.forEach((osc, i) => {
         if (wave) osc.type = patch.wave
-        if (detune && voice.oscs.length > 1) {
-          glide(osc.detune, i === 0 ? -patch.detune : patch.detune)
-        }
+        if (detune && voice.oscs.length > 1) glide(osc.detune, this.tuning(voice, i) + voice.bend)
       })
     }
   }
