@@ -25,10 +25,8 @@ export interface KnobDef {
   format: (value: number) => string
 }
 
-const knob = (def: KnobDef) => def
-
 export const KNOBS_LEFT: KnobDef[] = [
-  knob({
+  {
     key: 'detune',
     label: 'Detune',
     name: 'Detune',
@@ -37,8 +35,8 @@ export const KNOBS_LEFT: KnobDef[] = [
     step: 1,
     page: 'wave',
     format: (v) => (v === 0 ? 'Off' : `±${Math.round(v)} ct`),
-  }),
-  knob({
+  },
+  {
     key: 'cutoff',
     label: 'Cutoff',
     name: 'Filter cutoff',
@@ -46,17 +44,17 @@ export const KNOBS_LEFT: KnobDef[] = [
     max: 1,
     page: 'filter',
     format: (v) => hz(cutoffHz(v)),
-  }),
-  knob({
+  },
+  {
     key: 'resonance',
     label: 'Reso',
     name: 'Resonance',
     min: 0,
-    max: 20,
+    max: 18,
     page: 'filter',
     format: (v) => `${v.toFixed(1)} dB`,
-  }),
-  knob({
+  },
+  {
     key: 'envAmount',
     label: 'Env',
     name: 'Filter envelope',
@@ -64,8 +62,8 @@ export const KNOBS_LEFT: KnobDef[] = [
     max: 1,
     page: 'filter',
     format: (v) => `+${(v * 4).toFixed(1)} oct`,
-  }),
-  knob({
+  },
+  {
     key: 'lfoRate',
     label: 'LFO rate',
     name: 'LFO rate',
@@ -74,8 +72,8 @@ export const KNOBS_LEFT: KnobDef[] = [
     curve: 2,
     page: 'filter',
     format: (v) => `${v.toFixed(v < 2 ? 2 : 1)} Hz`,
-  }),
-  knob({
+  },
+  {
     key: 'lfoDepth',
     label: 'LFO depth',
     name: 'LFO depth',
@@ -83,8 +81,8 @@ export const KNOBS_LEFT: KnobDef[] = [
     max: 1,
     page: 'filter',
     format: pct,
-  }),
-  knob({
+  },
+  {
     key: 'tempo',
     label: 'Tempo',
     name: 'Tempo',
@@ -93,20 +91,12 @@ export const KNOBS_LEFT: KnobDef[] = [
     step: 1,
     page: 'bar',
     format: (v) => `${Math.round(v)} BPM`,
-  }),
-  knob({
-    key: 'volume',
-    label: 'Volume',
-    name: 'Volume',
-    min: 0,
-    max: 1,
-    page: 'bar',
-    format: pct,
-  }),
+  },
+  { key: 'volume', label: 'Volume', name: 'Volume', min: 0, max: 1, page: 'bar', format: pct },
 ]
 
 export const KNOBS_RIGHT: KnobDef[] = [
-  knob({
+  {
     key: 'attack',
     label: 'Attack',
     name: 'Attack',
@@ -115,8 +105,8 @@ export const KNOBS_RIGHT: KnobDef[] = [
     curve: 3,
     page: 'env',
     format: ms,
-  }),
-  knob({
+  },
+  {
     key: 'decay',
     label: 'Decay',
     name: 'Decay',
@@ -125,17 +115,9 @@ export const KNOBS_RIGHT: KnobDef[] = [
     curve: 3,
     page: 'env',
     format: ms,
-  }),
-  knob({
-    key: 'sustain',
-    label: 'Sustain',
-    name: 'Sustain',
-    min: 0,
-    max: 1,
-    page: 'env',
-    format: pct,
-  }),
-  knob({
+  },
+  { key: 'sustain', label: 'Sustain', name: 'Sustain', min: 0, max: 1, page: 'env', format: pct },
+  {
     key: 'release',
     label: 'Release',
     name: 'Release',
@@ -144,69 +126,56 @@ export const KNOBS_RIGHT: KnobDef[] = [
     curve: 3,
     page: 'env',
     format: ms,
-  }),
-  knob({ key: 'echo', label: 'Echo', name: 'Echo', min: 0, max: 0.8, page: 'bar', format: pct }),
-  knob({
-    key: 'reverb',
-    label: 'Reverb',
-    name: 'Reverb',
-    min: 0,
-    max: 1,
-    page: 'bar',
-    format: pct,
-  }),
-  knob({ key: 'swing', label: 'Swing', name: 'Swing', min: 0, max: 0.6, page: 'bar', format: pct }),
-  knob({
-    key: 'gate',
-    label: 'Gate',
-    name: 'Note length',
-    min: 0.1,
-    max: 1,
-    page: 'bar',
-    format: pct,
-  }),
+  },
+  { key: 'echo', label: 'Echo', name: 'Echo', min: 0, max: 0.8, page: 'bar', format: pct },
+  { key: 'reverb', label: 'Reverb', name: 'Reverb', min: 0, max: 1, page: 'bar', format: pct },
+  { key: 'swing', label: 'Swing', name: 'Swing', min: 0, max: 0.6, page: 'bar', format: pct },
+  { key: 'gate', label: 'Gate', name: 'Note length', min: 0.1, max: 1, page: 'bar', format: pct },
 ]
 
 export const KNOBS = [...KNOBS_LEFT, ...KNOBS_RIGHT]
 
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
+
 /** Knob position (0..1) to value, and back */
 export function fromPosition(def: KnobDef, position: number) {
-  const value = def.min + (def.max - def.min) * Math.pow(position, def.curve ?? 1)
+  const value = def.min + (def.max - def.min) * Math.pow(clamp01(position), def.curve ?? 1)
   return def.step ? Math.round(value / def.step) * def.step : value
 }
 
 export function toPosition(def: KnobDef, value: number) {
-  const linear = (value - def.min) / (def.max - def.min)
-  return Math.pow(Math.min(1, Math.max(0, linear)), 1 / (def.curve ?? 1))
+  return Math.pow(clamp01((value - def.min) / (def.max - def.min)), 1 / (def.curve ?? 1))
 }
 
 export const WAVES: { id: Wave; label: string; path: string }[] = [
   { id: 'sine', label: 'Sine', path: 'M1 8 C 5 -2, 9 -2, 13 8 S 21 18, 25 8' },
-  { id: 'triangle', label: 'Tri', path: 'M1 8 L7 2 L19 14 L25 8' },
+  { id: 'triangle', label: 'Triangle', path: 'M1 8 L7 2 L19 14 L25 8' },
   { id: 'sawtooth', label: 'Saw', path: 'M1 14 L13 2 L13 14 L25 2 L25 14' },
-  { id: 'square', label: 'Sqr', path: 'M1 14 L1 2 L13 2 L13 14 L25 14 L25 2' },
+  { id: 'square', label: 'Square', path: 'M1 14 L1 2 L13 2 L13 14 L25 14 L25 2' },
 ]
 
 /** A preset is the sound only: tempo, swing, note length and volume stay where they are */
 export type Sound = Omit<Patch, 'volume'>
 
+// The cutoffs sit higher than they would on a studio synth. A phone speaker reproduces very
+// little below about 300 Hz, so a sound that lives down there is close to silent on one.
 export const PRESETS: { name: string; sound: Sound }[] = [
   {
     name: 'Pluck',
     sound: {
       wave: 'sawtooth',
-      detune: 6,
-      cutoff: 0.36,
-      resonance: 6,
+      detune: 7,
+      cutoff: 0.54,
+      resonance: 5,
       envAmount: 0.6,
       attack: 0.003,
-      decay: 0.22,
-      sustain: 0.1,
-      release: 0.25,
+      decay: 0.3,
+      sustain: 0.25,
+      release: 0.3,
       lfoRate: 5,
       lfoDepth: 0,
-      echo: 0.3,
-      reverb: 0.2,
+      echo: 0.28,
+      reverb: 0.18,
     },
   },
   {
@@ -214,31 +183,31 @@ export const PRESETS: { name: string; sound: Sound }[] = [
     sound: {
       wave: 'sawtooth',
       detune: 14,
-      cutoff: 0.42,
-      resonance: 1,
-      envAmount: 0.25,
-      attack: 0.6,
+      cutoff: 0.55,
+      resonance: 1.5,
+      envAmount: 0.3,
+      attack: 0.5,
       decay: 0.9,
-      sustain: 0.8,
+      sustain: 0.85,
       release: 1.8,
       lfoRate: 0.3,
-      lfoDepth: 0.25,
+      lfoDepth: 0.2,
       echo: 0.2,
-      reverb: 0.55,
+      reverb: 0.5,
     },
   },
   {
     name: 'Bass',
     sound: {
       wave: 'square',
-      detune: 4,
-      cutoff: 0.24,
-      resonance: 9,
-      envAmount: 0.55,
+      detune: 5,
+      cutoff: 0.38,
+      resonance: 8,
+      envAmount: 0.6,
       attack: 0.003,
-      decay: 0.18,
-      sustain: 0.35,
-      release: 0.1,
+      decay: 0.2,
+      sustain: 0.4,
+      release: 0.12,
       lfoRate: 5,
       lfoDepth: 0,
       echo: 0,
@@ -250,15 +219,15 @@ export const PRESETS: { name: string; sound: Sound }[] = [
     sound: {
       wave: 'square',
       detune: 9,
-      cutoff: 0.6,
+      cutoff: 0.68,
       resonance: 3,
       envAmount: 0.2,
       attack: 0.01,
-      decay: 0.12,
+      decay: 0.15,
       sustain: 0.85,
       release: 0.22,
       lfoRate: 5.5,
-      lfoDepth: 0.12,
+      lfoDepth: 0.1,
       echo: 0.3,
       reverb: 0.25,
     },
@@ -267,7 +236,7 @@ export const PRESETS: { name: string; sound: Sound }[] = [
 
 export const INITIAL: Settings = {
   ...PRESETS[0].sound,
-  volume: 0.7,
+  volume: 0.8,
   tempo: 112,
   swing: 0,
   gate: 0.6,

@@ -5,7 +5,7 @@
 //              osc ─┴─> low-pass filter ─> gain (envelope) ─┐
 //                         ▲ filter envelope + LFO           │
 //                                                           ▼
-//   bus ─┬──────────────────────────────> master ─> limiter ─> analyser ─> speakers
+//   bus ─┬──────────────────────────────> master ─> limiter ─> soft clip ─> analyser ─> out
 //        ├─> delay ⟲ ─> echo gain ───────────┤
 //        └─> convolver ─> reverb gain ───────┘
 //
@@ -21,7 +21,7 @@ export interface Patch {
   detune: number
   /** 0..1, mapped onto 60 Hz..12 kHz on a log scale (see cutoffHz) */
   cutoff: number
-  /** Filter resonance in dB, 0..20 */
+  /** Filter resonance in dB, 0..18 */
   resonance: number
   /** 0..1, how far the envelope opens the filter above the cutoff (1 = four octaves) */
   envAmount: number
@@ -41,7 +41,7 @@ export interface Patch {
   echo: number
   /** 0..1 */
   reverb: number
-  /** 0..1 */
+  /** 0..1, the knob's position; see masterGain */
   volume: number
 }
 
@@ -69,14 +69,20 @@ interface Voice {
   envCents: number
 }
 
-// Loudness of one note at the top of its attack. A handful of notes still sit under 1.0, and
-// the limiter catches what resonance, echo and reverb add on top.
-const VOICE_PEAK = 0.2
+// Loudness of one note at the top of its attack. With the master gain and the limiter's
+// make-up gain a single note leaves at roughly half of full scale, loud enough for a phone
+// speaker, and the limiter holds chords under full scale (see start).
+const VOICE_PEAK = 0.32
+const MASTER_MAX = 1.5
+// What the limiter hands on is turned down a little, so that a full chord peaks at about the
+// point where the soft clipper starts to act and not above it
+const OUTPUT_TRIM = 0.85
 const MIN_CUTOFF = 60
 const MAX_CUTOFF = 12000
 const ENV_RANGE = 4800 // cents: the filter envelope opens up to four octaves
 const LFO_RANGE = 2400 // cents: the LFO swings up to two octaves each way
 const DELAY_FEEDBACK = 0.42
+const REVERB_SECONDS = 2.2
 // How quickly a turned knob is followed. Long enough not to click, short enough to feel direct.
 const SMOOTH = 0.015
 // The sequencer looks this far ahead and wakes up this often (see tick)
@@ -84,10 +90,30 @@ const LOOKAHEAD = 0.12
 const TICK_MS = 25
 // Notes the sequencer and arpeggiator may have ringing at once before the oldest is cut short
 const MAX_SCHEDULED = 20
+// The soft clipper is drawn for inputs up to this many times full scale, and is a straight
+// line (it changes nothing) below CLIP_KNEE
+const CLIP_RANGE = 4
+const CLIP_KNEE = 0.8
+// How long the first tap sounds for when the browser had not let audio start yet (see noteOff)
+const FIRST_TAP = 0.18
+// One second of silence (see openSession). A file rather than a blob made here, because the
+// site's Content-Security-Policy only lets media load from its own address.
+const SILENCE_URL = '/static/audio/silence.wav'
 
 export const cutoffHz = (cutoff: number) => MIN_CUTOFF * Math.pow(MAX_CUTOFF / MIN_CUTOFF, cutoff)
 
 export const midiToHz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12)
+
+// Loudness is heard on a log scale, so the volume knob is squared: half way round sounds
+// about half as loud rather than barely quieter.
+const masterGain = (volume: number) => volume * volume * MASTER_MAX
+
+type AudioSessionNavigator = Navigator & { audioSession?: { type: string } }
+
+const isIOS = () =>
+  /iP(hone|ad|od)/.test(navigator.userAgent) ||
+  // An iPad asking for desktop sites calls itself a Mac, but a Mac has no touch screen
+  (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent))
 
 export class SynthEngine {
   private ctx: AudioContext | null = null
@@ -99,6 +125,8 @@ export class SynthEngine {
   private lfo!: OscillatorNode
   private lfoGain!: GainNode
   private analyserNode!: AnalyserNode
+  /** A silent, looping <audio> element: see openSession */
+  private silence: HTMLAudioElement | null = null
 
   private patch: Patch
   private transport: Transport
@@ -132,31 +160,66 @@ export class SynthEngine {
     return this.ctx ? this.analyserNode : null
   }
 
-  get now(): number {
-    return this.ctx ? this.ctx.currentTime : 0
-  }
-
   private get stepSeconds() {
     return 60 / this.transport.tempo / 4
   }
 
+  // ------------------------------------------------------------------------ starting audio
+
+  // On an iPhone or iPad, sound made with Web Audio counts as "ambient", like a game's sound
+  // effects, and the silent switch on the side of the phone mutes it. Everything still runs
+  // and the scope still moves; nothing comes out. Declaring this page's audio as "playback",
+  // like music or video, makes it sound whatever the switch says.
+  private openSession() {
+    const session = (navigator as AudioSessionNavigator).audioSession
+    if (session) {
+      try {
+        session.type = 'playback'
+      } catch {
+        // An unknown type on an early implementation: carry on with the default
+      }
+      return
+    }
+    // Older versions of iOS have no audioSession. There, an <audio> element that is playing
+    // puts the whole page in the playback category, so a loop of silence does the same job.
+    if (!isIOS()) return
+    const audio = new Audio(SILENCE_URL)
+    audio.loop = true
+    audio.preload = 'auto'
+    audio.setAttribute('playsinline', '')
+    // Keep it off AirPlay and out of the lock screen's "now playing" as far as iOS allows
+    audio.setAttribute('x-webkit-airplay', 'deny')
+    this.silence = audio
+  }
+
   // Browsers only let a page make sound after a click, tap or key press, so the audio graph is
-  // built on the first note rather than on page load.
-  private start(): AudioContext {
+  // built on the first one rather than on page load.
+  private start(): AudioContext | null {
     if (this.ctx) {
-      if (this.ctx.state === 'suspended') this.ctx.resume()
+      // "suspended" before the first allowed gesture, or after sleep(); "interrupted" on iOS
+      // after a phone call or a switch to another app
+      if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {})
       return this.ctx
     }
 
     const Ctor =
       window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    const ctx = new Ctor()
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!Ctor) return null
+
+    this.openSession()
+    let ctx: AudioContext
+    try {
+      ctx = new Ctor()
+    } catch {
+      // No audio device, or the browser has run out of audio contexts: stay silent, keep working
+      return null
+    }
     const p = this.patch
 
     this.bus = ctx.createGain()
     this.master = ctx.createGain()
-    this.master.gain.value = p.volume
+    this.master.gain.value = masterGain(p.volume)
 
     // Echo: a delay line that feeds itself, timed to three steps (a dotted eighth note) so the
     // repeats fall between the notes of a pattern rather than on top of them
@@ -167,9 +230,9 @@ export class SynthEngine {
     this.echo = ctx.createGain()
     this.echo.gain.value = p.echo
 
-    // Reverb: convolve the sound with the "sound of a room", here 2.6 seconds of fading noise
+    // Reverb: convolve the sound with the "sound of a room", here a burst of fading noise
     const convolver = ctx.createConvolver()
-    convolver.buffer = roomImpulse(ctx, 2.6)
+    convolver.buffer = roomImpulse(ctx, REVERB_SECONDS)
     this.reverb = ctx.createGain()
     this.reverb.gain.value = p.reverb
 
@@ -181,12 +244,24 @@ export class SynthEngine {
     this.lfo.connect(this.lfoGain)
     this.lfo.start()
 
+    // Limiter. One note arrives just under the threshold and passes almost untouched; a chord
+    // arrives well over it and is held down. The node adds its own make-up gain (about 5 dB
+    // at these settings), which is what brings a single note up to a healthy level.
     const limiter = ctx.createDynamicsCompressor()
-    limiter.threshold.value = -10
+    limiter.threshold.value = -9
     limiter.knee.value = 6
-    limiter.ratio.value = 12
+    limiter.ratio.value = 10
     limiter.attack.value = 0.003
-    limiter.release.value = 0.2
+    limiter.release.value = 0.15
+
+    // A limiter needs a few milliseconds to react, and a resonant filter can throw out a peak
+    // faster than that. The last stage bends anything that still gets past it smoothly towards
+    // full scale instead of letting the sound card chop it flat.
+    const trim = ctx.createGain()
+    trim.gain.value = OUTPUT_TRIM / CLIP_RANGE
+    const clip = ctx.createWaveShaper()
+    clip.curve = softClipCurve()
+    clip.oversample = '2x'
 
     this.analyserNode = ctx.createAnalyser()
     this.analyserNode.fftSize = 2048
@@ -202,19 +277,42 @@ export class SynthEngine {
     convolver.connect(this.reverb)
     this.reverb.connect(this.master)
     this.master.connect(limiter)
-    limiter.connect(this.analyserNode)
+    limiter.connect(trim)
+    trim.connect(clip)
+    clip.connect(this.analyserNode)
     this.analyserNode.connect(ctx.destination)
 
     this.ctx = ctx
     return ctx
   }
 
+  /**
+   * Call from any click, tap or key press. A touch only counts as "the visitor did something"
+   * when the finger lifts, so a note started as it lands can find the audio still locked; this
+   * is what unlocks it, and what brings it back after the browser has paused it.
+   */
+  unlock() {
+    this.start()
+    if (this.silence?.paused) this.silence.play().catch(() => {})
+  }
+
+  /** The tab went to the background: stop the audio clock rather than run it unheard */
+  sleep() {
+    this.stop()
+    this.silence?.pause()
+    if (this.ctx?.state === 'running') this.ctx.suspend().catch(() => {})
+  }
+
+  /** The tab is back. Where the browser wants a gesture first, the next tap does it (unlock) */
+  wake() {
+    if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {})
+  }
+
   // ---------------------------------------------------------------------------------- voices
 
   // Build one note. With a duration the whole envelope, release included, is scheduled up
   // front (the sequencer's notes); without one the note holds until release() is called.
-  private makeVoice(midi: number, time: number, duration: number | null): Voice {
-    const ctx = this.start()
+  private makeVoice(ctx: AudioContext, midi: number, time: number, duration: number | null): Voice {
     const p = this.patch
     const attack = Math.max(p.attack, 0.002)
     const decayTc = Math.max(p.decay, 0.01) / 3
@@ -285,9 +383,13 @@ export class SynthEngine {
   private stopAt(voice: Voice, time: number) {
     voice.oscs.forEach((osc) => osc.stop(time))
     voice.oscs[0].onended = () => {
-      this.lfoGain.disconnect(voice.filter.detune)
-      voice.amp.disconnect()
       this.scheduled = this.scheduled.filter((v) => v !== voice)
+      try {
+        this.lfoGain.disconnect(voice.filter.detune)
+        voice.amp.disconnect()
+      } catch {
+        // Already disconnected, or the context has been closed
+      }
     }
   }
 
@@ -298,45 +400,52 @@ export class SynthEngine {
     return voice.sustain + (1 - voice.sustain) * Math.exp(-(dt - voice.attack) / voice.decayTc)
   }
 
-  // Release: from wherever the envelope is right now, ease to silence, then stop the oscillators.
-  private release(voice: Voice, seconds: number) {
-    if (!this.ctx) return
-    const now = this.ctx.currentTime
-    const level = this.envelopeAt(voice, now)
+  // Release: from wherever the envelope is at that moment, ease to silence, then stop the
+  // oscillators.
+  private release(ctx: AudioContext, voice: Voice, seconds: number, time = ctx.currentTime) {
+    const level = this.envelopeAt(voice, time)
     const timeConstant = Math.max(seconds, 0.01) / 5
 
     const fall = (param: AudioParam, peak: number) => {
-      // Freeze the envelope at its current value. cancelAndHoldAtTime does exactly that;
+      // Freeze the envelope at the value it has then. cancelAndHoldAtTime does exactly that;
       // where it is missing, cancel the schedule and set the value worked out above.
       if (typeof param.cancelAndHoldAtTime === 'function') {
-        param.cancelAndHoldAtTime(now)
+        param.cancelAndHoldAtTime(time)
       } else {
-        param.cancelScheduledValues(now)
-        param.setValueAtTime(peak * level, now)
+        param.cancelScheduledValues(time)
+        param.setValueAtTime(peak * level, time)
       }
       // setTargetAtTime approaches its target exponentially: after 5 time constants it is
       // within 1% of it, which is where the oscillator can stop without a click.
-      param.setTargetAtTime(0, now, timeConstant)
+      param.setTargetAtTime(0, time, timeConstant)
     }
     fall(voice.amp.gain, VOICE_PEAK)
     fall(voice.filter.detune, voice.envCents)
-    this.stopAt(voice, now + timeConstant * 7)
+    this.stopAt(voice, time + timeConstant * 7)
   }
 
   noteOn(midi: number) {
     const ctx = this.start()
+    if (!ctx) return
     // The same note again before its release has finished: let the old one fade quickly
     // rather than stacking two voices on one pitch.
     const old = this.voices.get(midi)
-    if (old) this.release(old, 0.03)
-    this.voices.set(midi, this.makeVoice(midi, ctx.currentTime, null))
+    if (old) this.release(ctx, old, 0.03)
+    this.voices.set(midi, this.makeVoice(ctx, midi, ctx.currentTime, null))
   }
 
   noteOff(midi: number) {
     const voice = this.voices.get(midi)
-    if (!voice) return
+    if (!voice || !this.ctx) return
     this.voices.delete(midi)
-    this.release(voice, this.patch.release)
+
+    // The very first tap on a touch screen: the note was built as the finger landed, but the
+    // browser only lets audio start when it lifts, so the audio clock has not moved yet.
+    // Released now, the note would be over before it began. Give it a short fixed length
+    // instead, and it sounds as the clock starts.
+    const waiting = this.ctx.state !== 'running' && this.ctx.currentTime < 0.01
+    const time = waiting ? this.ctx.currentTime + FIRST_TAP : undefined
+    this.release(this.ctx, voice, this.patch.release, time)
   }
 
   allNotesOff() {
@@ -344,21 +453,21 @@ export class SynthEngine {
   }
 
   // A note with a known length, starting at an exact time on the audio clock
-  private playNote(midi: number, time: number, duration: number) {
+  private playNote(ctx: AudioContext, midi: number, time: number, duration: number) {
     if (this.scheduled.length >= MAX_SCHEDULED) {
       const oldest = this.scheduled.shift()!
       oldest.amp.gain.cancelScheduledValues(time)
       oldest.amp.gain.setTargetAtTime(0, time, 0.02)
       this.stopAt(oldest, time + 0.15)
     }
-    this.scheduled.push(this.makeVoice(midi, time, duration))
+    this.scheduled.push(this.makeVoice(ctx, midi, time, duration))
     this.lights.push({ midi, on: time, off: time + Math.max(duration, 0.06) })
   }
 
   /** Play one short note now (a step being auditioned) */
   preview(midi: number) {
     const ctx = this.start()
-    this.playNote(midi, ctx.currentTime, 0.18)
+    if (ctx) this.playNote(ctx, midi, ctx.currentTime, 0.18)
   }
 
   // ------------------------------------------------------------------- sequencer, arpeggiator
@@ -367,9 +476,13 @@ export class SynthEngine {
   // late. So the timer never plays anything. It wakes up often, looks a little way ahead on
   // the audio clock, and schedules every step that starts inside that window at its exact time.
   private tick = () => {
-    if (!this.ctx) return
-    while (this.nextTime < this.ctx.currentTime + LOOKAHEAD) {
-      this.scheduleStep(this.nextTime)
+    const ctx = this.ctx
+    if (!ctx) return
+    // After a stall (a throttled timer, a suspended clock) carry on from now rather than
+    // firing every step that was missed in one burst
+    if (this.nextTime < ctx.currentTime - 0.2) this.nextTime = ctx.currentTime + 0.02
+    while (this.nextTime < ctx.currentTime + LOOKAHEAD) {
+      this.scheduleStep(ctx, this.nextTime)
       this.nextTime += this.stepSeconds
     }
     if (!this.playing && !this.arpRunning) this.stopClock()
@@ -379,7 +492,7 @@ export class SynthEngine {
     return this.arpOn && this.arpNotes.length > 0
   }
 
-  private scheduleStep(gridTime: number) {
+  private scheduleStep(ctx: AudioContext, gridTime: number) {
     const step = this.stepSeconds
     // Swing: every second sixteenth arrives late
     const time = gridTime + (this.clockStep % 2 === 1 ? this.transport.swing * step * 0.5 : 0)
@@ -388,13 +501,14 @@ export class SynthEngine {
     if (this.playing) {
       const index = this.seqStep % STEPS
       const midi = this.pattern[index]
-      if (midi !== null) this.playNote(midi, time, step * this.transport.gate)
+      if (midi !== null) this.playNote(ctx, midi, time, step * this.transport.gate)
       this.marks.push({ step: index, time })
+      if (this.marks.length > STEPS * 2) this.marks = this.marks.slice(-STEPS)
       this.seqStep++
     }
 
     if (this.arpRunning) {
-      this.playNote(this.nextArpNote(), time, step * Math.min(this.transport.gate, 0.9))
+      this.playNote(ctx, this.nextArpNote(), time, step * Math.min(this.transport.gate, 0.9))
     }
   }
 
@@ -420,7 +534,7 @@ export class SynthEngine {
 
   private startClock() {
     const ctx = this.start()
-    if (this.timer !== null) return
+    if (!ctx || this.timer !== null) return
     this.nextTime = ctx.currentTime + 0.02
     this.clockStep = 0
     this.timer = setInterval(this.tick, TICK_MS)
@@ -474,17 +588,21 @@ export class SynthEngine {
       if (mark.time <= now) current = mark.step
       else break
     }
-    if (this.marks.length > STEPS * 2) this.marks = this.marks.slice(-STEPS)
     return current
   }
 
   /** The step a note played right now belongs to: the nearest one, not the last one started */
   nearestStep(): number {
-    const current = this.currentStep()
-    if (current < 0 || !this.ctx) return -1
-    const started = [...this.marks].reverse().find((m) => m.time <= this.ctx!.currentTime)!
-    const late = this.ctx.currentTime - started.time > this.stepSeconds / 2
-    return late ? (current + 1) % STEPS : current
+    if (!this.playing || !this.ctx) return -1
+    const now = this.ctx.currentTime
+    let started: { step: number; time: number } | null = null
+    for (const mark of this.marks) {
+      if (mark.time <= now) started = mark
+      else break
+    }
+    if (!started) return -1
+    const late = now - started.time > this.stepSeconds / 2
+    return late ? (started.step + 1) % STEPS : started.step
   }
 
   /** MIDI numbers of the sequenced and arpeggiated notes sounding right now */
@@ -500,33 +618,43 @@ export class SynthEngine {
   // ------------------------------------------------------------------------------- settings
 
   // Envelope times are read when a note starts or ends. Everything else is applied to the
-  // running graph straight away, so a held note changes as the knob turns.
+  // running graph straight away, so a held note changes as the knob turns. Only what changed
+  // is touched: a knob being dragged calls this sixty times a second.
   setPatch(patch: Patch) {
+    const old = this.patch
     this.patch = patch
     if (!this.ctx) return
     const now = this.ctx.currentTime
+    const glide = (param: AudioParam, value: number) => param.setTargetAtTime(value, now, SMOOTH)
 
-    this.echo.gain.setTargetAtTime(patch.echo, now, SMOOTH)
-    this.reverb.gain.setTargetAtTime(patch.reverb, now, SMOOTH)
-    this.master.gain.setTargetAtTime(patch.volume, now, SMOOTH)
-    this.lfo.frequency.setTargetAtTime(patch.lfoRate, now, SMOOTH)
-    this.lfoGain.gain.setTargetAtTime(patch.lfoDepth * LFO_RANGE, now, SMOOTH)
+    if (patch.echo !== old.echo) glide(this.echo.gain, patch.echo)
+    if (patch.reverb !== old.reverb) glide(this.reverb.gain, patch.reverb)
+    if (patch.volume !== old.volume) glide(this.master.gain, masterGain(patch.volume))
+    if (patch.lfoRate !== old.lfoRate) glide(this.lfo.frequency, patch.lfoRate)
+    if (patch.lfoDepth !== old.lfoDepth) glide(this.lfoGain.gain, patch.lfoDepth * LFO_RANGE)
+
+    const cutoff = patch.cutoff !== old.cutoff
+    const resonance = patch.resonance !== old.resonance
+    const wave = patch.wave !== old.wave
+    const detune = patch.detune !== old.detune
+    if (!cutoff && !resonance && !wave && !detune) return
 
     for (const voice of [...this.voices.values(), ...this.scheduled]) {
-      voice.filter.frequency.setTargetAtTime(cutoffHz(patch.cutoff), now, SMOOTH)
-      voice.filter.Q.setTargetAtTime(patch.resonance, now, SMOOTH)
+      if (cutoff) glide(voice.filter.frequency, cutoffHz(patch.cutoff))
+      if (resonance) glide(voice.filter.Q, patch.resonance)
       voice.oscs.forEach((osc, i) => {
-        osc.type = patch.wave
-        if (voice.oscs.length > 1) {
-          osc.detune.setTargetAtTime(i === 0 ? -patch.detune : patch.detune, now, SMOOTH)
+        if (wave) osc.type = patch.wave
+        if (detune && voice.oscs.length > 1) {
+          glide(osc.detune, i === 0 ? -patch.detune : patch.detune)
         }
       })
     }
   }
 
   setTransport(transport: Transport) {
+    const tempo = transport.tempo !== this.transport.tempo
     this.transport = transport
-    if (!this.ctx) return
+    if (!this.ctx || !tempo) return
     // Glide to the new echo time. A delay line that changes length bends the pitch of what is
     // inside it, which is the tape-echo wobble you hear when the tempo knob turns.
     this.delay.delayTime.setTargetAtTime(this.stepSeconds * 3, this.ctx.currentTime, 0.1)
@@ -536,7 +664,10 @@ export class SynthEngine {
     this.stopClock()
     this.voices.clear()
     this.scheduled = []
-    this.ctx?.close()
+    this.lights = []
+    this.silence?.pause()
+    this.silence = null
+    this.ctx?.close().catch(() => {})
     this.ctx = null
   }
 }
@@ -553,4 +684,20 @@ function roomImpulse(ctx: AudioContext, seconds: number) {
     }
   }
   return buffer
+}
+
+// The curve a WaveShaperNode maps its input through, here over -CLIP_RANGE..CLIP_RANGE.
+// Below the knee the output is the input; above it the output bends over and creeps towards
+// full scale without ever reaching it.
+function softClipCurve() {
+  const points = 4097
+  const curve = new Float32Array(points)
+  const room = 1 - CLIP_KNEE
+  for (let i = 0; i < points; i++) {
+    const x = ((i / (points - 1)) * 2 - 1) * CLIP_RANGE
+    const size = Math.abs(x)
+    const bent = size <= CLIP_KNEE ? size : CLIP_KNEE + room * Math.tanh((size - CLIP_KNEE) / room)
+    curve[i] = Math.sign(x) * bent
+  }
+  return curve
 }

@@ -14,7 +14,7 @@ layout: PostLayout
 
 Press **Play** on that page and a sixteen-step pattern starts. Now drag the **Cutoff** knob upward while it runs. The riff goes from muffled to bright, the screen swaps its oscilloscope for a drawing of the filter you are moving, and the pads light up in time with the notes.
 
-There is no audio file behind any of it and no synth library. The browser generates the sound sample by sample from a graph of audio nodes, and a 25 millisecond timer keeps it in time. This post walks through how.
+There is no audio file behind any of it and no synth library. The browser generates the sound sample by sample from a graph of audio nodes, and a 25 millisecond timer keeps it in time. This post walks through how, including the two ways it managed to be silent on a phone.
 
 ## The Signal Chain
 
@@ -25,7 +25,7 @@ per note:  osc ─┐
            osc ─┴─> low-pass filter ─> gain (envelope) ─┐
                       ▲ filter envelope + LFO           │
                                                         ▼
-bus ─┬──────────────────────────────> master ─> limiter ─> analyser ─> speakers
+bus ─┬──────────────────────────────> master ─> limiter ─> soft clip ─> speakers
      ├─> delay ⟲ ─> echo gain ───────────┤
      └─> convolver ─> reverb gain ───────┘
 ```
@@ -86,13 +86,13 @@ The same shape is used twice. On the gain it makes the note louder and then quie
 Release starts when the key comes up, from wherever the envelope has got to, which may be halfway up the attack:
 
 ```typescript
-param.cancelAndHoldAtTime(now) // freeze at the current level
-param.setTargetAtTime(0, now, release / 5)
+param.cancelAndHoldAtTime(time) // freeze at the level it has then
+param.setTargetAtTime(0, time, release / 5)
 ```
 
 `setTargetAtTime` approaches its target exponentially and never quite arrives. After five time constants it is within 1% of it, so the oscillators are stopped a little after that, when the cut is too quiet to click.
 
-The four presets are mostly envelope settings. **Pluck** is a 3 ms attack with sustain at 10%. **Pad** is the same saw wave with a 600 ms attack and a 1.8 second release.
+The four presets are mostly envelope settings. **Pluck** is a 3 ms attack with sustain at 25%. **Pad** is the same saw wave with a 500 ms attack and a 1.8 second release.
 
 ## A Filter per Note
 
@@ -127,13 +127,27 @@ delay.connect(echo)
 
 The delay time is three sequencer steps, a dotted eighth note, so the repeats land between the notes of a pattern instead of on top of them. Turn the **Tempo** knob and the delay time glides to its new length. A delay line that changes length bends the pitch of whatever is inside it, which is why the echoes wobble like tape for a moment.
 
-Reverb is a `ConvolverNode`, which stamps the sound of a room onto a signal. The usual way to get a room is to load a recording of one. This one is generated in a loop: 2.6 seconds of random noise that fades out, different in the left and right channels so it sounds wide.
+Reverb is a `ConvolverNode`, which stamps the sound of a room onto a signal. The usual way to get a room is to load a recording of one. This one is generated in a loop: 2.2 seconds of random noise that fades out, different in the left and right channels so it sounds wide.
 
 ```typescript
 data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.4)
 ```
 
-Each note peaks at 0.2 of full scale, and resonance, echo and reverb all add level on top, so the last node before the speakers is a `DynamicsCompressorNode` set up as a limiter.
+## Loud Enough, and Never Too Loud
+
+A synth has an awkward range. One quiet note and eight loud ones come out of the same instrument. Set the level so a chord is safe and a single note is too quiet to hear on a phone. Set it so a single note is healthy and a chord runs off the top of the scale and clips.
+
+Three stages deal with it:
+
+1. **Each note peaks at 0.32 of full scale**, and the volume knob is squared before it is used as a gain. Loudness is heard on a log scale, so a squared knob sounds about half as loud at half way, where a linear one would sound barely quieter.
+2. **A limiter.** This is a `DynamicsCompressorNode` with a threshold of -9 dB and a ratio of 10. One note arrives just under the threshold and passes almost untouched. A chord arrives well over it and is held down. The node also adds make-up gain of its own, about 5 dB at these settings, which is what lifts a single note to a healthy level.
+3. **A soft clipper.** A limiter takes a few milliseconds to react, and a resonant filter can throw out a peak faster than that. The last node is a `WaveShaperNode` whose curve is a straight line up to 0.8 and then bends over, creeping towards full scale without reaching it.
+
+```typescript
+const bent = size <= KNEE ? size : KNEE + (1 - KNEE) * Math.tanh((size - KNEE) / (1 - KNEE))
+```
+
+Measured at the last node before the speakers: one note peaks at between 0.4 and 0.65 of full scale depending on the preset, and a six-note chord at about 0.8. With every knob at its maximum and an eight-note chord held over a running pattern, it reaches 0.9. It does not reach 1.0.
 
 ## Keeping Time Without a Timer You Can Trust
 
@@ -145,8 +159,8 @@ The fix is to never let the timer play anything. It wakes up every 25 ms, looks 
 
 ```typescript
 private tick = () => {
-  while (this.nextTime < this.ctx.currentTime + LOOKAHEAD) {
-    this.scheduleStep(this.nextTime)
+  while (this.nextTime < ctx.currentTime + LOOKAHEAD) {
+    this.scheduleStep(ctx, this.nextTime)
     this.nextTime += this.stepSeconds
   }
 }
@@ -160,29 +174,73 @@ One consequence: a note is scheduled up to 120 ms before it sounds. If the pads 
 
 ## The Knobs and the Screen
 
-Each knob is a `div` with `role="slider"`: drag up and down to turn it, hold Shift for fine steps, double-click to reset, or focus it and use the arrow keys. A screen reader hears "Cutoff, 1.1 kHz", not a percentage.
+Each knob is a `div` with `role="slider"`: drag up and down to turn it, hold Shift for fine steps, press it twice quickly to put it back, or focus it and use the arrow keys. A screen reader hears "Filter cutoff, 1.0 kHz", not a percentage.
 
 Choosing a preset moves every knob at once. The dials are styled with a half-second CSS transition, so they sweep to their new positions together, and that transition is switched off while a knob is being dragged so it follows the hand exactly.
+
+A button that switches something on has a small light above its legend. My first idea was to light the legend itself in lime. Measured against the body colours, lime lettering came out under the 4.5:1 contrast that small text needs, so the lettering stays white and the light does the signalling, which is also how real hardware does it.
 
 The screen is one canvas with three jobs:
 
 - **At rest** it is an oscilloscope over a faint spectrum, both read from an `AnalyserNode` every frame. Drawn as the samples come, the wave would start at a random point in its cycle each frame and shiver sideways. Real scopes solve this with a trigger, and so does this one: each frame starts where the signal crosses zero on the way up.
 - **While a knob turns** it shows that control: the envelope's shape with the segment you are changing lit, or the filter's frequency response. The filter curve is computed from the same formula the browser's filter uses, so it is the real response for those settings. The dashed line is where the envelope opens it to, and the curve sways at the LFO's actual rate and depth.
-- **Along the bottom** is the pattern, with the playing step lit.
+- **Along the bottom**, where the screen is tall enough, is the pattern, with the playing step lit.
+
+When nothing has sounded or changed for 0.7 seconds the screen stops redrawing. A canvas repainted sixty times a second for no reason is a phone battery being emptied.
+
+## One Screen, Any Screen
+
+The instrument is always exactly as big as the window allows, on a phone or a desktop, and the page never needs to scroll to reach part of it. No JavaScript is involved in that.
+
+Every size inside the instrument is a multiple of one custom property, `--u`, which stands for one pixel of the design. The space the instrument sits in is a size container, and `--u` is set from that space with container query units:
+
+```css
+.device {
+  --u: min(calc(100cqw / 1120), calc(100cqh / 664), 1.3px);
+  width: calc(1120 * var(--u));
+  height: calc(664 * var(--u));
+}
+
+.dial {
+  width: calc(56 * var(--u));
+  height: calc(56 * var(--u));
+}
+```
+
+The design is 1120 by 664. `100cqw / 1120` is the scale the width allows, `100cqh / 664` is the scale the height allows, and `--u` is the smaller of the two. Everything is drawn in multiples of it, so the instrument grows and shrinks as one object.
+
+One shape does not suit every window, so there are four arrangements, picked by container queries on the shape of the space:
+
+- **Wide**, for desktops and tablets on their side: everything on show.
+- **Tall**, for tablets upright: everything on show, stacked.
+- **Phone**: the screen, one octave of pads, Play, and four tabs that swap which controls sit underneath.
+- **Flat**, for a phone on its side: the same four pages beside the screen, over two octaves of pads.
+
+The markup is the same for all four. The phone's single octave is the stylesheet declining to draw the second one, and each tab's page is placed on the body's grid by name. That matters for a server-rendered page: the HTML that arrives is right for whatever device it lands on, with nothing to rearrange once the script loads.
+
+Knobs and pads set `touch-action: none`, which is what stops a drag on a knob from scrolling the page. The body sets `touch-action: manipulation`, which stops two quick taps on a button from zooming in.
 
 ## The Parts the Browser Makes Interesting
 
-**Sound needs a gesture.** Browsers do not let a page make noise until the visitor has clicked, tapped or pressed a key. The `AudioContext` is created on the first note or the first press of Play, and that press is itself the gesture.
+**Sound needs a gesture, and a touch only counts when the finger lifts.** Browsers do not let a page make noise until the visitor has clicked, tapped or pressed a key, so the `AudioContext` is created on the first one. On a touch screen that gesture is the finger coming up, not going down. The note a first tap starts is built while audio is still locked, and released the normal way it would be over before the audio clock had moved. That one note is given a fixed length of 180 ms instead, so it sounds as the finger lifts. Every note after it sounds as the finger lands.
+
+**The silent switch.** On an iPhone, sound made with Web Audio counts as "ambient", like a game's sound effects, and the switch on the side of the phone mutes it. Everything still runs. The sequencer plays, the pads light, the scope draws waves, and nothing comes out. Declaring the page's audio as playback, the category music and video use, makes it sound whatever the switch says:
+
+```typescript
+navigator.audioSession.type = 'playback'
+```
+
+Older versions of iOS have no `audioSession`. There, an `<audio>` element that is playing puts the whole page in the playback category, so the page loops one second of silence. The silence is a file rather than a blob made in the browser, because this site's Content-Security-Policy does not allow media from blob URLs.
+
+**A phone speaker has no bass.** The other way to be silent on a phone is to be quiet and low. A phone speaker reproduces very little below a few hundred hertz, and a pattern that starts on the C below middle C, through a filter set low, lives almost entirely down there. The presets' cutoffs sit higher than they would on a studio synth, and on a phone the keyboard and the starting pattern begin an octave higher. Measured, about three quarters of the pattern's energy is then above 300 Hz. An octave lower it was a third.
 
 **`cancelAndHoldAtTime` is not everywhere.** Where it is missing, the engine works out where the envelope has got to from when the note started, cancels the schedule and sets that value.
 
-**Stuck notes.** If you hold a key and switch tabs, the `keyup` goes to the other tab and the note rings forever. The page releases every note when the window loses focus, and stops the sequencer when the tab is hidden, since a background tab's timers are throttled to once a second and no lookahead window survives that.
+**Stuck notes.** If you hold a key and switch windows, the `keyup` goes to the other window and the note rings forever. The page lets go of every key when the window loses focus. When the tab is hidden it also stops the sequencer and suspends the audio clock: a background tab's timers are throttled to once a second, no lookahead window survives that, and nobody is listening.
 
 **Physical keys, not letters.** The keyboard mapping uses `event.code` rather than `event.key`, so the home row is the lower pads and the row above is the upper pads on any layout, including AZERTY and Dvorak.
 
 **Sliding across the pads.** The pad area captures the pointer on press. A drag plays each pad it passes over, and a release that happens off the pads still ends the note. Every finger is tracked separately, so chords work on a touch screen.
-
-**Phones.** Sixteen knobs, sixteen steps and a keyboard do not fit under a screen on a phone. There the pads sit directly below the screen, the controls are split into three tabs, and the screen stays pinned to the top of the window as you scroll, so a knob at the bottom of the body can still be watched as it turns. Knobs and pads set `touch-action: none`, which is what stops a drag on a knob from scrolling the page instead.
 
 ## Things to Try
 

@@ -20,19 +20,47 @@ export interface ScreenState {
   focus: { key: KnobKey | 'wave'; at: number } | null
 }
 
-// The screen is drawn on a 320 x 300 grid and scaled to whatever size the canvas is
-const W = 320
-// Two layouts. The full one has the pattern along the bottom. The compact one, for phones,
-// drops it (the step buttons show the same thing) so the screen takes less of a small window.
-const FULL = { height: 300, main: { top: 38, bottom: 196 }, graph: { top: 104, bottom: 190 } }
-const COMPACT = { height: 172, main: { top: 38, bottom: 166 }, graph: { top: 70, bottom: 160 } }
-const SEQ = { top: 212, bottom: 286 }
 // How long a control's page stays up after it was last moved, and how long it takes to fade
 const PAGE_HOLD = 1400
 const PAGE_FADE = 350
 const BOOT = 900
+// With nothing sounding and nothing changing for this long, the screen stops redrawing.
+// A canvas repainted sixty times a second for no reason is a phone battery being emptied.
+const IDLE_AFTER = 700
+// A frame that takes longer than this to draw is a slow one; this many in a row and the glow
+// around the lines, the most expensive thing drawn, is dropped for the rest of the visit
+const SLOW_FRAME_MS = 9
+const SLOW_FRAMES = 20
+// The width the screen was designed at. Narrower canvases get less room, not smaller text.
+const DESIGN_WIDTH = 320
+const STATUS_HEIGHT = 30
 
 const ARP_GLYPH: Record<ArpMode, string> = { up: '↑', down: '↓', updown: '↕', random: '?' }
+
+// The screen is whatever size the layout gives it, from a wide strip on a phone to a near
+// square on a desktop, so where things go is worked out from the size rather than fixed.
+function arrange(width: number, height: number) {
+  const pad = width < 250 ? 10 : 14
+  // The pattern along the bottom, where there is room for it under the main area
+  const strip = height >= 236 ? Math.min(96, Math.max(72, height * 0.3)) : 0
+  const main = { top: STATUS_HEIGHT + 1, bottom: height - strip }
+  // A control's name and value stack up large when the main area is tall enough
+  const tall = main.bottom - main.top >= 150
+  return {
+    width,
+    height,
+    pad,
+    main,
+    tall,
+    graph: {
+      left: pad,
+      right: width - pad,
+      top: main.top + (tall ? 72 : 34),
+      bottom: main.bottom - 8,
+    },
+    pattern: strip ? { top: main.bottom + 20, bottom: height - 10 } : null,
+  }
+}
 
 const wave = (type: Wave, phase: number) => {
   const p = phase - Math.floor(phase)
@@ -69,21 +97,15 @@ function lowpassDb(freq: number, cutoff: number, resonanceDb: number, sampleRate
 interface Props {
   engine: SynthEngine
   state: React.RefObject<ScreenState>
-  /** The phone layout: shorter, without the pattern */
-  compact: boolean
 }
 
-export default function Screen({ engine, state, compact }: Props) {
-  const layout = compact ? COMPACT : FULL
-
+export default function Screen({ engine, state }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
     const g = canvas?.getContext('2d')
     if (!canvas || !g) return
-    const H = layout.height
-    const MAIN = layout.main
 
     const css = getComputedStyle(canvas)
     const mono = css.fontFamily
@@ -95,20 +117,39 @@ export default function Screen({ engine, state, compact }: Props) {
     const touch = window.matchMedia('(hover: none)').matches
 
     let frame = 0
+    // Canvas pixels per unit the drawing code works in
     let scale = 1
+    let lay = arrange(DESIGN_WIDTH, 300)
     let samples: Float32Array<ArrayBuffer> | null = null
     let spectrum: Uint8Array<ArrayBuffer> | null = null
+    let drawn: ScreenState | null = null
+    let resized = true
+    let lastBusy = performance.now()
+    let slowFrames = 0
+    let glow = true
     const started = performance.now()
 
     const resize = () => {
+      const width = canvas.clientWidth
+      const height = canvas.clientHeight
+      if (!width || !height) return
       const dpr = Math.min(window.devicePixelRatio || 1, 2.5)
-      canvas.width = Math.round(canvas.clientWidth * dpr)
-      canvas.height = Math.round((canvas.clientWidth * dpr * H) / W)
-      scale = canvas.width / W
+      canvas.width = Math.round(width * dpr)
+      canvas.height = Math.round(height * dpr)
+      // Text grows a little on a big screen and never shrinks below nine tenths of its size
+      const zoom = Math.min(1.6, Math.max(0.9, width / DESIGN_WIDTH))
+      scale = dpr * zoom
+      lay = arrange(width / zoom, height / zoom)
+      resized = true
     }
     const observer = new ResizeObserver(resize)
     observer.observe(canvas)
     resize()
+    // Text drawn before the web font arrived is in the fallback font, and an idle screen is
+    // not redrawn: draw it again once the fonts are in
+    document.fonts?.ready.then(() => {
+      resized = true
+    })
 
     const text = (
       value: string,
@@ -123,6 +164,7 @@ export default function Screen({ engine, state, compact }: Props) {
       g.textAlign = align
       g.fillStyle = color
       g.fillText(value, x, y)
+      return g.measureText(value).width
     }
 
     const glowLine = (color: string, width: number, trace: () => void) => {
@@ -130,7 +172,7 @@ export default function Screen({ engine, state, compact }: Props) {
       g.lineCap = 'round'
       g.strokeStyle = color
       g.shadowColor = color
-      g.shadowBlur = 10 * scale
+      g.shadowBlur = glow ? 10 * scale : 0
       g.lineWidth = width
       g.beginPath()
       trace()
@@ -139,45 +181,40 @@ export default function Screen({ engine, state, compact }: Props) {
     }
 
     // ------------------------------------------------------------------ what is playing
-    const drawScope = () => {
-      const mid = (MAIN.top + MAIN.bottom) / 2
-      const half = (MAIN.bottom - MAIN.top) / 2
-      const analyser = engine.analyser
+    const drawScope = (analyser: AnalyserNode | null, data: Float32Array | null) => {
+      const { main, width } = lay
+      const mid = (main.top + main.bottom) / 2
+      const half = (main.bottom - main.top) / 2 - 2
 
       g.strokeStyle = white(0.1)
       g.lineWidth = 1
       g.beginPath()
       g.moveTo(0, mid)
-      g.lineTo(W, mid)
+      g.lineTo(width, mid)
       g.stroke()
 
-      if (!analyser) {
-        text(touch ? 'TAP A PAD' : 'PRESS A KEY', W / 2, mid - 14, 10, white(0.45), 'center')
+      if (!analyser || !data) {
+        text(touch ? 'TAP A PAD' : 'PRESS A KEY', width / 2, mid - 10, 10, white(0.62), 'center')
         return
       }
 
-      // Spectrum, faint, behind the trace: 44 bars from 40 Hz to 14 kHz on a log scale
+      // Spectrum, faint, behind the trace: bars from 40 Hz to 14 kHz on a log scale
       if (!spectrum || spectrum.length !== analyser.frequencyBinCount) {
         spectrum = new Uint8Array(analyser.frequencyBinCount)
       }
       analyser.getByteFrequencyData(spectrum)
       const hzPerBin = analyser.context.sampleRate / analyser.fftSize
-      const bars = 44
+      const bars = Math.round(width / 7.3)
+      const alpha = g.globalAlpha
+      g.globalAlpha = alpha * 0.22
       g.fillStyle = cyan
       for (let i = 0; i < bars; i++) {
         const freq = 40 * Math.pow(14000 / 40, i / (bars - 1))
         const level = spectrum[Math.min(spectrum.length - 1, Math.round(freq / hzPerBin))] / 255
         const height = level * level * half * 1.7
-        g.globalAlpha *= 0.22
-        g.fillRect((i / bars) * W + 1, MAIN.bottom - height, W / bars - 2, height)
-        g.globalAlpha /= 0.22
+        g.fillRect((i / bars) * width + 1, main.bottom - height, width / bars - 2, height)
       }
-
-      if (!samples || samples.length !== analyser.fftSize) {
-        samples = new Float32Array(analyser.fftSize)
-      }
-      analyser.getFloatTimeDomainData(samples)
-      const data = samples
+      g.globalAlpha = alpha
 
       // Start each frame where the wave crosses zero going up. Without this the picture
       // starts at a random point in the wave every frame and the trace jitters sideways.
@@ -191,8 +228,8 @@ export default function Screen({ engine, state, compact }: Props) {
       }
       glowLine(lime, 1.6, () => {
         for (let i = 0; i < shown; i++) {
-          const x = (i / (shown - 1)) * W
-          const y = mid - data[start + i] * half * 0.92
+          const x = (i / (shown - 1)) * width
+          const y = mid - Math.max(-1, Math.min(1, data[start + i])) * half * 0.92
           if (i === 0) g.moveTo(x, y)
           else g.lineTo(x, y)
         }
@@ -200,17 +237,16 @@ export default function Screen({ engine, state, compact }: Props) {
     }
 
     // ------------------------------------------------- the control being moved, as a picture
-    const GRAPH = { left: 14, right: W - 14, ...layout.graph }
-
     const drawWavePage = (s: Settings, now: number) => {
-      const mid = (GRAPH.top + GRAPH.bottom) / 2
-      const half = (GRAPH.bottom - GRAPH.top) / 2 - 4
-      const width = GRAPH.right - GRAPH.left
+      const { graph } = lay
+      const mid = (graph.top + graph.bottom) / 2
+      const half = (graph.bottom - graph.top) / 2 - 4
+      const width = graph.right - graph.left
       const trace = (offset: number) => () => {
         for (let i = 0; i <= width; i++) {
           const y = mid - wave(s.wave, (i / width) * 2.5 + offset) * half
-          if (i === 0) g.moveTo(GRAPH.left + i, y)
-          else g.lineTo(GRAPH.left + i, y)
+          if (i === 0) g.moveTo(graph.left + i, y)
+          else g.lineTo(graph.left + i, y)
         }
       }
       // The second oscillator, drifting against the first at the speed they beat at
@@ -219,23 +255,24 @@ export default function Screen({ engine, state, compact }: Props) {
     }
 
     const drawFilterPage = (s: Settings, now: number) => {
-      const width = GRAPH.right - GRAPH.left
-      const height = GRAPH.bottom - GRAPH.top
-      const yOf = (db: number) => GRAPH.top + ((24 - db) / 60) * height
+      const { graph } = lay
+      const width = graph.right - graph.left
+      const height = graph.bottom - graph.top
+      const yOf = (db: number) => graph.top + ((24 - db) / 60) * height
       const curve = (cutoff: number) => () => {
         for (let i = 0; i <= width; i += 2) {
           const freq = 20 * Math.pow(1000, i / width) // 20 Hz to 20 kHz
           const db = Math.max(-36, Math.min(24, lowpassDb(freq, cutoff, s.resonance)))
-          if (i === 0) g.moveTo(GRAPH.left + i, yOf(db))
-          else g.lineTo(GRAPH.left + i, yOf(db))
+          if (i === 0) g.moveTo(graph.left + i, yOf(db))
+          else g.lineTo(graph.left + i, yOf(db))
         }
       }
 
       g.strokeStyle = white(0.12)
       g.lineWidth = 1
       g.beginPath()
-      g.moveTo(GRAPH.left, yOf(0))
-      g.lineTo(GRAPH.right, yOf(0))
+      g.moveTo(graph.left, yOf(0))
+      g.lineTo(graph.right, yOf(0))
       g.stroke()
 
       const base = cutoffHz(s.cutoff)
@@ -255,8 +292,11 @@ export default function Screen({ engine, state, compact }: Props) {
     }
 
     const drawEnvPage = (s: Settings, key: string) => {
-      const width = GRAPH.right - GRAPH.left
-      const height = GRAPH.bottom - GRAPH.top - 6
+      const { graph } = lay
+      const width = graph.right - graph.left
+      const lettered = graph.bottom - graph.top > 44
+      const top = graph.top + (lettered ? 12 : 2)
+      const height = graph.bottom - top
       // Square roots so a 5 ms attack is still visible next to a 4 second release
       const raw = [
         0.12 + Math.sqrt(s.attack / 2),
@@ -265,11 +305,10 @@ export default function Screen({ engine, state, compact }: Props) {
         0.12 + Math.sqrt(s.release / 4),
       ]
       const total = raw.reduce((sum, n) => sum + n, 0)
-      const xs = [GRAPH.left]
+      const xs = [graph.left]
       raw.forEach((n) => xs.push(xs[xs.length - 1] + (n / total) * width))
-      const top = GRAPH.bottom - height
-      const hold = GRAPH.bottom - height * s.sustain
-      const ys = [GRAPH.bottom, top, hold, hold, GRAPH.bottom]
+      const hold = graph.bottom - height * s.sustain
+      const ys = [graph.bottom, top, hold, hold, graph.bottom]
       const lit = ['attack', 'decay', 'sustain', 'release'].indexOf(key)
 
       g.fillStyle = white(0.06)
@@ -291,57 +330,57 @@ export default function Screen({ engine, state, compact }: Props) {
           segment()
           g.stroke()
         }
-        text(
-          'ADSR'[i],
-          (xs[i] + xs[i + 1]) / 2,
-          GRAPH.bottom + 4 - height - 8,
-          8,
-          white(i === lit ? 0.9 : 0.35),
-          'center'
-        )
+        if (lettered) {
+          const x = (xs[i] + xs[i + 1]) / 2
+          text('ADSR'[i], x, graph.top + 6, 8, white(i === lit ? 0.95 : 0.6), 'center')
+        }
       }
     }
 
     const drawBarPage = (position: number, key: string, s: Settings, now: number) => {
-      const y = (GRAPH.top + GRAPH.bottom) / 2
-      const width = GRAPH.right - GRAPH.left
+      const { graph, tall, main } = lay
+      const y = (graph.top + graph.bottom) / 2
+      const width = graph.right - graph.left
       g.fillStyle = white(0.12)
-      g.fillRect(GRAPH.left, y - 3, width, 6)
+      g.fillRect(graph.left, y - 3, width, 6)
       g.fillStyle = white(0.92)
-      g.fillRect(GRAPH.left, y - 3, width * position, 6)
+      g.fillRect(graph.left, y - 3, width * position, 6)
       if (key === 'tempo' && !calm) {
         // A dot that blinks on the beat at the tempo being dialled in
         const beat = ((now / 1000) * s.tempo) / 60
         g.globalAlpha *= 1 - (beat - Math.floor(beat))
         g.fillStyle = lime
         g.beginPath()
-        g.arc(GRAPH.right - 6, compact ? GRAPH.top + 10 : 62, 5, 0, Math.PI * 2)
+        g.arc(graph.right - 6, tall ? main.top + 30 : y - 14, 4.5, 0, Math.PI * 2)
         g.fill()
       }
     }
 
-    // The control's name and its value: stacked and large, or on one line when compact
+    // The control's name and value: stacked and large where there is room, on one line where not
     const heading = (name: string, value: string) => {
-      if (compact) {
-        text(name, 14, 56, 9, white(0.5))
-        text(value, W - 14, 58, 17, white(0.96), 'right', 600)
+      const { main, pad, width, tall } = lay
+      if (tall) {
+        text(name, pad, main.top + 25, 9, white(0.62))
+        text(value, pad, main.top + 57, 28, white(0.96), 'left', 600)
       } else {
-        text(name, 14, 56, 9, white(0.5))
-        text(value, 14, 88, 28, white(0.96), 'left', 600)
+        text(name, pad, main.top + 21, 9, white(0.62))
+        text(value, width - pad, main.top + 23, 17, white(0.96), 'right', 600)
       }
     }
 
     const drawPage = (st: ScreenState, now: number) => {
       const key = st.focus!.key
       const s = st.settings
+      const room = lay.graph.bottom - lay.graph.top >= 16
       if (key === 'wave') {
         heading('WAVEFORM', WAVES.find((w) => w.id === s.wave)!.label.toUpperCase())
-        drawWavePage(s, now)
+        if (room) drawWavePage(s, now)
         return
       }
       const def = KNOBS.find((k) => k.key === key)!
       const value = s[key]
       heading(def.name.toUpperCase(), def.format(value))
+      if (!room) return
       if (def.page === 'wave') drawWavePage(s, now)
       else if (def.page === 'filter') drawFilterPage(s, now)
       else if (def.page === 'env') drawEnvPage(s, key)
@@ -349,37 +388,37 @@ export default function Screen({ engine, state, compact }: Props) {
     }
 
     // ------------------------------------------------------------------------- the pattern
-    const drawPattern = (st: ScreenState) => {
-      const left = 14
-      const column = (W - 28) / STEPS
+    const drawPattern = (st: ScreenState, area: { top: number; bottom: number }) => {
+      const { pad, width } = lay
+      const column = (width - pad * 2) / STEPS
       const notes = st.pattern.filter((n): n is number => n !== null)
       const low = notes.length ? Math.min(...notes) : 48
       const high = Math.max(notes.length ? Math.max(...notes) : 60, low + 7)
       const current = engine.currentStep()
-      const lane = SEQ.bottom - SEQ.top - 16
+      const lane = area.bottom - area.top - 16
 
       for (let i = 0; i < STEPS; i++) {
-        const x = left + i * column
+        const x = pad + i * column
         if (i === current) {
           g.fillStyle = white(0.12)
-          g.fillRect(x, SEQ.top, column - 1, SEQ.bottom - SEQ.top)
+          g.fillRect(x, area.top, column - 1, area.bottom - area.top)
         } else if (i % 4 === 0) {
           g.fillStyle = white(0.045)
-          g.fillRect(x, SEQ.top, column - 1, SEQ.bottom - SEQ.top)
+          g.fillRect(x, area.top, column - 1, area.bottom - area.top)
         }
         if (st.recording && !st.playing && i === st.cursor) {
           g.strokeStyle = red
           g.lineWidth = 1
-          g.strokeRect(x + 0.5, SEQ.top + 0.5, column - 2, SEQ.bottom - SEQ.top - 1)
+          g.strokeRect(x + 0.5, area.top + 0.5, column - 2, area.bottom - area.top - 1)
         }
         const midi = st.pattern[i]
         if (midi === null) {
           g.fillStyle = white(0.18)
-          g.fillRect(x + column / 2 - 1.5, SEQ.bottom - 5, 2, 2)
+          g.fillRect(x + column / 2 - 1.5, area.bottom - 5, 2, 2)
           continue
         }
-        const y = SEQ.bottom - 12 - ((midi - low) / (high - low)) * lane
-        if (i === current) {
+        const y = area.bottom - 12 - ((midi - low) / (high - low)) * lane
+        if (i === current && glow) {
           g.shadowColor = lime
           g.shadowBlur = 8 * scale
         }
@@ -390,8 +429,29 @@ export default function Screen({ engine, state, compact }: Props) {
 
       const sounding = current >= 0 ? st.pattern[current] : null
       const label = sounding !== null ? noteName(sounding) : st.playing ? '·' : 'PATTERN'
-      text(label, left, SEQ.top - 6, 8, white(0.45))
-      text(`${notes.length}/${STEPS}`, W - 14, SEQ.top - 6, 8, white(0.45), 'right')
+      text(label, pad, area.top - 6, 8, white(0.6))
+      text(`${notes.length}/${STEPS}`, width - pad, area.top - 6, 8, white(0.6), 'right')
+    }
+
+    const drawStatus = (st: ScreenState) => {
+      const { pad, width } = lay
+      const y = 21
+      const tempo = `${Math.round(st.settings.tempo)} BPM`
+      const left = pad + text((st.preset ?? 'Custom').toUpperCase(), pad, y, 9, white(0.9)) + 12
+      const right = width - pad - text(tempo, width - pad, y, 9, white(0.62), 'right') - 10
+
+      // What is switched on, spelled out where it fits and as symbols where it does not
+      const flags: [long: string, short: string, color: string][] = []
+      if (st.playing) flags.push(['▶ PLAY', '▶', lime])
+      if (st.recording) flags.push(['● REC', '●', red])
+      if (st.arp) flags.push([`ARP ${ARP_GLYPH[st.arpMode]}`, `A${ARP_GLYPH[st.arpMode]}`, cyan])
+      g.font = `500 9px ${mono}`
+      const widthOf = (which: 0 | 1) =>
+        flags.reduce((sum, flag) => sum + g.measureText(flag[which]).width + 10, 0)
+      const which = left + widthOf(0) <= right ? 0 : 1
+      if (left + widthOf(which) > right) return
+      let x = left
+      for (const flag of flags) x += text(flag[which], x, y, 9, flag[2]) + 10
     }
 
     // --------------------------------------------------------------------------- one frame
@@ -400,10 +460,35 @@ export default function Screen({ engine, state, compact }: Props) {
       const st = state.current
       const now = performance.now()
 
+      // Reading the analyser is cheap; it is how the screen knows whether to wake up
+      const analyser = engine.analyser
+      let sounding = false
+      if (analyser) {
+        if (!samples || samples.length !== analyser.fftSize) {
+          samples = new Float32Array(analyser.fftSize)
+        }
+        analyser.getFloatTimeDomainData(samples)
+        for (let i = 0; i < samples.length; i += 8) {
+          if (Math.abs(samples[i]) > 0.0015) {
+            sounding = true
+            break
+          }
+        }
+      }
+
+      const age = st.focus ? now - st.focus.at : Infinity
+      const paging = age < PAGE_HOLD + PAGE_FADE
+      const booting = now - started < BOOT
+      if (sounding || st.playing || paging || booting || resized || st !== drawn) lastBusy = now
+      if (now - lastBusy > IDLE_AFTER) return
+      drawn = st
+      resized = false
+
+      const { width, height, main } = lay
       g.setTransform(scale, 0, 0, scale, 0, 0)
       g.globalAlpha = 1
       g.fillStyle = '#05060a'
-      g.fillRect(0, 0, W, H)
+      g.fillRect(0, 0, width, height)
       g.textBaseline = 'alphabetic'
 
       // Power-on: the picture opens out from a horizontal line
@@ -412,37 +497,24 @@ export default function Screen({ engine, state, compact }: Props) {
         const open = 1 - Math.pow(1 - boot, 3)
         g.save()
         g.beginPath()
-        g.rect(0, (H / 2) * (1 - open), W, H * open)
+        g.rect(0, (height / 2) * (1 - open), width, height * open)
         g.clip()
       }
 
-      // Status line
-      text((st.preset ?? 'Custom').toUpperCase(), 14, 22, 9, white(0.9))
-      text(`${Math.round(st.settings.tempo)} BPM`, W - 14, 22, 9, white(0.55), 'right')
-      let x = 84
-      if (st.playing) {
-        text('▶ PLAY', x, 22, 9, lime)
-        x += 54
-      }
-      if (st.recording) {
-        text('● REC', x, 22, 9, red)
-        x += 48
-      }
-      if (st.arp) text(`ARP ${ARP_GLYPH[st.arpMode]}`, x, 22, 9, cyan)
+      drawStatus(st)
       g.fillStyle = white(0.12)
-      g.fillRect(0, 30, W, 1)
-      if (!compact) g.fillRect(0, 200, W, 1)
+      g.fillRect(0, STATUS_HEIGHT, width, 1)
+      if (lay.pattern) g.fillRect(0, main.bottom, width, 1)
 
       // Main area: the scope, or the page of the control being moved, cross-fading
-      const age = st.focus ? now - st.focus.at : Infinity
       const page = age < PAGE_HOLD ? 1 : Math.max(0, 1 - (age - PAGE_HOLD) / PAGE_FADE)
       g.save()
       g.beginPath()
-      g.rect(0, 31, W, (compact ? H : 200) - 31)
+      g.rect(0, main.top, width, main.bottom - main.top)
       g.clip()
       if (page < 1) {
         g.globalAlpha = 1 - page
-        drawScope()
+        drawScope(analyser, samples)
       }
       if (page > 0) {
         g.globalAlpha = page
@@ -451,8 +523,13 @@ export default function Screen({ engine, state, compact }: Props) {
       g.restore()
       g.globalAlpha = 1
 
-      if (!compact) drawPattern(st)
+      if (lay.pattern) drawPattern(st, lay.pattern)
       if (boot < 1) g.restore()
+
+      if (glow) {
+        slowFrames = performance.now() - now > SLOW_FRAME_MS ? slowFrames + 1 : 0
+        if (slowFrames >= SLOW_FRAMES) glow = false
+      }
     }
     draw()
 
@@ -460,13 +537,12 @@ export default function Screen({ engine, state, compact }: Props) {
       cancelAnimationFrame(frame)
       observer.disconnect()
     }
-  }, [engine, state, compact, layout])
+  }, [engine, state])
 
   return (
     <canvas
       ref={canvasRef}
       className={styles.screen}
-      style={{ aspectRatio: `${W} / ${layout.height}` }}
       role="img"
       aria-label="Synth display: the waveform being played, the control being adjusted, and the sequencer pattern"
     />

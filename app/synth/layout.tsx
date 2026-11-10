@@ -9,6 +9,6 @@ export const metadata = genPageMetadata({
 })
 
 export default function SynthLayout({ children }: { children: React.ReactNode }) {
-  // The frame only clears the fixed navbar; the synth lays itself out.
-  return <div className="ed-demo-frame">{children}</div>
+  // No frame: the synth sizes itself to the window (see .stage in synth.module.css)
+  return children
 }
