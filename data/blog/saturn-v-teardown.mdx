@@ -1,0 +1,128 @@
+---
+title: 'Saturn V Teardown: Fly Apollo 11 to Orbit With the Skin Cut Open'
+date: '2026-11-10'
+lastmod: '2026-11-10'
+tags: ['webgl', 'threejs', 'simulation', 'teardown', 'saturn-v', 'javascript']
+draft: false
+summary: 'A 3D Saturn V you can take apart. Scrub the Apollo 11 ascent from the pad to orbit, cut the skin open and watch six tanks drain in under 12 minutes.'
+images: ['/static/images/saturn-v/max-q.jpg']
+authors: ['default']
+layout: PostLayout
+---
+
+**[Open the Saturn V Teardown](/teardown/saturn-v.html)**. It's best on a desktop, and it works on a phone.
+
+A Saturn V on the pad is mostly propellant. The model weighs 2,950 t at ignition, and 2,710 t of that is kerosene, liquid oxygen and liquid hydrogen. Eleven and a half minutes later, about 134 t is left, level at 191 km. The rest was burned or dropped on the way.
+
+The teardown shows that happening. It's the Apollo 11 ascent, from six seconds before liftoff to parking orbit, with the skin cut open so you can watch the six tanks drain. It was built with [teardown](https://github.com/elvarofficial/teardown), a Claude Code skill that turns a machine into a 3D simulator in one offline HTML file, and it was built in a single 30-minute session. More on that at the end.
+
+![The Saturn V at max Q in cutaway, 88 seconds into the flight, with the S-IC tanks half empty](/static/images/saturn-v/max-q.jpg)
+
+## What's on the Screen
+
+The rocket sits in the middle and flies. Around it:
+
+- **A mission clock and a caption.** The caption says in one sentence what's happening right now.
+- **Eleven live readouts.** Altitude, speed, Mach, downrange, load on the crew, dynamic pressure, thrust, mass, burn rate, pitch and engines lit.
+- **Six tank gauges.** RP-1 and LOX in the first stage, LH2 and LOX in the other two, in tonnes.
+- **Two charts.** Load on the crew and altitude for the whole flight, with a cursor at the current time.
+- **Fourteen events.** Ignition, liftoff, tower clear, Mach 1, max Q, both centre-engine cutoffs, both stagings, and orbit. Click one to jump there.
+- **Three looks.** Solid, Cutaway and X-ray, plus an Explode button.
+- **Three speeds.** Real time, 10× and 60×. Drag the scrubber to go anywhere, or use the arrow keys to step 5 seconds.
+
+Left alone, the page tours itself: it launches in real time, speeds up, cuts the skin open, visits the engines and pulls the stages apart. Click, drag or press a key and it's yours. If your system asks for reduced motion, the tour stays off.
+
+## One Input
+
+The teardown skill has a rule: one input drives everything. For the V8 example it's the crank angle. Here it's mission time.
+
+The mass of the stack at any second comes from how long each engine has been burning. Thrust comes from which engines are lit and how thin the air is. The page integrates those once when it loads, ten steps a second, and every readout, chart, tank level and exhaust plume reads from that one table. Nothing on screen is keyframed by hand, so the gauges can't disagree with the picture.
+
+You can check the first number yourself. An F-1 makes 6,770 kN at sea level at a specific impulse of 263 seconds, so each one burns 6,770,000 ÷ (263 × 9.81) ≈ 2,625 kg of propellant a second. Five of them burn 13.1 t a second. The Burning readout says 13,124 kg/s.
+
+## The First Stage: 162 Seconds
+
+Five F-1s make 33.9 MN at liftoff. Against 2,950 t, that's 1.17 g, so the rocket leaves slowly: it takes 12 seconds to clear the tower.
+
+![Six seconds after liftoff: the Saturn V has barely left the pad, with the launch tower beside it](/static/images/saturn-v/liftoff.jpg)
+
+Then three things change at once. The tanks empty, so there's less to push. The air thins, so each engine makes more thrust: 38.2 MN in total by max Q. And the load on the crew climbs from 1.17 g to 3.4 g.
+
+| Event             | Time   | Altitude | Speed     | Load   |
+| ----------------- | ------ | -------- | --------- | ------ |
+| Liftoff           | T+0:00 | 0 km     | 400 m/s   | 1.17 g |
+| Mach 1            | T+1:05 | 6.3 km   | 653 m/s   | 1.74 g |
+| Max Q (36.5 kPa)  | T+1:28 | 13.0 km  | 910 m/s   | 2.11 g |
+| Centre engine off | T+2:15 | 39.9 km  | 1,884 m/s | 3.37 g |
+| S-IC cutoff       | T+2:42 | 62.9 km  | 2,575 m/s | 3.55 g |
+
+Speed here is inertial, so it starts at 400 m/s: the pad is already moving east with the Earth.
+
+The centre engine shuts down 26 seconds before the other four. With the tanks nearly empty, five engines would push the load past what the structure and crew were meant to take. Four keep it under 4 g.
+
+At cutoff the stack weighs 899 t. A second later it weighs 659 t, because the first stage is gone.
+
+![Staging at 67 km: the S-IC falls away as the five J-2 engines of the S-II light](/static/images/saturn-v/staging.jpg)
+
+## The Second Stage: Six and a Half Minutes
+
+The S-II's five J-2 engines burn liquid hydrogen. Together they make 5.12 MN, about a seventh of the first stage's thrust, and the load drops to 0.79 g. It feels like braking, but the stack is still gaining speed.
+
+What hydrogen gives is mileage. A J-2's specific impulse is 424 seconds against the F-1's 263, so every kilogram of propellant does about 60% more work. The S-II burns 1,230 kg a second, a tenth of the first stage's rate, and it burns for six and a half minutes.
+
+In the cutaway you can see why the stage is shaped the way it is. The hydrogen tank is far larger than the oxygen tank, but it holds 68 t against 376 t. Liquid hydrogen is about a sixteenth as dense as liquid oxygen.
+
+Two smaller things happen early in the burn. The ring between the stages drops off 30 seconds after staging, and the escape tower follows 6 seconds later. By then the air is too thin to need it.
+
+![The S-II burning at T+5:00 in X-ray, with the hydrogen and oxygen tanks visible through the skin](/static/images/saturn-v/s-ii-xray.jpg)
+
+## The Third Stage: Level Flight
+
+The S-IVB has one J-2. It lights at T+9:12 and burns for 147 seconds, with the stack flying almost level. Its job is the last 880 m/s.
+
+At cutoff the tanks are still about 70% full. That propellant is for the second burn, two and a half hours later, which sends the spacecraft to the Moon.
+
+## Where the Numbers Come From
+
+Three sources, and the page keeps them apart:
+
+- **The event times are Apollo 11's.** Centre engine cutoff at T+2:15.2, staging at T+2:42.3, third-stage cutoff at T+11:39.3.
+- **The masses, thrusts and specific impulses are published round figures.** The stage lengths and diameters are the real ones, and the geometry is built from them.
+- **The trajectory is the model's own.** Altitude, speed, load and dynamic pressure come from integrating thrust, drag and gravity along a simple pitch programme.
+
+That last one is worth being upfront about. The pitch programme is a smooth tip-over for the first stage and a straight ramp for the other two, fitted so the stack arrives level at 191 km. It gets there doing 7,613 m/s. A circular orbit at that height needs 7,790 m/s, so the model comes up 2% short. The real guidance flew a better path than a straight ramp, and the real stage burned a little more propellant than this one does.
+
+The model's peak load is 3.55 g, and its max Q is 36.5 kPa at 13 km. Treat them as a well-behaved simulation, not a flight record.
+
+![The exploded view on the pad: first stage, interstage ring, second stage, third stage with the spacecraft, and the escape tower](/static/images/saturn-v/exploded.jpg)
+
+## How It Was Built
+
+The page follows the skill's layout:
+
+- **`kin.js` is the math.** Stage data, the burn schedule and the integrator. It has no three.js in it, and it runs in Node, which is how the pitch programme was fitted.
+- **`main.js` is the machine and the console.** Lathed engine bells, tanks with domes, a clipping plane for the cutaway, and panels redrawn every frame from the same state.
+- **The skill's build script** bundles it with three.js r186 and its fonts into one HTML file of about 740 KB. Once it loads, it makes no other requests.
+
+The source is in the blog's repo under `teardown/saturn-v/`.
+
+The other reference was Jesse Vincent's [Latent Space Engineering](https://blog.fsck.com/2026/01/30/Latent-Space-Engineering/). One of his techniques is what he calls gene transfer: point the agent at well-written code before it starts, so it picks up the style and structure. The teardown skill does this by design. It ships three finished machines and tells you to copy the closest one. The Saturn V borrows the V8's split between math and geometry, and the Strandbeest's habit of tabulating anything integrated over time at load.
+
+His other point is that pressure makes a model rush and cut corners. A 30-minute limit is pressure, so here's what got cut:
+
+- **No recorded film or score.** The skill can render a 60 fps video with sound. This one is the live page only.
+- **No post-processing.** The examples use ambient occlusion and bloom. This uses plain lighting.
+- **A simple pad.** The launch tower is a bare frame with no swing arms.
+- **Simple steering.** Hence the 2%.
+
+The physics was not cut. It was written and checked first, before any geometry.
+
+## Go Fly It
+
+1. Let the tour run once.
+2. Click **Liftoff**, set the speed to 1× and watch how slowly it leaves.
+3. Switch to **Cutaway** at 10× and watch the first stage empty.
+4. Click **S-IC cutoff** and step forward with the right arrow key to see the staging.
+5. Click **Explode** to pull the stack apart.
+
+**[Open the Saturn V Teardown](/teardown/saturn-v.html)**

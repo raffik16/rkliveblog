@@ -11,6 +11,15 @@ export interface Demo {
 
 const demosData: Demo[] = [
   {
+    slug: 'saturn-v',
+    title: 'Saturn V Teardown',
+    href: '/teardown/saturn-v.html',
+    postHref: '/blog/saturn-v-teardown',
+    description:
+      'The Apollo 11 ascent from the pad to parking orbit, driven by mission time. Cut the skin open and watch six tanks drain, with live readouts for altitude, speed, load and thrust.',
+    tech: ['three.js', 'WebGL 2', 'teardown'],
+  },
+  {
     slug: 'roller-grill-sessions',
     title: 'Chaos Is an Art Form: Roller Grill Sessions',
     href: '/chaos/hotdog',
