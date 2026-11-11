@@ -124,7 +124,13 @@ export default async function Page() {
                 title={demo.title}
                 href={demo.href}
                 size={i === 0 ? 'lg' : 'md'}
-                className={i === 0 ? 'span-12' : 'span-6'}
+                // The first demo leads at full width and the rest pair up. With an even number
+                // of demos the last has no partner, so it takes the whole row too.
+                className={
+                  i === 0 || (i === demosData.length - 1 && demosData.length % 2 === 0)
+                    ? 'span-12'
+                    : 'span-6'
+                }
                 sub={demo.tech.slice(0, 3).join(' · ')}
                 actions={
                   <>

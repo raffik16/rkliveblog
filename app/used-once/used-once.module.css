@@ -1,0 +1,1367 @@
+/* /used-once: a lifetime of paper and plastic, on the Edition tokens (css/edition.css).
+
+   The page itself is the site's own chapters, shell and chapter heads. What is here is the
+   figures: one frame they all share, the pile and its controls, two small charts, the ledger
+   and the sources.
+
+   Two colours carry the data, one for each material, and nothing else on the page uses them:
+
+     paper    #c98500
+     plastic  #3987e5
+
+   They are the charting palette's dark steps, checked as a pair on the figure surface for
+   colour-blind separation and for contrast. Text never wears them: names and numbers stay in
+   the white tokens, with a swatch beside them. */
+
+.page {
+  --uo-paper: #c98500;
+  --uo-plastic: #3987e5;
+  /* Near-opaque ink, so the marks sit on the same dark surface in every chapter colour */
+  --uo-surface: rgba(7, 8, 12, 0.88);
+  --uo-rule: rgba(255, 255, 255, 0.1);
+}
+
+/* Every quantity is written in both systems (Q in context.tsx). <html> says which to show; it
+   is set before the first paint, so the numbers never change units in front of a reader. */
+:global(html[data-uo-units='us']) .page [data-unit='metric'],
+:global(html:not([data-uo-units='us'])) .page [data-unit='us'] {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ opening */
+/* The note sits beside the end of the opening paragraphs, not up beside the title */
+@media (min-width: 1101px) {
+  .introNotes {
+    align-self: end;
+    padding-bottom: clamp(32px, 5vh, 56px);
+  }
+}
+
+/* The pile follows the opening with no chapter head of its own, so it needs no run-up */
+.pileChapter {
+  padding-top: 0;
+}
+
+/* ------------------------------------------------------------------- figure */
+.fig,
+.ledger {
+  position: relative;
+  margin: 0;
+  border: 1px solid var(--ed-line);
+  border-radius: var(--ed-radius);
+  background: var(--uo-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Corner tick, as on the site's panels */
+.fig::after,
+.ledger::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 9px;
+  height: 9px;
+  border-top: 1px solid var(--ed-fg);
+  border-right: 1px solid var(--ed-fg);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.figBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  min-height: 42px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--ed-line);
+  font-family: var(--ed-font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ed-fg-3);
+}
+
+.figName b {
+  margin-right: 8px;
+  font-weight: 500;
+  color: var(--ed-fg);
+}
+
+.figTools {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.figFoot {
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--ed-line);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ed-fg-2);
+}
+
+.figNote {
+  max-width: 78ch;
+  margin: 10px 0 0;
+}
+
+/* Whose numbers these are */
+.basis {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.basisYours {
+  color: var(--ed-fg);
+}
+
+.basisYours i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ed-signal);
+}
+
+.basisYours button {
+  margin-left: 2px;
+  padding: 2px 9px;
+  border: 1px solid var(--ed-line-strong);
+  border-radius: 999px;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--ed-fg);
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.basisYours button:hover {
+  border-color: var(--ed-fg);
+  background: var(--ed-fg);
+  color: var(--ed-ink);
+}
+
+/* kg · m | lb · ft */
+.units {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--ed-line-strong);
+  border-radius: 999px;
+}
+
+.units button {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font: inherit;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  white-space: nowrap;
+  color: var(--ed-fg-2);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.units button:hover {
+  color: var(--ed-fg);
+}
+
+/* The pressed side follows <html>, like the numbers, so it is right before React wakes up */
+:global(html:not([data-uo-units='us'])) .units [data-units-button='metric'],
+:global(html[data-uo-units='us']) .units [data-units-button='us'] {
+  background: var(--ed-fg);
+  color: var(--ed-ink);
+}
+
+/* The two materials, named */
+.key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  font-family: var(--ed-font-mono);
+  font-size: 11px;
+  color: var(--ed-fg-2);
+}
+
+.key > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.key i {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.key .keyNote {
+  font-family: var(--ed-font-body);
+  font-size: 12.5px;
+  color: var(--ed-fg-3);
+}
+
+.swatchPaper,
+.fillPaper {
+  background: var(--uo-paper);
+}
+
+.swatchPlastic,
+.fillPlastic {
+  background: var(--uo-plastic);
+}
+
+/* ------------------------------------------------------------------ tooltip */
+.tip {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  min-width: 128px;
+  max-width: 208px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px 9px;
+  border: 1px solid var(--ed-line-strong);
+  border-radius: var(--ed-radius);
+  background: #0d0e15;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  font-family: var(--ed-font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--ed-fg-2);
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 8px));
+}
+
+.tipTitle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 3px;
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ed-fg-3);
+}
+
+/* A short stroke of the mark's colour, not a box */
+.tipTitle i {
+  flex: none;
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.tipRow b {
+  margin-right: 6px;
+  font-weight: 500;
+  color: var(--ed-fg);
+}
+
+/* --------------------------------------------------------------- Fig. 01 */
+.readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px 32px;
+  padding: 18px 14px 0;
+}
+
+.readoutMain {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+
+/* The one big number of the page. Fixed-width digits here, against the usual rule for display
+   numbers: this one counts up while the pile plays, and would shiver otherwise. */
+.readoutNumber {
+  font-family: var(--ed-font-display);
+  font-size: clamp(46px, 6.6vw, 88px);
+  font-weight: 500;
+  line-height: 0.86;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ed-fg);
+}
+
+.readoutLabel {
+  font-family: var(--ed-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ed-fg-2);
+}
+
+.readoutLabel > span {
+  display: block;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ed-fg-3);
+}
+
+/* Shown in the stage when the page has no JavaScript to draw with */
+.noscript {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  margin: 0;
+  padding: 24px;
+  place-items: center;
+  font-size: 14px;
+  text-align: center;
+  color: var(--ed-fg-2);
+}
+
+.readoutSplit {
+  display: flex;
+  gap: 28px;
+  margin: 0;
+}
+
+.readoutSplit dt {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--ed-font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ed-fg-3);
+}
+
+.readoutSplit dt i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.readoutSplit dd {
+  margin: 6px 0 0;
+  font-family: var(--ed-font-display);
+  font-size: clamp(20px, 2vw, 28px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The drawing. Its height follows its width here, in CSS, so the page does not jump when the
+   canvas is first measured: one row of four stacks, or two rows of two below 560px. Keep the
+   560 in step with NARROW in Pile.tsx. */
+.stageBox {
+  container-type: inline-size;
+}
+
+.stage {
+  position: relative;
+  height: min(34cqi + 70px, 520px);
+}
+
+@container (max-width: 559.98px) {
+  .stage {
+    height: min(120cqi + 130px, 640px);
+  }
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Read by Pile.tsx for the labels it draws */
+  font-family: var(--ed-font-mono);
+  touch-action: pan-y;
+}
+
+.transport {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 18px;
+  padding: 14px;
+  border-top: 1px solid var(--ed-line);
+}
+
+.play {
+  min-width: 104px;
+  justify-content: center;
+}
+
+.playIcon {
+  display: inline-block;
+  box-sizing: border-box;
+  flex: none;
+}
+
+.playIcon[data-state='play'] {
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid currentColor;
+}
+
+.playIcon[data-state='pause'] {
+  width: 8px;
+  height: 10px;
+  border-right: 3px solid currentColor;
+  border-left: 3px solid currentColor;
+}
+
+.scrub {
+  min-width: 0;
+}
+
+.scrubEnds {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: -2px;
+  font-family: var(--ed-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ed-fg-3);
+}
+
+.age {
+  display: flex;
+  min-width: 78px;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0;
+}
+
+.age > span {
+  font-family: var(--ed-font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ed-fg-3);
+}
+
+.age b {
+  font-family: var(--ed-font-display);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------- sliders */
+.range {
+  --p: 0;
+  --thumb: 16px;
+  --track: 2px;
+
+  display: block;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.rangeAge {
+  --thumb: 20px;
+  --track: 3px;
+
+  height: 34px;
+}
+
+.range::-webkit-slider-runnable-track {
+  height: var(--track);
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--ed-fg) calc(var(--p) * 100%),
+    var(--ed-line-strong) calc(var(--p) * 100%)
+  );
+}
+
+.range::-moz-range-track {
+  height: var(--track);
+  border-radius: 999px;
+  background: var(--ed-line-strong);
+}
+
+.range::-moz-range-progress {
+  height: var(--track);
+  border-radius: 999px;
+  background: var(--ed-fg);
+}
+
+.range::-webkit-slider-thumb {
+  width: var(--thumb);
+  height: var(--thumb);
+  margin-top: calc((var(--track) - var(--thumb)) / 2);
+  border: 0;
+  border-radius: 50%;
+  background: var(--ed-fg);
+  box-shadow: 0 0 0 3px rgba(7, 8, 12, 0.92);
+  transition: background-color 0.15s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.range::-moz-range-thumb {
+  width: var(--thumb);
+  height: var(--thumb);
+  border: 0;
+  border-radius: 50%;
+  background: var(--ed-fg);
+  box-shadow: 0 0 0 3px rgba(7, 8, 12, 0.92);
+  transition: background-color 0.15s ease;
+}
+
+.range:hover::-webkit-slider-thumb,
+.range:active::-webkit-slider-thumb {
+  background: var(--ed-signal);
+}
+
+.range:hover::-moz-range-thumb,
+.range:active::-moz-range-thumb {
+  background: var(--ed-signal);
+}
+
+/* The ring goes on the thumb: around the whole track it reads as a box */
+.range:focus-visible {
+  outline: none;
+}
+
+.range:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 3px var(--ed-ink),
+    0 0 0 5px var(--ed-signal);
+}
+
+.range:focus-visible::-moz-range-thumb {
+  box-shadow:
+    0 0 0 3px var(--ed-ink),
+    0 0 0 5px var(--ed-signal);
+}
+
+.rangeBox {
+  position: relative;
+}
+
+/* Where the US average sits on a slider */
+.usual {
+  position: absolute;
+  top: calc(50% + 5px);
+  left: calc(8px + (100% - 16px) * var(--usual));
+  width: 1px;
+  height: 6px;
+  background: var(--ed-fg-2);
+  pointer-events: none;
+}
+
+/* ----------------------------------------------------------------- the items */
+.items {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ed-line);
+}
+
+.item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 14px 14px 10px;
+  border-left: 1px solid var(--ed-line);
+  transition: background-color 0.2s ease;
+}
+
+.item:first-child {
+  border-left: 0;
+}
+
+.itemActive {
+  background: var(--ed-panel);
+}
+
+.itemName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.itemName i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.itemCount {
+  margin: 12px 0 0;
+  font-family: var(--ed-font-mono);
+  font-size: 11px;
+  line-height: 1;
+  color: var(--ed-fg-2);
+}
+
+.itemCount b {
+  margin-right: 3px;
+  font-family: var(--ed-font-display);
+  font-size: clamp(22px, 2.3vw, 32px);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ed-fg);
+}
+
+.itemSub {
+  margin: 6px 0 0;
+  font-family: var(--ed-font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ed-fg-3);
+}
+
+.habit {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--uo-rule);
+}
+
+.habitText {
+  margin: 0;
+  font-family: var(--ed-font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--ed-fg-2);
+}
+
+.habitText b {
+  font-weight: 500;
+  color: var(--ed-fg);
+}
+
+.life {
+  display: grid;
+  grid-template-columns: minmax(200px, 280px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 28px;
+  padding: 12px 14px 12px;
+  border-top: 1px solid var(--ed-line);
+}
+
+.lifeNote {
+  max-width: 52ch;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ed-fg-3);
+}
+
+.reset:disabled {
+  opacity: 0.38;
+  transform: none;
+}
+
+.reset:disabled:hover {
+  border-color: var(--ed-line-strong);
+  background: var(--ed-pill);
+}
+
+@media (max-width: 860px) {
+  .items {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .item:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .item:nth-child(n + 3) {
+    border-top: 1px solid var(--ed-line);
+  }
+
+  .life {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reset {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 520px) {
+  .transport {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .scrub {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
+  .age {
+    justify-content: flex-end;
+  }
+}
+
+/* --------------------------------------------------------------- Fig. 02 */
+.measures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.measure {
+  min-width: 0;
+  padding: 16px 14px 18px;
+  border-left: 1px solid var(--ed-line);
+}
+
+.measure:first-child {
+  border-left: 0;
+}
+
+.measureHead {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 16px;
+  font-weight: 400;
+}
+
+.measureHead > span {
+  font-family: var(--ed-font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ed-fg-3);
+}
+
+.measureHead b {
+  font-family: var(--ed-font-display);
+  font-size: clamp(26px, 2.6vw, 38px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.measureHead small {
+  margin-left: 6px;
+  font-family: var(--ed-font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--ed-fg-2);
+}
+
+/* Paper against plastic: a thin bar in two parts, its figures printed underneath */
+.split {
+  display: flex;
+  height: 8px;
+  gap: 2px;
+}
+
+.split i {
+  flex: 0 1 0;
+  min-width: 3px;
+  border-radius: 4px;
+  transition: flex-grow 0.5s var(--ed-ease);
+}
+
+.splitText {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 7px 0 18px;
+  font-family: var(--ed-font-mono);
+  font-size: 11px;
+  color: var(--ed-fg-2);
+}
+
+.splitText b {
+  font-weight: 500;
+  color: var(--ed-fg);
+}
+
+.plot {
+  position: relative;
+}
+
+.bars {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barRow {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.barName {
+  overflow: hidden;
+  font-size: 12.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ed-fg-2);
+}
+
+/* The whole row is the target, not just the painted bar */
+.barTrack {
+  display: flex;
+  height: 24px;
+  align-items: center;
+  gap: 8px;
+  border-radius: 2px;
+}
+
+/* A bar is at most the track less the room its value needs, so the longest still fits its
+   label. Square at the baseline, rounded at the end that carries the value. */
+.barTrack i {
+  flex: none;
+  width: calc((100% - 84px) * var(--v));
+  height: 14px;
+  border-radius: 0 4px 4px 0;
+  transition:
+    width 0.5s var(--ed-ease),
+    filter 0.2s ease;
+}
+
+.barValue {
+  font-family: var(--ed-font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ed-fg);
+}
+
+.barTrack:hover i,
+.barTrack:focus-visible i,
+.towerMark:hover i,
+.towerMark:focus-visible i {
+  filter: brightness(1.2);
+}
+
+.barTrack:focus-visible,
+.towerMark:focus-visible {
+  outline: 2px solid var(--ed-signal);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .measures {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .measure {
+    border-top: 1px solid var(--ed-line);
+    border-left: 0;
+  }
+
+  .measure:first-child {
+    border-top: 0;
+  }
+}
+
+/* --------------------------------------------------------------- Fig. 03 */
+.towers {
+  /* Room on the right for the names of the heights ruled across */
+  --gutter: 168px;
+
+  position: relative;
+  padding: 26px 14px 16px;
+}
+
+.towerPlot {
+  position: relative;
+  height: clamp(300px, 34vw, 400px);
+  border-bottom: 1px solid var(--ed-line-strong);
+}
+
+.rule {
+  position: absolute;
+  right: 0;
+  bottom: calc(var(--at) * 100%);
+  left: 0;
+  border-top: 1px solid var(--uo-rule);
+}
+
+.rule > span {
+  position: absolute;
+  right: 0;
+  bottom: 5px;
+  display: flex;
+  width: var(--gutter);
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: var(--ed-font-mono);
+  font-size: 10.5px;
+  line-height: 1.35;
+  text-align: right;
+  color: var(--ed-fg-3);
+}
+
+.rule b {
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--ed-fg-2);
+}
+
+.towerRow,
+.towerNames {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.towerRow {
+  position: absolute;
+  inset: 0 var(--gutter) 0 0;
+}
+
+.towerCol {
+  min-width: 0;
+}
+
+.towerMark {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  border-radius: 2px;
+}
+
+/* Columns: capped in width, rounded at the top, square on the ground */
+.towerMark > i,
+.towerStack {
+  flex: none;
+  width: 22px;
+  height: calc(var(--v) * 100%);
+  border-radius: 4px 4px 0 0;
+  transition:
+    height 0.5s var(--ed-ease),
+    filter 0.2s ease;
+}
+
+/* All four again, one on top of the other, with a sliver of surface between them */
+.towerStack {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+}
+
+.towerStack i {
+  flex: 0 1 0;
+  min-height: 1px;
+}
+
+.towerStack i:last-child {
+  border-radius: 4px 4px 0 0;
+}
+
+.towerValue {
+  margin-bottom: 6px;
+  font-family: var(--ed-font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ed-fg);
+}
+
+.towerNames {
+  margin: 9px var(--gutter) 0 0;
+  font-size: 12.5px;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--ed-fg-2);
+}
+
+.towerNames li {
+  padding-inline: 2px;
+}
+
+/* The total is a different kind of column: set it apart */
+.towerCol[data-total],
+.towerNames [data-total] {
+  border-left: 1px solid var(--uo-rule);
+}
+
+.towerNames [data-total] {
+  color: var(--ed-fg);
+}
+
+.nameShort {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .towers {
+    --gutter: 96px;
+  }
+
+  .towerMark > i,
+  .towerStack {
+    width: 16px;
+  }
+
+  .towerValue {
+    font-size: 10px;
+    letter-spacing: -0.02em;
+  }
+
+  .towerNames {
+    font-size: 11px;
+  }
+
+  .nameLong {
+    display: none;
+  }
+
+  .nameShort {
+    display: inline;
+  }
+}
+
+/* ---------------------------------------------------------------- ledger */
+/* Opaque, unlike the figures: the names column slides over the numbers on a phone and has to
+   hide them. */
+.ledger {
+  --uo-ledger: #0b0c12;
+
+  background: var(--uo-ledger);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.ledgerScroll {
+  overflow-x: auto;
+}
+
+.ledgerScroll:focus-visible {
+  outline: 2px solid var(--ed-signal);
+  outline-offset: -2px;
+}
+
+.ledgerTable {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ledgerTable th,
+.ledgerTable td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--uo-rule);
+  text-align: right;
+  vertical-align: baseline;
+  white-space: nowrap;
+  color: var(--ed-fg-2);
+}
+
+.ledgerTable th:first-child,
+.ledgerTable th:nth-child(5),
+.ledgerTable td:nth-child(5) {
+  text-align: left;
+}
+
+/* The names stay put while the numbers scroll under them on a narrow screen */
+.ledgerTable th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--uo-ledger);
+}
+
+.ledgerTable thead th {
+  padding-block: 10px;
+  border-bottom-color: var(--ed-line);
+  font-family: var(--ed-font-mono);
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ed-fg-3);
+}
+
+.ledgerTable tbody th,
+.ledgerTable tfoot th {
+  font-weight: 500;
+  color: var(--ed-fg);
+}
+
+/* Lifetime count and weight are the two columns the page is about */
+.ledgerTable td:nth-child(2),
+.ledgerTable td:nth-child(3) {
+  color: var(--ed-fg);
+}
+
+.ledgerTable td:nth-child(5) {
+  padding-left: 28px;
+  color: var(--ed-fg-3);
+}
+
+.ledgerTable th:nth-child(5) {
+  padding-left: 28px;
+}
+
+.ledgerName {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ledgerName i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.ledgerSpec {
+  display: block;
+  margin: 3px 0 0 16px;
+  font-family: var(--ed-font-mono);
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--ed-fg-3);
+}
+
+.ledgerTable tfoot tr:first-child > * {
+  border-top: 1px solid var(--ed-line-strong);
+}
+
+.ledgerTable .ledgerTotal > * {
+  border-bottom: 0;
+  font-weight: 500;
+  color: var(--ed-fg);
+}
+
+/* --------------------------------------------------------------- sources */
+.method {
+  max-width: 70ch;
+  margin-bottom: 40px;
+}
+
+.method h3 {
+  margin: 0 0 10px;
+  font-family: var(--ed-font-display);
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+.method p {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ed-fg-2);
+}
+
+.startGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 48px;
+}
+
+.start {
+  padding: 16px 16px 18px;
+  border: 1px solid var(--ed-line);
+  border-radius: var(--ed-radius);
+  background: rgba(7, 8, 12, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.startHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.startHead h3 {
+  margin: 0;
+  font-family: var(--ed-font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ed-fg-2);
+}
+
+/* How far to trust the number. Said in words, not in a traffic light. */
+.grade {
+  padding: 2px 8px;
+  border: 1px solid var(--ed-line);
+  border-radius: 999px;
+  font-family: var(--ed-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ed-fg-3);
+}
+
+.grade[data-grade='Rough'] {
+  border-color: var(--ed-fg);
+  color: var(--ed-fg);
+}
+
+.startFigure {
+  margin: 12px 0 10px;
+  font-family: var(--ed-font-display);
+  font-size: clamp(22px, 2vw, 28px);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.startBody p {
+  font-size: 14.5px;
+  line-height: 1.58;
+  color: var(--ed-fg-2);
+}
+
+.startBody p + p {
+  margin-top: 9px;
+}
+
+.sizes,
+.sourceList {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--ed-fg-2);
+}
+
+.sizes {
+  padding: 0;
+  list-style: none;
+}
+
+.sizes li {
+  display: grid;
+  grid-template-columns: 9em minmax(0, 1fr);
+  gap: 12px;
+}
+
+.sizes b {
+  font-weight: 500;
+  color: var(--ed-fg);
+}
+
+.sourceList {
+  padding-left: 1.5em;
+  list-style: decimal;
+}
+
+.sourceList li::marker {
+  font-family: var(--ed-font-mono);
+  font-size: 11px;
+  color: var(--ed-fg-3);
+}
+
+.sourceList li > span {
+  color: var(--ed-fg-3);
+}
+
+.method .checked {
+  margin-top: 14px;
+  font-family: var(--ed-font-mono);
+  font-size: 11px;
+  color: var(--ed-fg-3);
+}
+
+.more {
+  margin: 0;
+  font-size: 15px;
+  color: var(--ed-fg-2);
+}
+
+@media (max-width: 760px) {
+  .startGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ledgerTable {
+    min-width: 700px;
+    font-size: 13px;
+  }
+
+  .ledgerTable th,
+  .ledgerTable td {
+    padding-inline: 10px;
+  }
+
+  .ledgerTable th:first-child {
+    padding-left: 14px;
+    /* A hairline where the numbers go under the names */
+    box-shadow: 1px 0 0 var(--uo-rule);
+  }
+}
+
+/* Fingers need more to hold than a mouse pointer does */
+@media (pointer: coarse) {
+  .range {
+    --thumb: 22px;
+
+    height: 36px;
+  }
+
+  .rangeAge {
+    --thumb: 26px;
+
+    height: 42px;
+  }
+
+  .usual {
+    top: calc(50% + 8px);
+    left: calc(11px + (100% - 22px) * var(--usual));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .split i,
+  .barTrack i,
+  .towerMark > i,
+  .towerStack {
+    transition: none;
+  }
+}

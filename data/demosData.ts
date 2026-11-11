@@ -28,6 +28,14 @@ const demosData: Demo[] = [
     tech: ['three.js', 'WebGL 2', 'GLSL', 'teardown'],
   },
   {
+    slug: 'used-once',
+    title: 'Used Once',
+    href: '/used-once',
+    description:
+      'The toilet paper, paper towels, water bottles and plastic cups one American gets through in a lifetime: about 38,600 items weighing 1.8 tonnes, every one of them drawn to scale next to a person. Drag the age to grow the pile from birth, set your own habits, and see where each number comes from.',
+    tech: ['Canvas 2D', 'React', 'TypeScript'],
+  },
+  {
     slug: 'synth',
     title: 'Pocket Synth',
     href: '/synth',
