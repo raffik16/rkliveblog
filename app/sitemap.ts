@@ -20,6 +20,7 @@ const OTHER_PAGES = [
   'climb',
   'synth',
   'harmony',
+  'dream',
   'chaos',
   'chaos/hotdog',
 ]

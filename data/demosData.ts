@@ -11,6 +11,14 @@ export interface Demo {
 
 const demosData: Demo[] = [
   {
+    slug: 'forty-winks',
+    title: 'Forty Winks',
+    href: '/dream',
+    description:
+      'Put the kettle on, close your eyes and live a whole other life before it boils: a new name, a best friend, a first love, children, a house by the sea, seventy-odd years in about four minutes. Move to wander through it and hold on to slow it down, until the kettle whistles and you have to wake up. Every dream is a different life, painted by one shader and scored live with Web Audio.',
+    tech: ['WebGL 2', 'GLSL', 'Web Audio', 'React'],
+  },
+  {
     slug: 'roller-grill-sessions',
     title: 'Chaos Is an Art Form: Roller Grill Sessions',
     href: '/chaos/hotdog',
