@@ -90,7 +90,9 @@ const siteMetadata = {
     },
   },
   search: {
-    provider: 'kbar', // kbar or algolia
+    // The static post index: contentlayer.config.ts writes it while the provider is 'kbar', and
+    // the site search (components/SiteSearch.tsx) and the search_posts WebMCP tool read it.
+    provider: 'kbar',
     kbarConfig: {
       searchDocumentsPath: `${process.env.BASE_PATH || ''}/search.json`, // path to load documents to search
     },

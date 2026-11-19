@@ -2346,34 +2346,339 @@
 }
 
 @layer components {
-  /* ===================================================== search (kbar) */
-  /* pliny's KBarModal ships Tailwind classes; these bring it onto the system. */
-  input[aria-controls='kbar-listbox'] {
+  /* ============================================================ search */
+  /* components/SiteSearch.tsx: a <dialog> over a dimmed page, the panel near the top. */
+  .ed-search {
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: var(--ed-search-h, 100%);
+    max-height: none;
+    margin: 0;
+    padding: clamp(12px, 11vh, 112px) 16px 16px;
     border: 0;
-    box-shadow: none !important;
+    background: transparent;
+    color: var(--ed-fg);
+    overflow: hidden;
+  }
+
+  .ed-search[open] {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .ed-search::backdrop {
+    background: rgba(7, 8, 12, 0.62);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+
+  /* The page stays put behind it */
+  :root:has(.ed-search[open]) {
+    overflow: hidden;
+    scrollbar-gutter: stable;
+  }
+
+  .ed-search__panel {
+    display: flex;
+    width: min(100%, 640px);
+    max-height: min(100%, 620px);
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--ed-line-strong);
+    border-radius: calc(var(--ed-radius) * 2);
+    background: rgba(12, 13, 19, 0.94);
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    backdrop-filter: blur(20px) saturate(140%);
+  }
+
+  .ed-search__field {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 12px;
+    padding: 0 12px 0 18px;
+    border-bottom: 1px solid var(--ed-line);
+    transition: box-shadow 0.2s ease;
+  }
+
+  .ed-search__field:focus-within {
+    box-shadow: inset 0 -1px 0 var(--ed-signal);
+  }
+
+  .ed-search__field svg {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    color: var(--ed-fg-3);
+  }
+
+  .ed-search__field input {
+    min-width: 0;
+    height: 58px;
+    flex: 1;
+    padding: 0;
+    border: 0;
+    background: transparent;
     font-family: var(--ed-font-body);
-    font-size: 16px;
-    color: var(--ed-fg) !important;
+    font-size: 17px;
+    color: var(--ed-fg);
   }
 
-  input[aria-controls='kbar-listbox']:focus,
-  input[aria-controls='kbar-listbox']:focus-visible {
+  .ed-search__field input::placeholder {
+    color: var(--ed-fg-3);
+  }
+
+  .ed-search__field input:focus,
+  .ed-search__field input:focus-visible {
     outline: none;
+    box-shadow: none;
   }
 
-  /* The highlighted result: a lime edge and tint instead of a solid lime fill */
-  #kbar-listbox [aria-selected='true'] .bg-primary-600 {
-    background: rgba(215, 255, 61, 0.1) !important;
+  .ed-search__close {
+    flex: none;
+    padding: 4px 9px;
+    border: 1px solid var(--ed-line-strong);
+    border-radius: 999px;
+    background: transparent;
+    font-family: var(--ed-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ed-fg-3);
+    cursor: pointer;
+    transition:
+      color 0.2s ease,
+      border-color 0.2s ease;
+  }
+
+  .ed-search__close:hover {
+    border-color: var(--ed-fg-3);
+    color: var(--ed-fg);
+  }
+
+  .ed-search__close:focus-visible {
+    outline: 2px solid var(--ed-signal);
+    outline-offset: 2px;
+  }
+
+  .ed-search__close-word {
+    display: none;
+  }
+
+  .ed-search__body {
+    min-height: 0;
+    flex: 1;
+    padding: 6px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+
+  .ed-search__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ed-search__item {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr) 14px;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    border-radius: var(--ed-radius);
+    cursor: pointer;
+  }
+
+  /* The result Enter opens: a lime edge and tint, as on the rest of the site's focus states */
+  .ed-search__item[aria-selected='true'] {
+    background: rgba(215, 255, 61, 0.08);
     box-shadow: inset 2px 0 0 var(--ed-signal);
   }
 
-  #kbar-listbox [aria-selected='true'] .bg-primary-600,
-  #kbar-listbox [aria-selected='true'] .bg-primary-600 * {
-    color: var(--ed-fg) !important;
+  .ed-search__kind {
+    padding: 3px 0;
+    border: 1px solid var(--ed-line-strong);
+    border-radius: 999px;
+    font-family: var(--ed-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-align: center;
+    text-transform: uppercase;
+    color: var(--ed-fg-2);
   }
 
-  #kbar-listbox .text-xs {
+  .ed-search__kind--lab {
+    border-color: transparent;
+    background: var(--ed-violet);
+    color: var(--ed-fg);
+  }
+
+  .ed-search__text {
+    min-width: 0;
+  }
+
+  .ed-search__title {
+    display: -webkit-box;
+    overflow: hidden;
+    font-family: var(--ed-font-display);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    color: var(--ed-fg);
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .ed-search__meta {
+    display: block;
+    margin-top: 4px;
+    overflow: hidden;
     font-family: var(--ed-font-mono);
-    letter-spacing: 0.04em;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    color: var(--ed-fg-3);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ed-search__item[aria-selected='true'] .ed-search__meta {
+    color: var(--ed-fg-2);
+  }
+
+  .ed-search__go {
+    font-family: var(--ed-font-mono);
+    font-size: 13px;
+    color: var(--ed-fg-2);
+    opacity: 0;
+  }
+
+  .ed-search__item[aria-selected='true'] .ed-search__go {
+    opacity: 1;
+  }
+
+  .ed-search__empty {
+    padding: 36px 20px 40px;
+    text-align: center;
+  }
+
+  .ed-search__empty p {
+    max-width: 44ch;
+    margin: 0 auto;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ed-fg-3);
+  }
+
+  .ed-search__empty p:first-child {
+    font-family: var(--ed-font-display);
+    font-size: 18px;
+    color: var(--ed-fg);
+  }
+
+  .ed-search__empty p + p {
+    margin-top: 6px;
+  }
+
+  .ed-search__foot {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--ed-line);
+    font-family: var(--ed-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    color: var(--ed-fg-3);
+  }
+
+  .ed-search__foot p {
+    margin: 0;
+  }
+
+  .ed-search__keys {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  .ed-search__keys kbd {
+    min-width: 20px;
+    padding: 1px 5px;
+    border: 1px solid var(--ed-line);
+    border-radius: var(--ed-radius);
+    font-family: inherit;
+    font-size: 10px;
+    text-align: center;
+    color: var(--ed-fg-2);
+  }
+
+  .ed-search__keys kbd + kbd {
+    margin-left: -1px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .ed-search[open] .ed-search__panel {
+      animation: ed-search-in 0.24s var(--ed-ease);
+    }
+
+    .ed-search[open]::backdrop {
+      animation: ed-search-fade 0.2s ease-out;
+    }
+  }
+
+  /* Touch screens: no keyboard hints, and the close button says so */
+  @media (hover: none) {
+    .ed-search__keys {
+      display: none;
+    }
+
+    .ed-search__close-key {
+      display: none;
+    }
+
+    .ed-search__close-word {
+      display: inline;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .ed-search {
+      padding: 10px;
+    }
+
+    .ed-search__panel {
+      max-height: 100%;
+    }
+
+    .ed-search__field input {
+      height: 52px;
+    }
+
+    .ed-search__item {
+      gap: 12px;
+      padding: 10px;
+    }
+  }
+}
+
+@keyframes ed-search-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
+  }
+}
+
+@keyframes ed-search-fade {
+  from {
+    opacity: 0;
   }
 }

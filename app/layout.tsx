@@ -1,11 +1,9 @@
 import 'css/tailwind.css'
-import 'pliny/search/algolia.css'
 import 'remark-github-blockquote-alert/alert.css'
 
 import { Inter, Inter_Tight, Instrument_Serif, JetBrains_Mono } from 'next/font/google'
 import Script from 'next/script'
 import { Analytics, AnalyticsConfig } from 'pliny/analytics'
-import { SearchProvider, SearchConfig } from 'pliny/search'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import siteMetadata from '@/data/siteMetadata'
@@ -14,6 +12,7 @@ import { Metadata, Viewport } from 'next'
 import { twitterHandle } from './seo'
 import { authorPerson, jsonLdGraph, websiteSchema } from '@/lib/schema'
 import WebMCPTools from '@/components/WebMCPTools'
+import SiteSearch from '@/components/SiteSearch'
 import EdBackdrop from '@/components/edition/EdBackdrop'
 import EdRail from '@/components/edition/EdRail'
 import Reveal from '@/components/edition/Reveal'
@@ -170,7 +169,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           <Analytics analyticsConfig={siteMetadata.analytics as AnalyticsConfig} />
           {/* Registers a read-only search_posts WebMCP tool where the browser supports it */}
           <WebMCPTools />
-          <SearchProvider searchConfig={siteMetadata.search as SearchConfig}>
+          {/* Search across posts and Lab demos: the navbar's Search pill, or ⌘K */}
+          <SiteSearch>
             <EdBackdrop />
             <div className="ed-app">
               <Header />
@@ -181,7 +181,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
               <Footer />
             </div>
             <Reveal />
-          </SearchProvider>
+          </SiteSearch>
         </ThemeProviders>
       </body>
     </html>
