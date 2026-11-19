@@ -457,7 +457,9 @@
   .ed-hero__word {
     flex: none;
     margin: 0 0 0 -0.05em;
-    padding-bottom: 0.04em;
+    /* Room for the tail of the g: at line-height 0.8 the line ends just below the baseline, and
+       the hero clips anything that hangs out of it */
+    padding-bottom: 0.2em;
     font-family: var(--ed-font-display);
     font-size: 19.6cqi;
     font-weight: 500;
