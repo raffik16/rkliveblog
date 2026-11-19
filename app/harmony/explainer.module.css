@@ -1,0 +1,389 @@
+/* /harmony, below the machine: the rig, the ratio, the tuning, the build and the history, on
+   the Edition tokens (css/edition.css). */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  margin-top: clamp(40px, 6vh, 64px);
+  color: var(--ed-fg-2);
+  font-size: clamp(15px, 1.05vw, 17px);
+  line-height: 1.6;
+}
+
+.prose {
+  max-width: 62ch;
+  margin: 0;
+}
+
+.prose b,
+.steps b {
+  color: var(--ed-fg);
+  font-weight: 600;
+}
+
+.index,
+.year,
+.layerName {
+  font-family: var(--ed-font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ed-fg-3);
+}
+
+/* ------------------------------------------------------------------ the rig drawing */
+.rig {
+  margin: 0;
+  padding: clamp(16px, 2.4vw, 32px);
+  border: 1px solid var(--ed-line);
+  border-radius: var(--ed-radius);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.rigScroll {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.rigArt {
+  display: block;
+  width: 100%;
+  max-width: 760px;
+  height: auto;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.frameArt rect {
+  fill: rgba(255, 255, 255, 0.05);
+  stroke: var(--ed-line-strong);
+}
+
+.frameArt line {
+  stroke: var(--ed-line-strong);
+}
+
+.partArt,
+.partArt rect,
+.partArt circle {
+  fill: rgba(255, 255, 255, 0.04);
+  stroke: var(--ed-fg-2);
+  stroke-width: 1.2;
+}
+
+.viewArt line {
+  stroke: var(--ed-fg-3);
+  stroke-dasharray: 2 5;
+  opacity: 0.6;
+}
+
+.cordArt line {
+  stroke: var(--ed-fg);
+  stroke-width: 1.1;
+}
+
+.knotArt {
+  fill: var(--ed-fg);
+}
+
+.ledArt {
+  fill: #ffd27a;
+}
+
+.glowArt {
+  fill: #ffb03b;
+  opacity: 0.28;
+  filter: blur(3px);
+}
+
+.streamArt {
+  stroke: #d9c39a;
+  stroke-width: 1.6;
+  stroke-dasharray: 0.5 4;
+  stroke-linecap: round;
+}
+
+.sandArt ellipse {
+  fill: #d9c39a;
+}
+
+.plateArt {
+  fill: rgba(205, 215, 230, 0.32);
+  stroke: var(--ed-fg-2);
+  stroke-width: 1;
+}
+
+.waveArt path {
+  fill: none;
+  stroke: var(--ed-fg-3);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+
+.guideArt line {
+  stroke: var(--ed-fg-3);
+  stroke-dasharray: 2 4;
+  opacity: 0.7;
+}
+
+.dimArt line {
+  stroke: var(--ed-signal);
+  stroke-width: 1.1;
+}
+
+.dimText {
+  fill: var(--ed-signal);
+  font-family: var(--ed-font-mono);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.labelText {
+  fill: var(--ed-fg-2);
+  font-family: var(--ed-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* On a phone the drawing keeps a readable size and scrolls sideways */
+@media (max-width: 640px) {
+  .rig {
+    padding: 12px;
+  }
+
+  .rigArt {
+    min-width: 560px;
+  }
+}
+
+.caption {
+  max-width: 62ch;
+  margin: 18px auto 0;
+  color: var(--ed-fg-3);
+  font-size: 13.5px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ five parts, four layers */
+.parts,
+.layers {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 28px 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Five parts: three to a row, then two */
+.parts li {
+  grid-column: span 2;
+}
+
+.parts li:nth-child(n + 4) {
+  grid-column: span 3;
+}
+
+.parts li,
+.layers li {
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--ed-line);
+}
+
+.parts p,
+.layers p {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+.partName {
+  margin: 10px 0 0;
+  color: var(--ed-fg);
+  font-family: var(--ed-font-display);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.layers {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .layers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .parts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .parts li,
+  .parts li:nth-child(n + 4) {
+    grid-column: span 1;
+  }
+
+  .parts li:last-child {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 420px) {
+  .parts,
+  .layers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .parts li,
+  .parts li:nth-child(n + 4),
+  .parts li:last-child {
+    grid-column: auto;
+  }
+}
+
+.layers li {
+  border-top-color: var(--ed-line-strong);
+}
+
+/* ------------------------------------------------------------------ tables */
+.tableWrap {
+  overflow-x: auto;
+  margin: 0 -4px;
+  padding: 0 4px;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.tableCaption {
+  padding-bottom: 12px;
+  color: var(--ed-fg-3);
+  font-family: var(--ed-font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.table th,
+.table td {
+  padding: 12px 16px 12px 0;
+  border-bottom: 1px solid var(--ed-line);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table thead th {
+  padding-top: 0;
+  color: var(--ed-fg-3);
+  font-family: var(--ed-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom-color: var(--ed-line-strong);
+}
+
+.table tbody th {
+  color: var(--ed-fg);
+  font-weight: 500;
+}
+
+.rowName {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.figure {
+  flex: none;
+  width: 28px;
+  height: 28px;
+}
+
+.figure path {
+  fill: none;
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+.num {
+  font-family: var(--ed-font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sub {
+  display: block;
+  margin-top: 2px;
+  color: var(--ed-fg-3);
+  font-family: var(--ed-font-mono);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ build steps, history */
+.steps,
+.timeline {
+  display: flex;
+  flex-direction: column;
+  max-width: 72ch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps li,
+.timeline li {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 16px;
+  margin: 0;
+  padding: 18px 0;
+  border-top: 1px solid var(--ed-line);
+}
+
+.steps li:last-child,
+.timeline li:last-child {
+  border-bottom: 1px solid var(--ed-line);
+}
+
+.steps .index,
+.year {
+  padding-top: 0.35em;
+}
+
+.year {
+  color: var(--ed-fg);
+  font-size: 12px;
+}
+
+.steps p,
+.timeline p {
+  margin: 0;
+}
+
+@media (max-width: 560px) {
+  .steps li,
+  .timeline li {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 12px;
+  }
+}

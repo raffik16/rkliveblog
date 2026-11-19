@@ -36,6 +36,11 @@ const CHAPTERS = [
   { id: 'subscribe', num: '04', label: 'Subscribe', color: 'var(--ed-ink)' },
 ]
 
+// The first demo runs full width and the rest go two to a row; an odd one out at the end runs
+// full width too, so the grid never ends on a lone half card.
+const wideDemo = (i: number) =>
+  i === 0 || (i === demosData.length - 1 && (demosData.length - 1) % 2 === 1)
+
 const chapterProps = (id: string) => {
   const c = CHAPTERS.find((ch) => ch.id === id)!
   return {
@@ -124,7 +129,7 @@ export default async function Page() {
                 title={demo.title}
                 href={demo.href}
                 size={i === 0 ? 'lg' : 'md'}
-                className={i === 0 ? 'span-12' : 'span-6'}
+                className={wideDemo(i) ? 'span-12' : 'span-6'}
                 sub={demo.tech.slice(0, 3).join(' · ')}
                 actions={
                   <>

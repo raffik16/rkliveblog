@@ -28,6 +28,14 @@ const demosData: Demo[] = [
     tech: ['three.js', 'WebGL 2', 'GLSL', 'teardown'],
   },
   {
+    slug: 'harmony',
+    title: 'The Harmony Machine',
+    href: '/harmony',
+    description:
+      'Pendulums swing a funnel of sand and an LED over a steel plate that a speaker sets ringing, under a camera taking one long exposure. Pick a musical interval and the glowing loops, the Chladni lines in the sand and the chord you hear all show the same ratio. Hundreds of thousands of grains, simulated on the GPU.',
+    tech: ['WebGL 2', 'GLSL', 'Web Audio', 'React'],
+  },
+  {
     slug: 'synth',
     title: 'Pocket Synth',
     href: '/synth',
