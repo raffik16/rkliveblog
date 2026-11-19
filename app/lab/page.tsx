@@ -9,7 +9,7 @@ import SetLauncher from '@/components/SetLauncher'
 export const metadata = genPageMetadata({
   title: 'Lab',
   description:
-    'Demos from the blog: a dream, two full-screen three.js pieces, a harmony machine, a synth, a spacecraft sim, twelve clocks, a one-button game and WebMCP.',
+    'Demos from the blog: a dream, a harmony machine, a synth, two full-screen three.js pieces, WebMCP, a one-button game, twelve clocks and a spacecraft sim.',
   path: '/lab',
 })
 
