@@ -19,6 +19,8 @@ const OTHER_PAGES = [
   'clocks',
   'climb',
   'synth',
+  'harmony',
+  'dream',
   'chaos',
   'chaos/hotdog',
 ]
