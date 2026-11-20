@@ -590,23 +590,6 @@ input[type='range']:focus-visible {
 
 /* ---- During play -------------------------------------------------------------------------- */
 
-.lock-hint {
-  position: fixed;
-  top: 14px;
-  left: 50%;
-  margin: 0;
-  padding: 8px 14px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(12, 8, 22, 0.85);
-  color: var(--white);
-  font: 700 11px var(--mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
 .countdown {
   position: fixed;
   inset: 0;
@@ -676,7 +659,6 @@ input[type='range']:focus-visible {
 }
 
 body.poster #ui,
-body.poster .lock-hint,
 body.poster .preparing,
 body.poster .rotate-hint {
   display: none;

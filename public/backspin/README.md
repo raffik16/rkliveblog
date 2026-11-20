@@ -73,8 +73,9 @@ If `src/scene.js` starts using another part of three.js, add it to the list in
 | Hybrid: `A` `S` `D` and the mouse                   | Six pads: kick, snare, clap on the keys; crash, vox, horn by mouse |
 | Touch: tap a pad, drag on the record, tap the fader | All of the above on screen, with every finger on its own           |
 
-Playing with the keyboard, the mouse is locked to the game (Pointer Lock), so it can't wander off
-the window. Press `Esc` to get it back.
+Playing with the keyboard, hold the mouse button anywhere on the club and move it up and down to
+scratch. The cursor stays on screen, with an arrow up and an arrow down, and fills in while you
+hold the record. The press is captured, so a stroke can run off the window and keep going.
 
 ### Beat pads
 
@@ -250,7 +251,7 @@ the notes for the two pads it doesn't have (see Mouse, Hybrid and touch, above).
 | `src/engine.js`                        | The AudioContext, the two decks, the pads, the crossfader, song scheduling and practice tempos                                     |
 | `src/clock.js`                         | The master clock: turns an input's timestamp into the audio time being heard                                                       |
 | `src/pads.js`                          | The eight pads: names, colours, keys and MIDI notes, and where they sit (all eight, or Hybrid's six)                               |
-| `src/input.js`                         | Keys, the mouse (on the record with Pointer Lock, or playing the picture) and touch                                                |
+| `src/input.js`                         | Keys, the mouse (on the record, or playing the picture) and touch                                                                  |
 | `src/cursors.js`                       | The cursors for playing with the mouse, drawn in code                                                                              |
 | `src/midi.js`                          | MIDI pad controllers through Web MIDI, with MIDI learn                                                                             |
 | `src/chart.js`                         | Loads charts, thins them into Medium and Easy (and for one pointer), and builds practice loops                                     |

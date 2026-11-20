@@ -1,14 +1,16 @@
-// Mouse, keyboard and touch. The mouse is the record: hold the left button to put your hand on
-// it, and up/down movement turns it. Pointer Lock keeps the cursor from running off the screen
-// and reports raw movement; every movement keeps its own timestamp (see scratch-worklet.js for
-// why). The keys are the pads, the crossfader and the rest.
+// Mouse, keyboard and touch. With the keys, the mouse is the record: hold the left button
+// anywhere on the club to put your hand on it, and up/down movement turns it. The cursor stays
+// on screen (no Pointer Lock: a cursor that vanished as a run began and came back only on Esc
+// looked broken), showing arrows, filled in while you hold the record. The press is captured, so
+// a stroke that leaves the window still counts, and every movement keeps its own timestamp (see
+// scratch-worklet.js for why). The keys are the pads, the crossfader and the rest.
 //
 // On a touch screen the picture is the controller: tap the pads, drag a finger up and down on
 // the record, tap or slide the crossfader, and tap the buttons the HUD draws (the hype meter,
 // pause, the loops). Every finger is its own pointer, so you can drum with one hand and scratch
 // with the other. Played with the mouse, in Hybrid or with touch chosen (`pointerPlay`), the
-// mouse plays the picture the same way, one click at a time: no pointer lock. Then the cursor
-// says what a click would do (cursors.js draws them), and each click or tap that hits something
+// mouse plays the picture the same way, one click at a time. Then the cursor says what a click
+// would do (cursors.js draws them), and each click or tap that hits something
 // is passed on (`tap`) for the HUD to flash.
 
 import { PAD_OF_KEY } from './pads.js'
@@ -80,27 +82,9 @@ export class Input {
 
   set active(on) {
     this.live = on
-    if (on && this.pointerPlay) this.hoverAt(this.mouseX, this.mouseY)
-    else this.setCursor('')
-  }
-
-  get locked() {
-    return document.pointerLockElement === this.el
-  }
-
-  /** Ask for pointer lock. Must run inside a click or key press. Fine if it fails. */
-  lock() {
-    if (this.locked || !this.el.requestPointerLock) return
-    try {
-      const p = this.el.requestPointerLock()
-      if (p && p.catch) p.catch(() => {})
-    } catch {
-      // not allowed right now: the game still works, the cursor just stays visible
-    }
-  }
-
-  unlock() {
-    if (this.locked) document.exitPointerLock()
+    if (!on) this.setCursor('')
+    else if (this.pointerPlay) this.hoverAt(this.mouseX, this.mouseY)
+    else this.setCursor(this.held ? 'scratch' : 'record')
   }
 
   onDown(e) {
@@ -109,13 +93,18 @@ export class Input {
       this.onPointDown(e)
       return
     }
-    if (e.button !== 0) return
-    // Without the lock, only presses on the game itself count (not on menus)
-    if (!this.locked && e.target !== this.el) return
+    // With the keys, a press anywhere on the club takes the record (not on the menus)
+    if (e.button !== 0 || e.target !== this.el) return
     e.preventDefault()
+    try {
+      this.el.setPointerCapture(e.pointerId)
+    } catch {
+      // the browser's own capture of a held mouse button still applies
+    }
     this.held = true
     this.lastT = null
     this.h.down(e.timeStamp)
+    this.setCursor('scratch')
   }
 
   onUp(e) {
@@ -135,10 +124,12 @@ export class Input {
     if (!this.held) return
     this.held = false
     this.h.up(at)
-    if (this.live && this.pointerPlay) this.hoverAt(this.mouseX, this.mouseY)
+    if (!this.live) return
+    if (this.pointerPlay) this.hoverAt(this.mouseX, this.mouseY)
+    else this.setCursor('record')
   }
 
-  /** The locked mouse on the record. */
+  /** The mouse on the record, played with the keys. */
   onMove(e) {
     if (!this.active || !this.held || e.pointerType !== 'mouse' || this.pointerPlay) return
     const list = this.list

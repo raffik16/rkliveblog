@@ -34,7 +34,6 @@ export class UI {
 
     this.sens = $('#sensitivity')
     this.sens.addEventListener('input', () => actions.sensitivity(Number(this.sens.value)))
-    this.lock = $('#lock-hint')
     this.count = $('#countdown')
     this.prep = $('#preparing')
     this.slots = [...document.querySelectorAll('#cal-slots span')]
@@ -196,11 +195,6 @@ export class UI {
   }
 
   // ---- During play --------------------------------------------------------------------------
-
-  lockHint(show) {
-    if (this.lock.hidden === !show) return
-    this.lock.hidden = !show
-  }
 
   countdown(text) {
     this.count.textContent = text || ''

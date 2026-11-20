@@ -1,12 +1,13 @@
-// The cursors for playing with the mouse, drawn in code as the page loads (like the sounds and
-// the club). They are cursor images handed to the browser in CSS, not a sprite the game moves
-// around: the system draws its own cursor straight from the mouse, a frame or more ahead of
-// anything the page can draw, and on the beat you would feel the difference.
+// The cursors over the club while you play, drawn in code as the page loads (like the sounds
+// and the club). They are cursor images handed to the browser in CSS, not a sprite the game
+// moves around: the system draws its own cursor straight from the mouse, a frame or more ahead
+// of anything the page can draw, and on the beat you would feel the difference.
 //
 //   aim      over nothing: a ring with a dot in the middle
 //   pad0-7   over a pad: the ring a size up, in that pad's colour
 //   target   over the crossfader and the HUD's buttons: the ring in lime
-//   record   over the record: a small ring between an up arrow and a down arrow (drag it)
+//   record   over the record: a small ring between an up arrow and a down arrow (drag it). With
+//            the keys, anywhere on the club, since a press anywhere takes the record
 //   scratch  holding the record: the ring filled in, the arrows still there
 
 import { PADS } from './pads.js'

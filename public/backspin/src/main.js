@@ -291,14 +291,6 @@ function setFade(pos, ms) {
   view.crossfader = FADE_VALUE[pos]
 }
 
-// Clicking the stage while playing (re)locks the mouse to the record (unless the mouse plays it all)
-stage.addEventListener('pointerdown', (e) => {
-  if (e.pointerType !== 'mouse' || controls !== 'keys') return
-  if ((mode === 'play' && !bot) || mode === 'sandbox') input.lock()
-})
-document.addEventListener('pointerlockchange', () => {
-  if (!input.locked && (mode === 'play' || mode === 'sandbox')) pause()
-})
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && !bot && (mode === 'play' || mode === 'sandbox')) pause()
 })
@@ -518,7 +510,6 @@ function stopPlay() {
   bot = null
   input.release(performance.now())
   input.active = false
-  input.unlock()
   if (engine.ctx) {
     engine.hush()
     engine.stopSong()
@@ -568,9 +559,8 @@ async function tempo(bpm) {
 // ---- Play ---------------------------------------------------------------------------------
 
 /** Everything a run needs before it starts, after the click that started it. */
-async function begin(lock) {
+async function begin() {
   stopPlay()
-  if (lock && controls === 'keys') input.lock() // still inside the click, or the browser refuses
   trail.length = 0
   ui.hide()
   return ensureAudio()
@@ -606,7 +596,7 @@ function playerInput() {
 
 async function startGame(lvl) {
   const auto = AUTOPLAY.length > 0
-  if (!(await begin(!auto))) return
+  if (!(await begin())) return
   level = lvl
   practice = null
   engine.guide = false
@@ -625,11 +615,10 @@ async function startGame(lvl) {
 }
 
 async function startPractice() {
-  const auto = AUTOPLAY.length > 0
   const p = { ...settings.practice }
   if (!PRACTICE_SECTIONS[p.section]) p.section = 'verse'
   if (!SPEEDS.includes(p.speed)) p.speed = 75
-  if (!(await begin(!auto))) return
+  if (!(await begin())) return
   await tempo(Math.round((BASE_BPM * p.speed) / 100))
   practice = p
   engine.guide = p.guide
@@ -644,7 +633,7 @@ async function startPractice() {
 }
 
 async function startSandbox() {
-  if (!(await begin(true))) return
+  if (!(await begin())) return
   practice = null
   engine.guide = false
   await tempo(BASE_BPM)
@@ -667,7 +656,6 @@ function pause() {
   clearTimeout(resumeTimer)
   input.release(performance.now())
   input.active = false
-  input.unlock()
   if (bot) bot.stop()
   engine.pause()
   ui.pauseFor(pausedFrom === 'sandbox', !!practice)
@@ -677,7 +665,6 @@ function pause() {
 
 function resume() {
   if (mode !== 'paused') return
-  if (!bot && controls === 'keys') input.lock()
   ui.hide()
   let n = 3
   ui.countdown(String(n))
@@ -712,7 +699,6 @@ function finish() {
   bot = null
   input.release(performance.now())
   input.active = false
-  input.unlock()
   const style = game.chart.controls
   const isBest = !auto && !result.practice && recordResult(bestKey(result.level, style), result)
   const what = practice ? `Practice · ${sectionName(practice.section)} · ${practice.speed}%` : null
@@ -818,12 +804,6 @@ function frame(now) {
   scene.draw(view)
   view.liveScratch = scene.liveScratch
   hud.draw(view, scene.layout)
-  ui.lockHint(
-    controls === 'keys' &&
-      ((mode === 'play' && !bot) || mode === 'sandbox') &&
-      !input.locked &&
-      !input.held
-  )
 
   if (debugEl && ++frames % 15 === 0) {
     fps = Math.round((15 * 1000) / (now - fpsAt))
@@ -915,7 +895,7 @@ function showDebug() {
       `t ${game.time.toFixed(3)}   next ${game.next}/${game.notes.length}   hype ${game.hype.toFixed(0)}   combo ${game.combo}`
     )
   }
-  lines.push(`pointer ${input.raw ? 'pointerrawupdate' : 'pointermove'}   locked ${input.locked}`)
+  lines.push(`pointer ${input.raw ? 'pointerrawupdate' : 'pointermove'}`)
   lines.push(
     `render ${scene.renderer.getPixelRatio().toFixed(2)}x   glow ${scene.bloomOn}   midi ${midi.state}`
   )
