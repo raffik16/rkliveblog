@@ -129,13 +129,31 @@ pointer, so Easy has 66 notes, Medium 89 and Hard 115. The layouts are `LAYOUTS`
 on the record and drag it up and down, tap or slide the crossfader, and tap the hype meter, the
 loops and ❚❚. Every finger is its own pointer, so you can drum with one hand and scratch with the
 other, and the charts are the full ones. Where the screen reports pressure, it sets the velocity.
-Each tap that hits something flashes a ring big enough to show around your finger. Hold a phone
-sideways: upright, the pads are small. A tablet gives you the biggest pads.
+Each tap that hits something flashes a ring big enough to show around your finger. Hold it either
+way up: on a phone or a tablet held upright the club stacks (see Fitting the screen), so the pads
+are as big as they are sideways, or bigger. On Android and on an iPad a run goes full screen, so
+the browser's bars don't take room and an edge swipe can't scroll the page or go back (an iPhone
+doesn't let a page do that). While a run is on, Safari's double-tap zoom, pinch zoom and
+magnifier are switched off over the club, and the menus don't wait to see if a tap is a double
+tap. On an iPhone the game asks for media playback (`navigator.audioSession`, Safari 17 and
+later), so it plays with the silent switch on, the way a video does.
+
+**Fitting the screen.** The rig goes side by side on a wide screen: a deck either side of the pads
+and the crossfader under them. On a tall one that leaves the pads tiny, so it stacks instead: the
+crossfader under the pads and the two decks under that. `fit()` in `src/scene.js` works out how big
+each arrangement could be, leaving room for the HUD round it (a band along the top for the score
+and the hype meter, the labels and loop buttons under the decks), takes the one with bigger pads
+(side by side unless stacking is clearly better), and sets the camera so the rig fills the space.
+On a big screen the side-by-side club keeps its roomy framing; it only fills the screen more
+tightly where the pads would otherwise be under 110 pixels. Upright, an iPhone's pads go from 41
+to 69 pixels and an iPad's from 82 to 127; held sideways, an iPhone's go from 62 to 75. The menus
+lay themselves out flatter on a short screen (a phone held sideways): the title's buttons and the
+levels side by side, the practice choices and the results in two columns.
 
 **Hit areas.** A pad answers a click or a tap a little past its edges: halfway across the gap to
-the next pad, so neighbours meet but never overlap, and a whole gap on the outside of the grid
-(half a gap below it), which still stops short of the record and the crossfader (`measure()` in
-`src/scene.js`).
+the next pad, so neighbours meet but never overlap, and further on the outside of the grid (a
+whole gap at the sides, more when stacked, more again above it, half a gap below it), which still
+stops short of the record and the crossfader (`measure()` in `src/scene.js`).
 
 ## How it plays
 
@@ -282,7 +300,9 @@ speakers at which page time, so a key press's, a MIDI message's or a touch's eve
 be turned into "what the player was hearing" on the audio clock, minus their calibrated offset.
 
 **Drawing.** The camera looks straight down a tunnel at the pads, so the two rows never cover each
-other and every note flies straight at its pad. Notes, pad frames, lights, lasers, the crowd and the
+other and every note flies straight at its pad. Moving the rig up or down the screen to fit it is a
+shift of the lens (`setViewOffset`), not a tilt of the camera, so the lanes still meet in the
+middle of the grid. Notes, pad frames, lights, lasers, the crowd and the
 sparks are instanced meshes from fixed pools, updated in place, so a frame allocates nothing. The
 crowd bounces in a vertex shader, and their arms go up as the hype passes each one's threshold. The
 club renders into a HalfFloat target for the bloom, so the neon can go brighter than white without

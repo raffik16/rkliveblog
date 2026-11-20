@@ -6,7 +6,8 @@
 // the grid under your fingers (on the keyboard or a pad controller), and a note is due when it
 // fills its gate. Looking along the lanes means two rows can never cover each other: notes for
 // the top row climb as they come, notes for the bottom row drop. The scratch lane comes in to the
-// record on the left and the crossfader's lane runs along the bottom.
+// record and the crossfader's lane runs under the pads. Where the decks and the fader sit, beside
+// the pads or under them, depends on the shape of the screen (RIGS, fit()).
 //
 // Everything that moves is an InstancedMesh or a shader uniform, set from the game's state each
 // frame: nothing is created while a song plays. The glow is a bloom pass over the whole frame.
@@ -29,21 +30,50 @@ const GAP = 0.16
 const PITCH = PAD + GAP
 const NOTE = 0.84 // a note tile, as a share of its pad
 const HALF_H = PITCH // the grid's outer rails, above and below (its width depends on the layout)
-const DECK_X = 3.6
 const DECK_R = 0.86
-const FADER_Y = -1.82
+const PLATE = DECK_R + 0.25 // half the width of a deck's plate
 const FADER_HALF = 1
+// Where the decks and the crossfader go round the pads. On a wide screen, side by side: a deck
+// either side of the pads and the crossfader under them. On a tall one (a phone or a tablet held
+// upright) that would leave the pads tiny, so the rig stacks: the crossfader under the pads and
+// the two decks under it. The Scratch Deck is at (-deckX, deckY), the Beat Deck at (deckX, deckY).
+// Stacked, the decks sit far enough under the fader for the scratch arrow to fit between them.
+const RIGS = {
+  side: { name: 'side', deckX: 3.6, deckY: 0, faderY: -1.82, reachOut: GAP, recordReach: 1.25 },
+  stacked: {
+    name: 'stacked',
+    deckX: 1.3,
+    deckY: -3.95,
+    faderY: -1.82,
+    reachOut: 0.3,
+    recordReach: 1.35,
+  },
+}
 // How far past its edges a pad answers a click or a tap: halfway across the gap to the next pad,
-// so neighbours meet but never overlap, and a whole gap on the grid's outside, still clear of
-// the record and (below the grid, only half a gap) of the crossfader
+// so neighbours meet but never overlap, and further on the grid's outside (the rig's reachOut
+// at the sides, more above, where only the HUD is), still clear of the record and (below the
+// grid, only half a gap) of the crossfader
 const REACH_IN = GAP / 2
-const REACH_OUT = GAP
+const REACH_ABOVE = 0.36
 const REACH_BELOW = GAP / 2
+// What the HUD draws round the rig, in CSS pixels: a band along the top for the score, the hype
+// meter and the combo (a share of the height, within limits; stacked, on a narrow screen, the
+// score and the hype meter meet in the middle, so the combo and the calls need room under
+// them), the fader's marks under it, and the deck labels and the loop buttons under the Beat
+// Deck (with the sandbox's switch under those too when stacked; side by side it moves above the
+// deck if it has to)
+const HUD_TOP = { side: [0.16, 60, 160], stacked: [0.16, 116, 160] }
+const HUD_FADER = 14
+const HUD_DECK = { side: 62, stacked: 100 }
+const EDGE = 10 // the least space at the sides of the screen
+const BOTTOM = 6 // and at the bottom
+// Side by side on a big screen, the club keeps its roomy framing (room for 4.96 units either
+// side of the middle of the grid and 2.72 above and below, as it always had). It only fills the
+// screen more tightly where the pads would otherwise come out smaller than this many pixels.
+const ROOMY = { halfW: 4.96, halfH: 2.72, pad: 110 }
 const Z_FAR = 64 // where notes appear
 const SPEED = Z_FAR / LOOKAHEAD
 const FOV = 46
-const NEED_W = DECK_X + DECK_R + 0.5 // half the width that has to fit on screen at the gates
-const NEED_H = 2.72
 const TAU = Math.PI * 2
 
 const HEX = {
@@ -118,6 +148,7 @@ export class Scene {
     this.knob = 0.5
     this.keyLabels = true // the crossfader marks name the keys (not on touch or mouse play)
     this.padLayout = LAYOUTS.full // where the pads are (see pads.js)
+    this.rig = RIGS.side // where the decks and the fader are (chosen to suit the screen)
 
     this.buildBackdrop()
     this.buildCrowd()
@@ -131,6 +162,7 @@ export class Scene {
     this.buildComposer()
     this.layout = null
     this.usePads(LAYOUTS.full)
+    this.useRig(RIGS.side)
     this.resize()
   }
 
@@ -158,7 +190,19 @@ export class Scene {
       this.padTarget.setMatrixAt(i, this.m)
     }
     this.padTarget.instanceMatrix.needsUpdate = true
-    if (this.layout) this.layout = this.measure()
+    if (this.layout) this.fit()
+  }
+
+  /** Put the decks, the fader and their lanes where a rig (RIGS) has them. */
+  useRig(rig) {
+    this.rig = rig
+    const { deckX, deckY, faderY } = rig
+    this.scratchDeck.group.position.set(-deckX, deckY, 0)
+    this.beatDeck.group.position.set(deckX, deckY, 0)
+    this.scratchArc.position.set(-deckX, deckY, 0.02)
+    this.recordLane.position.set(-deckX, deckY, 0)
+    this.faderLane.position.set(0, faderY, 0)
+    this.faderGroup.position.set(0, faderY, 0)
   }
 
   // ---- Building -----------------------------------------------------------------------------
@@ -463,15 +507,19 @@ export class Scene {
       })
       this.padRails.set(cols, rails)
     }
-    lines((add) => {
+    // The record's lane and the fader's, built round the origin and moved to wherever the rig
+    // puts the record and the fader (useRig)
+    this.recordLane = lines((add) => {
       const magenta = new THREE.Color(HEX.magenta)
       for (let k = 0; k < 12; k++) {
         const a = (k / 12) * TAU
-        add(-DECK_X + Math.cos(a) * (DECK_R + 0.12), Math.sin(a) * (DECK_R + 0.12), magenta, 0.5)
+        add(Math.cos(a) * (DECK_R + 0.12), Math.sin(a) * (DECK_R + 0.12), magenta, 0.5)
       }
+    })
+    this.faderLane = lines((add) => {
       const white = new THREE.Color(HEX.white)
-      add(-FADER_HALF - 0.18, FADER_Y, white, 0.35)
-      add(FADER_HALF + 0.18, FADER_Y, white, 0.35)
+      add(-FADER_HALF - 0.18, 0, white, 0.35)
+      add(FADER_HALF + 0.18, 0, white, 0.35)
     })
 
     // Beat frames: an outline round the pads (and a ring round the record) for every beat,
@@ -597,8 +645,8 @@ export class Scene {
       this.scene.add(group)
       return { group, spin, rim, face, hex, word, color: new THREE.Color(hex) }
     }
-    this.scratchDeck = make(-DECK_X, HEX.magenta, 'SCRATCH')
-    this.beatDeck = make(DECK_X, HEX.cyan, 'BEAT')
+    this.scratchDeck = make(-RIGS.side.deckX, HEX.magenta, 'SCRATCH')
+    this.beatDeck = make(RIGS.side.deckX, HEX.cyan, 'BEAT')
     // The progress of the scratch you're in: an arc round the record that fills as you get it
     this.arcMat = new THREE.ShaderMaterial({
       uniforms: { uAmount: { value: 0 }, uColor: { value: new THREE.Color(HEX.lime) } },
@@ -627,14 +675,15 @@ export class Scene {
       new THREE.RingGeometry(DECK_R + 0.16, DECK_R + 0.24, 96),
       this.arcMat
     )
-    this.scratchArc.position.set(-DECK_X, 0, 0.02)
+    this.scratchArc.position.set(-RIGS.side.deckX, 0, 0.02)
     this.scratchArc.visible = false
     this.scene.add(this.scratchArc)
   }
 
   buildFader() {
     const group = new THREE.Group()
-    group.position.set(0, FADER_Y, 0)
+    group.position.set(0, RIGS.side.faderY, 0)
+    this.faderGroup = group
     const plate = new THREE.Mesh(roundedPlane(FADER_HALF * 2 + 0.75, 0.5, 0.12), panel())
     plate.position.z = -0.08
     group.add(plate)
@@ -727,7 +776,7 @@ export class Scene {
   // ---- Size and where things are on screen --------------------------------------------------
 
   resize() {
-    const w = Math.max(320, window.innerWidth)
+    const w = Math.max(280, window.innerWidth)
     const h = Math.max(240, window.innerHeight)
     const pr = Math.min(window.devicePixelRatio || 1, this.maxPixelRatio)
     this.renderer.setPixelRatio(pr)
@@ -735,15 +784,62 @@ export class Scene {
     this.composer.setPixelRatio(pr)
     this.composer.setSize(w, h)
     this.fxaa.enabled = pr < 1.5
+    this.w = w
+    this.h = h
+    this.fit()
+  }
+
+  /**
+   * How big the rig can be on this screen (in CSS pixels per world unit at the gates), and the
+   * range of heights the middle of the grid can be at for it all to fit with the HUD round it.
+   * Everything at the gates faces the camera, so on screen it's the world scaled and moved.
+   */
+  scaleFor(rig) {
+    const { w, h } = this
+    const [share, least, most] = HUD_TOP[rig.name]
+    const top = Math.min(most, Math.max(least, h * share))
+    const above = HALF_H + 0.14 // the grid's beat frames
+    // What's under the grid's middle: the fader's marks, and the deck labels and loops
+    const below = [
+      [rig.faderY - 0.375, HUD_FADER],
+      [rig.deckY - DECK_R * 1.32, HUD_DECK[rig.name]],
+    ]
+    const halfX = Math.max(this.halfW + 0.14, rig.deckX + PLATE) + 0.1
+    let k = (w - EDGE * 2) / (halfX * 2)
+    for (const [y, px] of below) k = Math.min(k, (h - top - BOTTOM - px) / (above - y))
+    if (rig === RIGS.side) {
+      const roomy = Math.min(w / (ROOMY.halfW * 2), h / (ROOMY.halfH * 2))
+      k = Math.min(k, Math.max(roomy, ROOMY.pad))
+    }
+    k = Math.max(1, k)
+    let hi = h
+    for (const [y, px] of below) hi = Math.min(hi, h - BOTTOM - px + k * y)
+    return { k, lo: top + k * above, hi }
+  }
+
+  /**
+   * Fit the club to the screen: pick the rig that makes the pads biggest (side by side unless
+   * stacking is clearly better), then set the camera so the rig fills the space the HUD leaves.
+   * The camera always looks straight down the tunnel at the middle of the grid, so the lanes
+   * still meet there and the two rows never cover each other. Where that middle lands on screen
+   * is a shift of the lens: the middle of the screen when there's room, or as near as it fits.
+   */
+  fit() {
+    const side = this.scaleFor(RIGS.side)
+    const stacked = this.scaleFor(RIGS.stacked)
+    const rig = stacked.k > side.k * 1.12 ? RIGS.stacked : RIGS.side
+    if (rig !== this.rig) this.useRig(rig)
+    const { k, lo, hi } = rig === RIGS.stacked ? stacked : side
+    const { w, h } = this
+    const middle = Math.min(Math.max(h / 2, lo), Math.max(lo, hi))
     const cam = this.camera
     cam.aspect = w / h
     const tan = Math.tan(((FOV / 2) * Math.PI) / 180)
-    this.camZ = Math.max(NEED_W / (tan * cam.aspect), NEED_H / tan)
+    this.camZ = h / (2 * k * tan)
     cam.position.set(0, 0, this.camZ)
+    cam.setViewOffset(w, h, 0, h / 2 - middle, w, h)
     cam.updateProjectionMatrix()
     cam.updateMatrixWorld()
-    this.w = w
-    this.h = h
     this.layout = this.measure()
   }
 
@@ -775,12 +871,12 @@ export class Scene {
       // The square a click or a tap has to land in (the grid faces the camera, so it stays one)
       const top = slot.row === 1
       const a = this.project(
-        x - PAD / 2 - (slot.col > 0 ? REACH_IN : REACH_OUT),
-        y + PAD / 2 + (top ? REACH_OUT : REACH_IN),
+        x - PAD / 2 - (slot.col > 0 ? REACH_IN : this.rig.reachOut),
+        y + PAD / 2 + (top ? REACH_ABOVE : REACH_IN),
         0
       )
       const b = this.project(
-        x + PAD / 2 + (slot.col < cols - 1 ? REACH_IN : REACH_OUT),
+        x + PAD / 2 + (slot.col < cols - 1 ? REACH_IN : this.rig.reachOut),
         y - PAD / 2 - (top ? REACH_IN : REACH_BELOW),
         0
       )
@@ -788,20 +884,22 @@ export class Scene {
     }
     const tl = this.project(-this.halfW, HALF_H, 0)
     const br = this.project(this.halfW, -HALF_H, 0)
+    const { deckX, deckY, faderY } = this.rig
     const deck = (x) => {
-      const c = this.project(x, 0, 0)
-      const e = this.project(x + DECK_R, 0, 0)
+      const c = this.project(x, deckY, 0)
+      const e = this.project(x + DECK_R, deckY, 0)
       return { x: c.x, y: c.y, r: e.x - c.x }
     }
-    const f0 = this.project(-FADER_HALF, FADER_Y, 0)
-    const f1 = this.project(FADER_HALF, FADER_Y, 0)
-    const fTop = this.project(0, FADER_Y + 0.25, 0)
+    const f0 = this.project(-FADER_HALF, faderY, 0)
+    const f1 = this.project(FADER_HALF, faderY, 0)
+    const fTop = this.project(0, faderY + 0.25, 0)
     return {
       w: this.w,
       h: this.h,
       pads,
       grid: { left: tl.x, top: tl.y, right: br.x, bottom: br.y },
-      decks: [deck(-DECK_X), deck(DECK_X)],
+      decks: [deck(-deckX), deck(deckX)],
+      stacked: this.rig === RIGS.stacked,
       fader: { x0: f0.x, x1: f1.x, y: f0.y, half: f0.y - fTop.y },
       vp: this.project(0, 0, -1e4),
     }
@@ -815,7 +913,7 @@ export class Scene {
       if (x >= h.x0 && x < h.x1 && y >= h.y0 && y < h.y1) return { kind: 'pad', index: i }
     }
     const d = L.decks[0]
-    if (Math.hypot(x - d.x, y - d.y) <= d.r * 1.25) return { kind: 'record' }
+    if (Math.hypot(x - d.x, y - d.y) <= d.r * this.rig.recordReach) return { kind: 'record' }
     const f = L.fader
     if (y > f.y - f.half * 2.2 && y < f.y + f.half * 2.2 && x > f.x0 - 40 && x < f.x1 + 40) {
       return { kind: 'fader', x: Math.max(0, Math.min(1, (x - f.x0) / (f.x1 - f.x0))) }
@@ -917,10 +1015,11 @@ export class Scene {
         this.wave(this.padX(n.pad), this.padY(n.pad), this.padColor[n.pad], false)
       } else if (n.type === 'scratch') {
         const col = this.c.set(n.dir > 0 ? HEX.magenta : HEX.cyan)
-        this.burst(-DECK_X, 0, 0.1, col, count + 6, DECK_R)
-        this.wave(-DECK_X, 0, col, true)
+        const { deckX, deckY } = this.rig
+        this.burst(-deckX, deckY, 0.1, col, count + 6, DECK_R)
+        this.wave(-deckX, deckY, col, true)
       } else if (n.type === 'fade') {
-        this.burst(FADE_X[n.pos], FADER_Y, 0.1, this.c.set(HEX.white), count, 0.2)
+        this.burst(FADE_X[n.pos], this.rig.faderY, 0.1, this.c.set(HEX.white), count, 0.2)
       }
     } else if (e.kind === 'boost') {
       if (!this.reduced) this.fx.shake = 1
@@ -1036,6 +1135,7 @@ export class Scene {
     const marks = [0, 0, 0]
     this.approach.fill(0)
     let live = null
+    const { deckX, deckY, faderY } = this.rig
     if (game) {
       const list = game.notes
       for (let i = Math.max(0, game.next - 16); i < list.length; i++) {
@@ -1064,7 +1164,7 @@ export class Scene {
           const color = c.set(n.dir > 0 ? HEX.magenta : HEX.cyan)
           if (tubes < MAX_SCRATCH && zStart > zEnd) {
             m.makeScale(1, 1, zStart - zEnd)
-            m.setPosition(-DECK_X, 0, zStart)
+            m.setPosition(-deckX, deckY, zStart)
             this.tubeMesh.setMatrixAt(tubes, m)
             this.tubeMesh.setColorAt(tubes++, color.multiplyScalar(missed ? 0.05 : 0.16))
           }
@@ -1078,7 +1178,7 @@ export class Scene {
             const z = -(at - t) * SPEED
             if (z > 0.05 || z < -Z_FAR) continue
             m.makeScale(1, n.dir, 1)
-            m.setPosition(-DECK_X, 0, z)
+            m.setPosition(-deckX, deckY, z)
             this.chevMesh.setMatrixAt(chev, m)
             this.chevMesh.setColorAt(chev++, color)
           }
@@ -1086,7 +1186,7 @@ export class Scene {
           if (n.judged && n.grade !== 'miss') continue
           const z = -ahead * SPEED
           if (z > 1 || fades >= MAX_FADES) continue
-          m.makeTranslation(0, FADER_Y, z)
+          m.makeTranslation(0, faderY, z)
           this.fadeBar.setMatrixAt(fades, m)
           this.fadeBar.setColorAt(
             fades++,
@@ -1094,7 +1194,7 @@ export class Scene {
           )
           const k = FADE_FRAME[n.pos]
           const mesh = this.fadeMarks[k]
-          m.makeTranslation(FADE_X[n.pos], FADER_Y + 0.27, z)
+          m.makeTranslation(FADE_X[n.pos], faderY + 0.27, z)
           mesh.setMatrixAt(marks[k], m)
           mesh.setColorAt(
             marks[k]++,
@@ -1194,7 +1294,7 @@ export class Scene {
       this.frameRect.setMatrixAt(k, m)
       c.set(boosting ? HEX.lime : HEX.violet).multiplyScalar(level * (1 + this.fx.snare * 0.8))
       this.frameRect.setColorAt(k, c)
-      m.makeTranslation(-DECK_X, 0, z)
+      m.makeTranslation(-this.rig.deckX, this.rig.deckY, z)
       this.frameRing.setMatrixAt(k, m)
       c.set(HEX.magenta).multiplyScalar(level * 0.8)
       this.frameRing.setColorAt(k++, c)

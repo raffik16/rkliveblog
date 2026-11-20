@@ -100,7 +100,7 @@
         <p class="note" id="touch-note" hidden>
           On a touch screen the club is the controller: tap the pads (with as many fingers as you
           like), drag a finger up and down on the record, tap the fader, and tap the hype meter when
-          it’s full. Hold a phone sideways; a tablet gives you the biggest pads.
+          it’s full. Hold it upright or sideways: the club rearranges itself to fit.
         </p>
         <p class="fine" id="offset-line"></p>
         <p class="fine">
@@ -387,45 +387,48 @@
       </section>
 
       <section class="screen results" data-screen="results" hidden>
-        <p class="eyebrow" id="res-song"></p>
-        <div class="grade" id="res-grade">A</div>
-        <p class="best-flag" id="res-best" hidden>New best</p>
-        <dl class="stats">
-          <div>
-            <dt>Score</dt>
-            <dd id="res-score">0</dd>
-          </div>
-          <div>
-            <dt>Accuracy</dt>
-            <dd id="res-acc">0%</dd>
-          </div>
-          <div>
-            <dt>Max combo</dt>
-            <dd id="res-combo">0</dd>
-          </div>
-          <div>
-            <dt>Freestyle</dt>
-            <dd id="res-free">0</dd>
-          </div>
-        </dl>
-        <p class="counts" id="res-counts"></p>
-        <p class="timing" id="res-timing"></p>
-        <div class="pad-timing" id="res-pads" aria-label="Average timing on each pad"></div>
-        <p class="crowd">The crowd: <strong id="res-crowd"></strong></p>
-        <nav class="menu">
-          <button class="primary" id="res-retry" data-action="retry">Play again</button>
-          <div class="row">
-            <button id="res-level" data-action="play">Choose level</button>
-            <button id="res-practice" data-action="practice" hidden>Practice menu</button>
-            <button data-action="title">Title</button>
-          </div>
-        </nav>
+        <div class="res-main">
+          <p class="eyebrow" id="res-song"></p>
+          <div class="grade" id="res-grade">A</div>
+          <p class="best-flag" id="res-best" hidden>New best</p>
+          <dl class="stats">
+            <div>
+              <dt>Score</dt>
+              <dd id="res-score">0</dd>
+            </div>
+            <div>
+              <dt>Accuracy</dt>
+              <dd id="res-acc">0%</dd>
+            </div>
+            <div>
+              <dt>Max combo</dt>
+              <dd id="res-combo">0</dd>
+            </div>
+            <div>
+              <dt>Freestyle</dt>
+              <dd id="res-free">0</dd>
+            </div>
+          </dl>
+        </div>
+        <div class="res-more">
+          <p class="counts" id="res-counts"></p>
+          <p class="timing" id="res-timing"></p>
+          <div class="pad-timing" id="res-pads" aria-label="Average timing on each pad"></div>
+          <p class="crowd">The crowd: <strong id="res-crowd"></strong></p>
+          <nav class="menu">
+            <button class="primary" id="res-retry" data-action="retry">Play again</button>
+            <div class="row">
+              <button id="res-level" data-action="play">Choose level</button>
+              <button id="res-practice" data-action="practice" hidden>Practice menu</button>
+              <button data-action="title">Title</button>
+            </div>
+          </nav>
+        </div>
       </section>
     </main>
 
     <p class="countdown" id="countdown" hidden aria-live="assertive"></p>
     <p class="preparing" id="preparing" hidden aria-live="polite"></p>
-    <p class="rotate-hint">Turn your phone sideways for bigger pads</p>
     <pre class="debug" id="debug" hidden></pre>
   </body>
 </html>

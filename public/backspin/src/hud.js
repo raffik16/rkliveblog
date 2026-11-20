@@ -80,6 +80,7 @@ const LOOP_W = 56
 const LOOP_H = 40
 const LOOP_GAP = 8
 const PAUSE_R = 17
+const STACKED_BAND = 70 // where the score and the hype meter end, at the top of the screen
 const TAP_SECONDS = 0.32 // how long a click's ring takes to burst and fade
 const DISPLAY = '"Unbounded", "Arial Black", system-ui, sans-serif'
 const MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace'
@@ -229,15 +230,19 @@ export class Hud {
       mark.scratch = n.type === 'scratch'
       if (e.grade !== 'miss') this.comboPulse = 1
     } else if (e.kind === 'boost') {
-      const g = layout.grid
-      this.floater('HYPE BOOST  ×2', COLORS.lime, layout.w / 2, g.top * 0.62)
+      this.floater('HYPE BOOST  ×2', COLORS.lime, layout.w / 2, above(layout, 0.62))
     } else if (e.kind === 'free') {
-      // Freestyle calls take turns between three spots, so two in a row never overlap
+      // Freestyle calls take turns between three spots, so two in a row never overlap. They go
+      // above the pads, under the freestyle's banner, where there's room for that; on a short
+      // screen they go over the pads instead (the freestyle has no notes to cover).
       const color = e.points < 0 ? COLORS.red : e.label === 'VARIETY!' ? COLORS.lime : COLORS.cyan
       const slot = this.freeSlot++ % 3
       const g = layout.grid
       const x = layout.w / 2 + (slot - 1) * (g.right - g.left) * 0.3
-      const y = g.top * (0.78 + 0.08 * (slot % 2))
+      const roomy = g.top - above(layout, 0) > 150
+      const y = roomy
+        ? above(layout, 0.78 + 0.08 * (slot % 2))
+        : g.top + (g.bottom - g.top) * (0.32 + 0.16 * (slot % 2))
       const sign = e.points > 0 ? '+' : ''
       this.floater(`${e.label}  ${sign}${e.points}`, color, x, y)
     }
@@ -302,6 +307,36 @@ export class Hud {
     if (s.live && !keys) this.drawPause(layout)
     this.drawFloaters(dt)
     this.drawTaps(dt)
+  }
+
+  /**
+   * Lines of text (in the current font) no wider than `width`: each line as it is if it fits,
+   * or broken into parts at its dots, as many parts to a line as fit.
+   */
+  wrap(lines, width) {
+    const g = this.g
+    const key = `${lines.join('|')}@${Math.round(width)}`
+    if (this.wrapped && this.wrapped.key === key) return this.wrapped.lines
+    const out = []
+    for (const line of lines) {
+      if (g.measureText(line).width <= width) {
+        out.push(line)
+        continue
+      }
+      let now = ''
+      for (const part of line.split(/\s+·\s+/)) {
+        const next = now ? `${now}  ·  ${part}` : part
+        if (now && g.measureText(next).width > width) {
+          out.push(now)
+          now = part
+        } else {
+          now = next
+        }
+      }
+      if (now) out.push(now)
+    }
+    this.wrapped = { key, lines: out }
+    return out
   }
 
   /** Where the things on the top right end: left of the pause button, when there is one. */
@@ -483,13 +518,22 @@ export class Hud {
     }
     if (full && s.live) this.place(this.boostButton, mx - 12, 2, mw + 16, my + 46)
 
-    // Combo, above the pads, pulsing on each hit
+    // Freestyle coming, or on
+    let soon = null
+    if (!free) {
+      const list = game.chart.freestyle
+      for (let i = 0; i < list.length; i++) {
+        if (list[i].start > t && list[i].start - t < BEAT * 4) soon = list[i]
+      }
+    }
+
+    // Combo, above the pads, pulsing on each hit (stacked, the band above the pads only has room
+    // for the freestyle's warning while it shows)
     this.comboPulse = Math.max(0, this.comboPulse - dt * 5)
-    const top = L.grid.top
     g.textAlign = 'center'
     g.textBaseline = 'middle'
-    if (game.combo >= 4 && !free) {
-      const y = top * 0.72
+    if (game.combo >= 4 && !free && !(soon && L.stacked)) {
+      const y = above(L, L.stacked ? 0.62 : 0.72)
       const k = this.reduced ? 1 : 1 + 0.12 * this.comboPulse
       g.globalAlpha = 0.92
       g.fillStyle = COLORS.white
@@ -518,15 +562,8 @@ export class Hud {
     }
 
     // Freestyle: a warning as it comes, then the banner, the running total and beats left
-    let soon = null
-    if (!free) {
-      const list = game.chart.freestyle
-      for (let i = 0; i < list.length; i++) {
-        if (list[i].start > t && list[i].start - t < BEAT * 4) soon = list[i]
-      }
-    }
     if (free || soon) {
-      const y = top * 0.42
+      const y = above(L, L.stacked ? 0.4 : 0.42)
       const pulse = this.reduced ? 0 : Math.pow(1 - ((((t / BEAT) % 1) + 1) % 1), 3)
       g.font = this.font.banner
       g.fillStyle = COLORS.lime
@@ -558,8 +595,9 @@ export class Hud {
     g.fillText('SANDBOX', 18, 16)
     g.font = this.font.mono
     g.fillStyle = COLORS.dim
-    g.fillText(text[0], 18, 22 + this.big)
-    g.fillText(text[1], 18, 38 + this.big)
+    // On a narrow screen (a phone held upright) each line breaks where it has a dot
+    const lines = this.wrap(text, this.rightEdge(s, L.w) - 18)
+    for (let i = 0; i < lines.length; i++) g.fillText(lines[i], 18, 22 + this.big + i * 16)
     if (s.midi) {
       g.textAlign = 'right'
       g.font = this.font.monoSmall
@@ -574,7 +612,9 @@ export class Hud {
     const d = L.decks[1]
     const w = Math.max(LOOP_W * 3 + LOOP_GAP * 2, g.measureText(text4).width + 28)
     const x = d.x - w / 2
-    const y = bottom + 8
+    // Under the loops, or above the deck if the screen ends first (a phone held sideways)
+    let y = bottom + 8
+    if (y + 30 > L.h - 2) y = d.y - d.r * 1.32 - 38
     roundRect(g, x, y, w, 30, 10)
     g.fillStyle = s.autoPads ? 'rgba(12, 8, 22, 0.55)' : 'rgba(216, 255, 60, 0.16)'
     g.fill()
@@ -673,6 +713,16 @@ export class Hud {
     }
     g.globalAlpha = 1
   }
+}
+
+/**
+ * A height in the space above the pads, as a share of it: from the top of the screen, or
+ * stacked (a narrow screen held upright, where the score and the hype meter take the width)
+ * from under them.
+ */
+function above(L, share) {
+  const from = L.stacked ? STACKED_BAND : 0
+  return from + (L.grid.top - from) * share
 }
 
 /** The next scratch note still to come (for the arrow by the record). */

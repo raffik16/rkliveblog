@@ -84,6 +84,14 @@ export class AudioEngine {
       await this.ctx.resume()
       return
     }
+    // An iPhone plays a web page's sound through the ringer, so with its silent switch on the
+    // game would be silent. Saying the page plays media (Safari 17 and later) uses the media
+    // volume instead, like a video would.
+    try {
+      if (navigator.audioSession) navigator.audioSession.type = 'playback'
+    } catch {
+      // not this browser
+    }
     let ctx
     try {
       ctx = new AudioContext({ sampleRate: SAMPLE_RATE, latencyHint: 'interactive' })

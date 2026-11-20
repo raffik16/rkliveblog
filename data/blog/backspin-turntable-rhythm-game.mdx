@@ -1,7 +1,7 @@
 ---
 title: 'BACKSPIN: Building a Beat-Pad Rhythm Game in the Browser'
 date: '2026-11-18'
-lastmod: '2026-11-19'
+lastmod: '2026-11-20'
 tags: ['web-audio', 'game-dev', 'html5-games', 'javascript', 'threejs']
 draft: false
 summary: 'Eight beat pads, a turntable and a 3D club: a rhythm game to practise finger drumming on a MIDI pad controller, with every sound synthesized in code.'
@@ -94,7 +94,9 @@ Safari has no Web MIDI, so on a Mac a pad controller needs Chrome, Edge or Firef
 
 The game starts out on whatever suits the device. Where the main pointer is a finger, on a phone or a tablet, that's touch, and on a computer it's the keyboard. You can change it when you pick a level, and in Practice and Settings. The choice only offers what the device has: Mouse and Hybrid when there's a mouse or a trackpad, and Touch when there's a touch screen, which some laptops have as well. Keyboard is always there, since a page can't tell whether a keyboard is plugged in. Once you pick one, it sticks.
 
-On a touch screen the club itself is the controller. The scene works out where each pad, the record and the crossfader land on screen, and every touch is tested against that. Each finger is its own pointer, so you can drum with one hand and scratch with the other, and where the screen measures how hard you press, that sets the velocity. Upright, a phone makes the pads small, so the game asks you to turn it sideways.
+On a touch screen the club itself is the controller. The scene works out where each pad, the record and the crossfader land on screen, and every touch is tested against that. Each finger is its own pointer, so you can drum with one hand and scratch with the other, and where the screen measures how hard you press, that sets the velocity.
+
+A phone or a tablet can be held either way up, and the club rearranges itself to suit. Side by side, with a deck either side of the pads, the rig is about twice as wide as it is tall, so on an upright phone it shrank until the pads were 41 pixels across. Held upright, the rig now stacks: the crossfader goes under the pads and the two decks under that. The scene works out how big the pads could be in each arrangement, leaving room for the score along the top and the labels under the decks, and takes whichever makes them bigger. An upright iPhone's pads are now 69 pixels across, and an upright iPad's 127, up from 82. Held sideways, the rig fills the screen more tightly than it did, so an iPhone's pads grew from 62 to 75 pixels. On Android and on an iPad a run goes full screen, so the browser's bars don't take room and a swipe from the edge can't scroll the page or go back. Safari's double-tap zoom and its magnifier are switched off over the club, and on an iPhone the game asks to play as media, so the silent switch doesn't mute it.
 
 A touch screen has no **Space**, **Esc** or number keys, though, so everything those keys do has a button on screen too. The hype meter is the boost button: tap it when it's full. A pause button sits next to it. The three loops sit under the Beat Deck as buttons, the playing one lit, so you can switch them in the freestyle, and the Sandbox adds one that hands you the drums. Each button goes through the same code as the key it stands in for, so tapping the meter boosts exactly as **Space** does. The labels change to match: the pads and the crossfader lose their letters, and the prompts say TAP or CLICK where they would name a key.
 
@@ -352,6 +354,8 @@ At the end you get a grade from your accuracy (S at 95% or better, down to D) an
 The first version of BACKSPIN was drawn on a 2D canvas: a note highway seen in perspective. Eight pads in two rows don't fit that picture. Put eight lanes side by side and the grid on screen no longer looks like the grid under your fingers. Put the top row's lanes behind the bottom row's and the notes cover each other.
 
 So the camera looks straight down a tunnel, level with the middle of the grid, and each pad is a gate at the near end. A note appears 64 units away, near the vanishing point, and flies straight at its gate, taking two seconds. Seen head-on, the top row's notes climb as they come and the bottom row's drop, so the rows never cross, and a note is due exactly when it fills its gate. Its distance is worked out every frame from the judged song time, `z = -(note.time - now) * 32`, so a note can't drift away from the music.
+
+That rule decides how the club fits a screen. When the rig stacks on an upright phone, it has to sit higher on the screen, but tilting the camera down at it would make the lanes converge somewhere other than the middle of the grid, and the top row's notes would start flying across the bottom row. So the camera never turns. The picture is moved with a lens shift instead (`camera.setViewOffset` in three.js), the way a tilt-shift lens keeps a building's walls parallel: the whole frame slides up the screen, and the lanes still meet in the middle of the grid.
 
 Everything that moves comes from a fixed pool that is rewritten in place every frame: an instanced mesh for each kind of thing (note tiles, arrows, pad frames, light beams, lasers) and one buffer of 700 points for the sparks. Nothing is created while a song plays, so the garbage collector has nothing to stop for. A busy frame from the final section is 32 draw calls and about 8,500 triangles, plus 15 more calls for the glow and the edge smoothing.
 
