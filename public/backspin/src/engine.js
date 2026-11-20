@@ -543,7 +543,7 @@ export class AudioEngine {
 
 /**
  * iPhones and iPads play a page's Web Audio on the ringer's channel, so with the silent switch on
- * (or silent mode, on an iPad) the whole game is silent, with no sign why. Safari 17 and later
+ * (or silent mode, on an iPad) the whole game is silent, with no sign why. Safari 16.4 and later
  * let a page say it plays media (navigator.audioSession), and then it follows the media volume,
  * like a video. Before that, the way round it is an HTML <audio> element playing alongside:
  * while one plays, iOS puts the page's Web Audio on the media channel too. Its track is a second
