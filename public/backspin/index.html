@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      html {
+        background: #07050c;
+        color-scheme: dark;
+      }
+    </style>
+    <script>
+      // Served at /backspin (no trailing slash), relative links would point one folder up.
+      // A <base> for this folder fixes that; it has to come before any of them. The stylesheet
+      // and the game's script are added here too, after the <base>: written in the markup, the
+      // browser's preload scanner would fetch them from the wrong folder before this runs.
+      ;(function () {
+        var path = location.pathname
+        if (!/\/$|\.html$/.test(path)) {
+          var base = document.createElement('base')
+          base.href = path + '/'
+          document.head.appendChild(base)
+        }
+        var css = document.createElement('link')
+        css.rel = 'stylesheet'
+        css.href = 'style.css'
+        css.setAttribute('blocking', 'render')
+        document.head.appendChild(css)
+        var preload = document.createElement('link')
+        preload.rel = 'modulepreload'
+        preload.href = 'src/main.js'
+        document.head.appendChild(preload)
+        // The game reads the page as it starts, so it runs once the page is parsed
+        document.addEventListener('DOMContentLoaded', function () {
+          var main = document.createElement('script')
+          main.type = 'module'
+          main.src = 'src/main.js'
+          document.head.appendChild(main)
+        })
+      })()
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BACKSPIN · a beat-pad rhythm game</title>
+    <meta
+      name="description"
+      content="A beat-pad rhythm game with a turntable. Drum eight pads, scratch the record, win the crowd: keys, mouse, MIDI pads or touch. Every sound is made in code."
+    />
+    <link rel="canonical" href="https://me.raffi.website/backspin" />
+    <meta name="theme-color" content="#07050c" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="BACKSPIN · a beat-pad rhythm game" />
+    <meta
+      property="og:description"
+      content="Eight beat pads and a turntable in a 3D club. Practise with a MIDI pad controller, your keyboard or a touch screen. Every sound is synthesized in code."
+    />
+    <meta property="og:url" content="https://me.raffi.website/backspin" />
+    <meta property="og:image" content="https://me.raffi.website/static/images/og/backspin.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%2307050c' stroke='%23ff2bd6' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%2322e4ff'/%3E%3Ccircle cx='16' cy='16' r='1.5' fill='%2307050c'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800;900&display=swap"
+    />
+  </head>
+  <body>
+    <canvas
+      id="stage"
+      aria-label="The club: notes flying down a tunnel to eight pads, two turntables and a crossfader"
+    ></canvas>
+    <canvas id="hud" aria-hidden="true"></canvas>
+
+    <main id="ui">
+      <section class="screen" data-screen="loading" aria-live="polite">
+        <h1 class="logo">BACK<span>SPIN</span></h1>
+        <p class="status" id="load-status">Pressing the record…</p>
+        <div class="bar" aria-hidden="true"><span id="load-bar"></span></div>
+        <p class="fine" id="load-pct">0%</p>
+        <noscript><p class="status error">BACKSPIN needs JavaScript.</p></noscript>
+      </section>
+
+      <section class="screen" data-screen="title" hidden>
+        <h1 class="logo">BACK<span>SPIN</span></h1>
+        <p class="tag">Drum the pads, scratch the record, win the crowd.</p>
+        <nav class="menu" aria-label="Main menu">
+          <button class="primary" data-action="play">Play</button>
+          <div class="row">
+            <button data-action="practice">Practice</button>
+            <button data-action="sandbox">Sandbox</button>
+          </div>
+          <div class="row">
+            <button data-action="calibrate">Calibrate</button>
+            <button data-action="settings">Settings</button>
+          </div>
+          <button data-action="how">How to play</button>
+        </nav>
+        <p class="note" id="touch-note" hidden>
+          On a touch screen the club is the controller: tap the pads (with as many fingers as you
+          like), drag a finger up and down on the record, tap the fader, and tap the hype meter when
+          it’s full. Hold a phone sideways; a tablet gives you the biggest pads.
+        </p>
+        <p class="fine" id="offset-line"></p>
+        <p class="fine">
+          Every sound is synthesized in your browser as the page loads: no samples, no audio files.
+          <a href="https://me.raffi.website/blog/backspin-turntable-rhythm-game">How it’s made</a>
+        </p>
+      </section>
+
+      <section class="screen wide" data-screen="how" hidden>
+        <h2>How to play</h2>
+        <p>
+          Notes fly down the tunnel to eight pads. Hit a note’s pad as it reaches the pad’s frame.
+          The bottom row is the drum kit and the top row is for the bigger moments. Every pad is an
+          instrument: it always sounds when you hit it, and the song’s own hits for your part only
+          play when you play them.
+        </p>
+        <table class="keys">
+          <tbody>
+            <tr>
+              <td><kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> <kbd>F</kbd></td>
+              <td>Kick, snare, open hat, clap (the bottom row)</td>
+            </tr>
+            <tr>
+              <td><kbd>Q</kbd> <kbd>W</kbd> <kbd>E</kbd> <kbd>R</kbd></td>
+              <td>Laser, crash, vox, horn (the top row)</td>
+            </tr>
+            <tr>
+              <td>
+                <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> <kbd>;</kbd> and <kbd>U</kbd>…<kbd>P</kbd>
+              </td>
+              <td>The same pads under your right hand</td>
+            </tr>
+            <tr>
+              <td><kbd>Hold mouse</kbd> + move</td>
+              <td>Scratch: up plays forward, down plays back</td>
+            </tr>
+            <tr>
+              <td><kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd></td>
+              <td>Crossfader left, centre, right</td>
+            </tr>
+            <tr>
+              <td><kbd>Space</kbd></td>
+              <td>Hype Boost, when the meter is full</td>
+            </tr>
+            <tr>
+              <td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></td>
+              <td>Switch loops (freestyle and sandbox)</td>
+            </tr>
+            <tr>
+              <td><kbd>4</kbd></td>
+              <td>The song’s own pad hits on or off (sandbox)</td>
+            </tr>
+            <tr>
+              <td><kbd>Esc</kbd></td>
+              <td>Pause</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Round notes come down the left lane to the record. Hold the mouse button and move the
+          mouse the way the arrows point for as long as the note lasts. A bar under the pads is a
+          crossfader cut: press <kbd>Z</kbd>, <kbd>X</kbd> or <kbd>C</kbd> as it lands.
+        </p>
+        <p>
+          <strong>Beat pads.</strong> Plug in a MIDI pad controller and connect it in Settings. Its
+          first eight pads are the game’s eight, in the same places (notes 36 to 43, bottom row
+          first), and how hard you hit sets how loud the pad plays. Any pad can be taught another
+          note.
+        </p>
+        <p>
+          <strong>Mouse, Hybrid, touch.</strong> The game starts on whatever suits your device, and
+          you can change it when you pick a level. With Mouse, the mouse plays it all: click the
+          pads, hold the record and drag it up and down, click or slide the fader, click the hype
+          meter to boost, and <strong>❚❚</strong> pauses. One pointer can’t be in two places, so
+          notes that land together or too close to reach are left to the song. Hybrid plays six
+          pads: <strong>A</strong>, <strong>S</strong> and <strong>D</strong> under your other hand
+          for the kick, snare and clap, and the mouse for the crash, vox and horn above them. On a
+          touch screen it’s all taps, with every finger you’ve got.
+        </p>
+        <p>
+          <strong>Practice.</strong> Pick a section and loop it at 60, 75 or 90% speed. Your part
+          plays quietly underneath as a guide, every hit shows how many milliseconds early or late
+          it was, and the results show your timing pad by pad.
+        </p>
+        <p>
+          Good hits build the crowd’s hype. When the meter is full, <kbd>Space</kbd> doubles your
+          score for eight beats. In the freestyle there are no notes at all: drum, scratch in time,
+          switch loops, cut the crossfader, mix it up, and don’t let the music sit there on its own.
+        </p>
+        <nav class="menu"><button class="primary" data-action="back">Back</button></nav>
+      </section>
+
+      <section class="screen" data-screen="settings" hidden>
+        <h2>Settings</h2>
+        <div class="field" data-controls>
+          <span>Play with</span>
+          <div class="chips" role="group" aria-label="Play with">
+            <button data-action="controls" data-value="keys">Keyboard</button>
+            <button data-action="controls" data-value="mouse">Mouse</button>
+            <button data-action="controls" data-value="hybrid">Hybrid</button>
+            <button data-action="controls" data-value="touch">Touch</button>
+          </div>
+          <small>
+            Keyboard: the keys play the pads and the mouse turns the record. Mouse: click the pads,
+            hold the record and drag it, click or slide the fader, no keys needed. Hybrid: six pads,
+            with A, S and D for the kick, snare and clap, and the mouse for the rest. Touch: tap
+            with as many fingers as you like. It starts on whichever suits your device.
+          </small>
+        </div>
+        <div class="field midi">
+          <span>MIDI pads <output id="midi-state">Off</output></span>
+          <button id="midi-connect" data-action="midiConnect">Connect a pad controller</button>
+          <small id="midi-none" hidden>
+            This browser has no Web MIDI. Chrome, Edge, Firefox and Opera have it.
+          </small>
+          <small id="midi-denied" hidden>
+            The browser said no. Allow MIDI for this site in the browser’s site settings, then try
+            again.
+          </small>
+          <div class="midi-on" id="midi-on" hidden>
+            <p class="devices" id="midi-devices"></p>
+            <div
+              class="learn"
+              id="midi-learn"
+              role="group"
+              aria-label="The note each pad plays"
+            ></div>
+            <small>
+              Hit a pad on your controller to try it. To change which pad plays what, pick a pad
+              here, then hit the one you want for it.
+            </small>
+            <p class="fine" id="midi-last"></p>
+            <button class="link" data-action="midiReset">Back to the usual layout</button>
+          </div>
+        </div>
+        <label class="field">
+          <span>Scratch sensitivity <output id="sens-value">1.00×</output></span>
+          <input id="sensitivity" type="range" min="0.25" max="3" step="0.05" value="1" />
+          <small>How far the record turns for each bit of mouse or finger movement.</small>
+        </label>
+        <div class="field">
+          <span>Audio offset <output id="offset-value">0 ms</output></span>
+          <div class="row">
+            <button data-action="offsetDown" aria-label="Offset 5 ms earlier">−5 ms</button>
+            <button data-action="offsetUp" aria-label="Offset 5 ms later">+5 ms</button>
+          </div>
+          <small>How late your hits land after the sound. Calibrate to measure it.</small>
+        </div>
+        <nav class="menu">
+          <button data-action="calibrate">Calibrate</button>
+          <button class="primary" data-action="back">Done</button>
+        </nav>
+      </section>
+
+      <section class="screen" data-screen="calibrate" hidden>
+        <h2>Calibrate</h2>
+        <p>
+          You’ll hear four count-in clicks, then eight more. Tap <kbd>Space</kbd> or the circle on
+          each of the eight. Headphones on? Calibrate with them on.
+        </p>
+        <button class="pad" id="cal-pad" type="button" aria-label="Tap here on each click"></button>
+        <div class="slots" id="cal-slots" aria-live="polite">
+          <span></span><span></span><span></span><span></span><span></span><span></span><span></span
+          ><span></span>
+        </div>
+        <p class="status" id="cal-status"></p>
+        <nav class="menu">
+          <button class="primary" id="cal-start" data-action="calStart">Start</button>
+          <button class="primary" id="cal-save" data-action="calSave" hidden>Save</button>
+          <button data-action="back">Back</button>
+        </nav>
+      </section>
+
+      <section class="screen" data-screen="difficulty" hidden>
+        <h2>Low Light</h2>
+        <p class="tag">95 BPM · about a minute and a half</p>
+        <div class="field" data-controls>
+          <span>Play with</span>
+          <div class="chips" role="group" aria-label="Play with">
+            <button data-action="controls" data-value="keys">Keyboard</button>
+            <button data-action="controls" data-value="mouse">Mouse</button>
+            <button data-action="controls" data-value="hybrid">Hybrid</button>
+            <button data-action="controls" data-value="touch">Touch</button>
+          </div>
+          <small data-note-for="mouse" hidden>
+            Click the pads, drag the record, click the fader. Notes one pointer can’t reach in time
+            are left to the song.
+          </small>
+          <small data-note-for="hybrid" hidden>
+            Six pads: A, S and D play the kick, snare and clap, and the mouse the crash, vox and
+            horn. The song plays the hats, and any notes the mouse can’t reach in time.
+          </small>
+        </div>
+        <nav class="menu levels" aria-label="Choose a level">
+          <button data-action="level" data-level="easy">
+            <strong>Easy</strong><span class="count"></span><span class="best"></span>
+          </button>
+          <button class="primary" data-action="level" data-level="medium">
+            <strong>Medium</strong><span class="count"></span><span class="best"></span>
+          </button>
+          <button data-action="level" data-level="hard">
+            <strong>Hard</strong><span class="count"></span><span class="best"></span>
+          </button>
+        </nav>
+        <p class="note" id="cal-hint">
+          Not calibrated yet. Timing is fairer if you
+          <button class="link" data-action="calibrate">calibrate</button> first.
+        </p>
+        <nav class="menu"><button data-action="back">Back</button></nav>
+      </section>
+
+      <section class="screen" data-screen="practice" hidden>
+        <h2>Practice</h2>
+        <p class="tag">Loop one part, slower, with your part played quietly to follow.</p>
+        <div class="field">
+          <span>Section</span>
+          <div class="chips" role="group" aria-label="Section">
+            <button data-action="practiceSet" data-key="section" data-value="verse">Verse</button>
+            <button data-action="practiceSet" data-key="section" data-value="scratch">
+              Scratch
+            </button>
+            <button data-action="practiceSet" data-key="section" data-value="freestyle">
+              Freestyle
+            </button>
+            <button data-action="practiceSet" data-key="section" data-value="final">Final</button>
+            <button data-action="practiceSet" data-key="section" data-value="song">
+              Whole song
+            </button>
+          </div>
+        </div>
+        <div class="field">
+          <span>Speed</span>
+          <div class="chips" role="group" aria-label="Speed">
+            <button data-action="practiceSet" data-key="speed" data-value="60">60%</button>
+            <button data-action="practiceSet" data-key="speed" data-value="75">75%</button>
+            <button data-action="practiceSet" data-key="speed" data-value="90">90%</button>
+            <button data-action="practiceSet" data-key="speed" data-value="100">100%</button>
+          </div>
+        </div>
+        <div class="field" id="practice-times">
+          <span>Times through</span>
+          <div class="chips" role="group" aria-label="Times through">
+            <button data-action="practiceSet" data-key="times" data-value="1">1</button>
+            <button data-action="practiceSet" data-key="times" data-value="2">2</button>
+            <button data-action="practiceSet" data-key="times" data-value="4">4</button>
+            <button data-action="practiceSet" data-key="times" data-value="8">8</button>
+          </div>
+        </div>
+        <div class="field">
+          <span>Level</span>
+          <div class="chips" role="group" aria-label="Level">
+            <button data-action="practiceSet" data-key="level" data-value="easy">Easy</button>
+            <button data-action="practiceSet" data-key="level" data-value="medium">Medium</button>
+            <button data-action="practiceSet" data-key="level" data-value="hard">Hard</button>
+          </div>
+        </div>
+        <div class="field" data-controls>
+          <span>Play with</span>
+          <div class="chips" role="group" aria-label="Play with">
+            <button data-action="controls" data-value="keys">Keyboard</button>
+            <button data-action="controls" data-value="mouse">Mouse</button>
+            <button data-action="controls" data-value="hybrid">Hybrid</button>
+            <button data-action="controls" data-value="touch">Touch</button>
+          </div>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="practice-guide" data-action="practiceGuide" />
+          <span>Play my part quietly as a guide</span>
+        </label>
+        <nav class="menu">
+          <button class="primary" data-action="practiceStart">Start practice</button>
+          <button data-action="back">Back</button>
+        </nav>
+      </section>
+
+      <section class="screen" id="pause" data-screen="pause" hidden>
+        <h2 id="pause-title">Paused</h2>
+        <nav class="menu">
+          <button class="primary" data-action="resume">Resume</button>
+          <button data-action="restart">Restart</button>
+          <button data-action="settings">Settings</button>
+          <button data-action="title">Quit</button>
+        </nav>
+      </section>
+
+      <section class="screen results" data-screen="results" hidden>
+        <p class="eyebrow" id="res-song"></p>
+        <div class="grade" id="res-grade">A</div>
+        <p class="best-flag" id="res-best" hidden>New best</p>
+        <dl class="stats">
+          <div>
+            <dt>Score</dt>
+            <dd id="res-score">0</dd>
+          </div>
+          <div>
+            <dt>Accuracy</dt>
+            <dd id="res-acc">0%</dd>
+          </div>
+          <div>
+            <dt>Max combo</dt>
+            <dd id="res-combo">0</dd>
+          </div>
+          <div>
+            <dt>Freestyle</dt>
+            <dd id="res-free">0</dd>
+          </div>
+        </dl>
+        <p class="counts" id="res-counts"></p>
+        <p class="timing" id="res-timing"></p>
+        <div class="pad-timing" id="res-pads" aria-label="Average timing on each pad"></div>
+        <p class="crowd">The crowd: <strong id="res-crowd"></strong></p>
+        <nav class="menu">
+          <button class="primary" id="res-retry" data-action="retry">Play again</button>
+          <div class="row">
+            <button id="res-level" data-action="play">Choose level</button>
+            <button id="res-practice" data-action="practice" hidden>Practice menu</button>
+            <button data-action="title">Title</button>
+          </div>
+        </nav>
+      </section>
+    </main>
+
+    <p class="countdown" id="countdown" hidden aria-live="assertive"></p>
+    <p class="preparing" id="preparing" hidden aria-live="polite"></p>
+    <p class="rotate-hint">Turn your phone sideways for bigger pads</p>
+    <pre class="debug" id="debug" hidden></pre>
+  </body>
+</html>

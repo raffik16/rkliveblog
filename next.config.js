@@ -1,3 +1,5 @@
+// A CommonJS config file: require() is how it loads things
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { withContentlayer } = require('next-contentlayer2')
 const siteMetadata = require('./data/siteMetadata')
 
@@ -16,6 +18,12 @@ const ContentSecurityPolicy = `
   font-src 'self';
   frame-src giscus.app www.googletagmanager.com
 `
+
+// BACKSPIN (public/backspin) is a static page that loads its display face from Google Fonts
+const BackspinPolicy = ContentSecurityPolicy.replace(
+  "style-src 'self' 'unsafe-inline';",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;"
+).replace("font-src 'self';", "font-src 'self' https://fonts.gstatic.com;")
 
 const securityHeaders = [
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
@@ -105,7 +113,22 @@ module.exports = () => {
           source: '/llms-full.txt',
           headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
         },
+        // The BACKSPIN game: the site's policy plus Google Fonts (a later header with the same
+        // key replaces the earlier one)
+        {
+          source: '/backspin',
+          headers: [{ key: 'Content-Security-Policy', value: BackspinPolicy.replace(/\n/g, '') }],
+        },
+        {
+          source: '/backspin/:path*',
+          headers: [{ key: 'Content-Security-Policy', value: BackspinPolicy.replace(/\n/g, '') }],
+        },
       ]
+    },
+    // BACKSPIN is plain HTML in public/backspin. Next.js serves public files as they are but
+    // doesn't map a folder to its index.html, so /backspin is pointed at it here.
+    async rewrites() {
+      return [{ source: '/backspin', destination: '/backspin/index.html' }]
     },
     webpack: (config, options) => {
       config.module.rules.push({

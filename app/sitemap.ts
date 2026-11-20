@@ -23,6 +23,7 @@ const OTHER_PAGES = [
   'dream',
   'chaos',
   'chaos/hotdog',
+  'backspin',
 ]
 
 const day = (date: string) => new Date(date).toISOString().slice(0, 10)

@@ -15,6 +15,16 @@ export interface Demo {
 // this list, and demos from the same day keep the order they're written in.
 const demos: Demo[] = [
   {
+    slug: 'backspin',
+    title: 'BACKSPIN',
+    href: '/backspin',
+    postHref: '/blog/backspin-turntable-rhythm-game',
+    date: '2026-11-18',
+    description:
+      'A beat-pad rhythm game with a turntable, in a 3D club. Notes fly down a tunnel to eight pads: play them on the keyboard, with the mouse or both at once, on a MIDI pad controller or on a touch screen, scratch the record when the round notes come, cut the crossfader and freestyle for eight bars. Practise any part of the song slowed down, with every hit timed to the millisecond. Every sound is synthesized in code as the page loads.',
+    tech: ['three.js', 'Web Audio', 'AudioWorklet', 'Web MIDI'],
+  },
+  {
     slug: 'forty-winks',
     title: 'Forty Winks',
     href: '/dream',

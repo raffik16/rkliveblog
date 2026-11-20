@@ -1,0 +1,426 @@
+---
+title: 'BACKSPIN: Building a Beat-Pad Rhythm Game in the Browser'
+date: '2026-11-18'
+lastmod: '2026-11-19'
+tags: ['web-audio', 'game-dev', 'html5-games', 'javascript', 'threejs']
+draft: false
+summary: 'Eight beat pads, a turntable and a 3D club: a rhythm game to practise finger drumming on a MIDI pad controller, with every sound synthesized in code.'
+images: ['/static/images/og/backspin.jpg']
+authors: ['default']
+layout: PostLayout
+---
+
+[**Play BACKSPIN**](/backspin)
+
+Eight pads sit in a two-by-four grid at the end of a tunnel, laid out like the pads on a drum machine: a kick, a snare, an open hat and a clap along the bottom, and a laser, a crash, a vocal and a horn section along the top. Notes fly down the tunnel towards them, and you hit each pad as its note fills it. Off to the left is a turntable, because some notes ask you to scratch the record, and under the pads is a crossfader, because some ask you to cut the sound.
+
+You can play the pads on the keyboard, with the mouse alone or with the mouse and three keys, with your fingers on a touch screen, or on a real pad controller plugged in over USB. That last one is the reason the game exists. Finger drumming takes practice, and the usual way to practise is to play along with a record and guess whether you were in time. BACKSPIN listens to the controller instead. It judges every hit against the beat on the audio clock, and at the end it tells you whether you rush or drag, by how many milliseconds, and on which pad. Practice mode slows any part of the song down and loops it.
+
+Every sound is synthesized in code while the page loads. There is no audio file anywhere: not the drums, not the horns, not the record you scratch. The club is drawn with three.js, the only library the game uses. This post covers how the pads, the practice mode and the record work, and how the club holds 60 frames a second.
+
+## How It Plays
+
+| Input                             | What it does                                                               |
+| --------------------------------- | -------------------------------------------------------------------------- |
+| **A S D F**                       | The bottom row of pads: kick, snare, open hat, clap                        |
+| **Q W E R**                       | The top row: laser, crash, vox, horn                                       |
+| **J K L ;** and **U I O P**       | The same eight pads under the right hand                                   |
+| A MIDI pad controller             | Its first eight pads are the game's eight; how hard you hit sets the level |
+| A touch screen                    | Tap the pads, drag the record, tap or slide the crossfader                 |
+| Just the mouse                    | The same with clicks, if you choose **Mouse** when you pick a level        |
+| **A**, **S**, **D** and the mouse | **Hybrid**: six pads, the drums on the keys and the mouse for the rest     |
+| Hold the mouse button, move       | Scratch: up plays the record forwards, down plays it backwards             |
+| **Z** / **X** / **C**             | Crossfader left, centre, right                                             |
+| **Space**                         | Hype boost, when the meter is full: double points for eight beats          |
+| **1** / **2** / **3**             | Switch loops (in the freestyle)                                            |
+| **Esc**                           | Pause                                                                      |
+
+The keys make the same shape as the pads on screen. **Q W E R** sits above **A S D F** just as the top row of pads sits above the bottom row, so your fingers learn a grid, not a list of letters.
+
+Pad notes are square tiles, each flying down its own lane to its own pad. Scratch notes are round. They fly down a lane of their own into the record, carrying arrows: move the record that way for as long as the note lasts. Fade notes are bars that slide in under the pads, with a marker over the notch where the crossfader should be when they land.
+
+There are two turntables. The left one, the Scratch Deck, holds the record, and it is silent unless you move it or hit the **VOX** pad, which plays the record's sung "ahh" from its cue point. The right one, the Beat Deck, plays the song and is never scratched. The crossfader between them decides how much of each you hear. With it all the way to the right the scratch deck is silent, so cutting the fader in the middle of a scratch chops the sound off. Real DJs give their scratches rhythm the same way.
+
+The song, "Low Light", is about 90 seconds of 95 BPM boom-bap in D minor: an intro, a verse of pads, a scratch section, eight bars of freestyle, a final section and an outro. The freestyle has no notes at all. You play whatever you like, and the crowd in front of the booth tells you how it is going.
+
+## You Play Part of the Song
+
+A rhythm game with drum pads has a problem that a game with abstract buttons doesn't. If the song plays its own kick drum and you hit the kick pad on top of it, you hear two kicks, and if you are ten milliseconds off, they flam. If the song leaves its kicks out, a miss leaves a hole, which is exactly the feedback you want. But then the song only sounds like a song when you play it perfectly, and on an easy level, where you only play some of the hits, it never does.
+
+So the song is split in two. The backing (the closed hats, the ghost notes, the bass and the chords) is rendered into four-bar loops that play whatever you do. The rest of the drums and the horns are the song's pad part: every kick, snare, clap, open hat and horn stab, scheduled one hit at a time on the audio clock. A pad note in the chart hands one of those hits to you, and that hit is silent unless you play it. Every hit the chart doesn't give you, the song plays itself. Stripped down, the scheduling is:
+
+```js
+for (const ev of loopEvents(loop)) {
+  const beat = base + ev.beat // counted from the start of the song
+  const yours = this.claimed.has(claimKey(ev.pad, beat)) // the chart gives this hit to you
+  if (yours && !this.guide) continue // so it only sounds when you play it
+  const src = ctx.createBufferSource()
+  src.buffer = this.sounds.pads[ev.pad]
+  src.connect(yours ? guide : pads) // with the practice guide on, your part plays quietly
+  src.start(start + beatTime(ev.beat))
+}
+```
+
+So every level sounds like the whole song when it is played well. Easy hands you 37 of the song's hits and Hard hands you 72, and the song plays the rest, so the groove under you is the same on every level. When you miss, there is a hole in the beat exactly where your hit should have been, which tells you more than the word MISS does.
+
+Your hits always sound, note or no note: a pad is an instrument. A hit on a note plays exactly what the song has there. The **HORN** pad always plays the stab that fits the chord of the moment, so even a stray horn hit is in key. A hit with no note near it during the charted parts is an extra. It costs a sliver of hype but never breaks your combo, and in the freestyle every hit counts. The laser, the crash and the vox aren't in the song's part at all. Only you play them.
+
+How hard you hit sets how loud the hit plays. A MIDI controller sends a velocity from 1 to 127 with every note, a touch screen that measures pressure gives a pressure, and a key plays at 85%. The level follows a gentle curve, `0.25 + 0.75 × velocity^0.8`, so the softest tap still plays at a quarter of full level: quiet, but never lost.
+
+## Pad Controllers Over Web MIDI
+
+Most pad controllers send the same MIDI notes out of the box: 36 to 43 (C1 to G1) from their first eight pads, starting at the bottom left, along the bottom row and then the row above. That is the order of the pads on screen, so most controllers need no setup at all. A controller with four rows of four sends 44 to 51 from its top two rows, and those wrap round onto the same eight pads, as does any other note. If yours sends something else, Settings has MIDI learn: pick a pad on screen, hit the pad you want for it, and the game remembers the note.
+
+```js
+message(e) {
+  const [status, note, velocity] = e.data
+  // A note on, on any channel (a note on with velocity 0 is really a note off)
+  if ((status & 0xf0) !== 0x90 || !velocity) return
+  this.onPad(this.padFor(note), e.timeStamp, velocity / 127)
+}
+
+padFor(note) {
+  const learned = this.map[note] // taught in Settings
+  if (learned !== undefined) return learned
+  return (((note - 36) % 8) + 8) % 8 // 36-43 are the eight pads, and other notes wrap round
+}
+```
+
+Two details matter more than they look. First, Web MIDI is only switched on when you press **Connect** in Settings. Asking for it shows a permission prompt, and nobody should get one just for opening a game. Once it has been allowed, the game asks the Permissions API on later visits and reconnects without a prompt. Second, every MIDI message carries a timestamp: when the browser received it, on the same clock as a key press. The game judges that time, not the moment its handler got round to running, so a hit that arrives while the page is busy drawing a frame is judged as early as it really was.
+
+Safari has no Web MIDI, so on a Mac a pad controller needs Chrome, Edge or Firefox.
+
+## Mouse, Hybrid and Touch
+
+The game starts out on whatever suits the device. Where the main pointer is a finger, on a phone or a tablet, that's touch, and on a computer it's the keyboard. You can change it when you pick a level, and in Practice and Settings. The choice only offers what the device has: Mouse and Hybrid when there's a mouse or a trackpad, and Touch when there's a touch screen, which some laptops have as well. Keyboard is always there, since a page can't tell whether a keyboard is plugged in. Once you pick one, it sticks.
+
+On a touch screen the club itself is the controller. The scene works out where each pad, the record and the crossfader land on screen, and every touch is tested against that. Each finger is its own pointer, so you can drum with one hand and scratch with the other, and where the screen measures how hard you press, that sets the velocity. Upright, a phone makes the pads small, so the game asks you to turn it sideways.
+
+A touch screen has no **Space**, **Esc** or number keys, though, so everything those keys do has a button on screen too. The hype meter is the boost button: tap it when it's full. A pause button sits next to it. The three loops sit under the Beat Deck as buttons, the playing one lit, so you can switch them in the freestyle, and the Sandbox adds one that hands you the drums. Each button goes through the same code as the key it stands in for, so tapping the meter boosts exactly as **Space** does. The labels change to match: the pads and the crossfader lose their letters, and the prompts say TAP or CLICK where they would name a key.
+
+You can play with just the mouse as well. Choose **Mouse** and the mouse stops being only the record: it plays the picture the way a finger does. Click a pad to hit it, hold the record and drag it up and down, click the crossfader or slide it, and click the meter, the loops and pause.
+
+The cursor tells you what a click will do. Over nothing it's a small white ring. Over a pad the ring grows and takes that pad's colour, and over the crossfader and the buttons it turns lime. Over the record it gets an up arrow and a down arrow, and it fills in while you hold the record. With the keyboard, where the mouse is only ever the record, it wears the arrows anywhere over the club, since a press anywhere takes hold of it. The cursors are drawn in code as the page loads, like everything else, but the game doesn't draw them on screen. Each one is a small image handed to the browser in CSS, so the operating system draws it, straight from the mouse. A cursor the game drew itself would always be a frame or more behind the mouse, and you'd feel that when aiming at a pad on the beat. The flash when a click lands is the game's: a ring bursts out from the cursor on the HUD, and a bigger one shows around your finger on a touch screen. That ring doesn't have to keep up with anything.
+
+One pointer can't be in two places, though. Medium and Hard have notes that land together, and hits that come the moment a scratch ends, with no time to get off the record. So with the mouse, each level goes through one more pass, and a note stays only if one pointer can get to it from the note before and on to the note after:
+
+```js
+// Can one pointer play note a and then note b? end(a) is the beat a scratch ends, or a's own beat
+const follows = (a, b) =>
+  target(a) === target(b)
+    ? b.beat > a.beat && b.beat >= end(a) // the same pad again, or the next scratch of a chain
+    : b.beat >= end(a) + 0.5 // half a beat to get to another pad, the record or the fader
+```
+
+The crossfader cuts and the scratches are placed first, then the pads in order of importance, each one only where it fits between the notes already placed. Easy already plays one thing at a time, so it keeps all 70 notes. Medium goes from 103 to 91 and Hard from 132 to 116. The song plays the hits the pass leaves out, so the groove stays whole, and mouse runs keep best scores of their own.
+
+**Hybrid** sits between the mouse and the keyboard, with six pads in three columns. Your left hand plays the bottom row on **A**, **S** and **D**, with **Space** under the thumb for the boost. The kick and the snare are on their keyboard keys, and the clap moves over to **D**, where the keyboard has the open hat: the hat has two notes in the whole song, and the clap has four on every level. The mouse plays the row above them, the crash, the vox and the horn, and the record and the crossfader as it does in Mouse mode. Those three are the pads with the most notes in the charts after the drums. The hat and the laser sit Hybrid out: their notes come out of its charts, and the song plays its hats itself. The hand on the keys can play while the mouse is busy, so every kick, snare and clap note stays, and only the mouse's notes go through the one-pointer pass. Easy has 66 notes, Medium 89 and Hard 115, and Hybrid runs keep their own best scores too.
+
+Clicks and taps don't have to land on the pad itself, because each pad answers a little past its edges. Between two pads, a pad's square stops halfway across the gap, where its neighbour's starts, so the squares meet but never overlap, and a click in a gap goes to the nearer pad. On the outside of the grid the squares reach a whole gap out, or half a gap along the bottom, where the crossfader is, and they all stop short of the record and the crossfader. That makes a pad between two others 16% wider to a click than it looks, and a pad at either end 24% wider.
+
+## Practice
+
+Practice loops one part of the song (the verse, the scratch section, the freestyle or the final section) one, two, four or eight times, or plays the whole song, at 60, 75, 90 or 100% speed, on any level. A bar of count-in clicks starts each run.
+
+The usual way to slow a song down is to time-stretch the audio, and it sounds like it: smeared drums and a warbling bass. BACKSPIN doesn't have to. The song is data (the chords, the drum patterns and the bass line are lists of 16th notes in a JavaScript file), and every sound is rendered from it, so the song at 71 BPM is just another render. The drums are one-shots and sound the same at any tempo, so only the loops are rendered again: three loops of three stems, plus the laser's echo and the boost's riser, which are timed in beats. On my laptop that takes about half a second, and each tempo is kept, so the next run at that speed starts straight away. It sounds like the band playing slower, because it is.
+
+The tempo itself is a pair of live module bindings. Trimmed down:
+
+```js
+export let BPM = 95
+export let BEAT = 60 / BPM
+
+export function setTempo(bpm) {
+  BPM = bpm
+  BEAT = 60 / bpm
+}
+```
+
+An ES module that imports `BEAT` sees the new value the moment it changes, so the judging, the notes on screen and the freestyle's grid all follow without being told. The one thing that keeps its own tempo is the record on the Scratch Deck. It is a record: the "ahh" lasts as long at any speed.
+
+Three things make practice different from playing:
+
+- **The guide.** With it on, your part of the song plays quietly underneath you, about 10 dB down, from the same scheduling as above. You hear where each hit should go, and yours lands on top of it.
+- **Milliseconds.** In a normal game, a hit that isn't Perfect says EARLY or LATE on the pad. In practice every hit shows its error, like −12 ms or +31 ms.
+- **No pressure.** Practice runs don't count towards best scores, so you can loop the hard bit at 60% as often as you like.
+
+After every run, practice or not, the results show how early or late you were on average and how widely your hits spread around that, and then the same average for each pad. If one finger drags, that is where it shows.
+
+## The Record Is a Playhead
+
+Hold the left mouse button down and your hand is on the record. Push the mouse up and the record plays forwards; pull it down and it plays backwards, at exactly the speed your hand moves. Rock it back and forth and you get the "wicka-wicka" of a scratch. Flick it hard and let go mid-flick, and the record spins on by itself and whirs to a stop.
+
+None of those sounds is a recording of a scratch. The record holds one short phrase, a sung "ahh" and a horn stab, and everything you hear is that phrase played forwards and backwards at the speed your hand gives it.
+
+A sample player usually starts a sound and lets it run to the end. A turntable works differently. The record is always there, and all that changes is where the needle is and how fast the record is moving under it. So the Scratch Deck is a _playhead_: a position in the record, in samples, with a fractional part, plus a speed. A speed of 1 is normal, 0 is stopped and −2 is backwards at double speed. Every sample, the speed is added to the position and the record is read at the new spot.
+
+That runs in an AudioWorklet, a small processor the browser calls on its audio thread for every 128 samples. Stripped down, the inner loop is:
+
+```js
+for (let i = 0; i < 128; i++) {
+  const target = this.mode === HAND ? this.handTarget(time) : this.mode === PLAY ? 1 : 0
+  this.speed += alpha * (target - this.speed) // a 5 ms smoother: no clicks, no zipper noise
+  this.pos += this.speed // in samples; a negative speed plays backwards
+  out[i] = this.read(this.pos, Math.abs(this.speed))
+}
+```
+
+The position is almost never a whole number. At a quarter speed the playhead spends four samples' worth of time between each pair of samples in the record. Picking the nearest sample would make the waveform a staircase, which you hear as a gritty buzz. So `read` draws a smooth curve through the four samples around the playhead and takes the value on it (Catmull-Rom interpolation):
+
+```js
+function cubic(d, pos) {
+  const i = pos | 0
+  const f = pos - i
+  const y0 = d[i - 1]
+  const y1 = d[i]
+  const y2 = d[i + 1]
+  const y3 = d[i + 2]
+  const c1 = 0.5 * (y2 - y0)
+  const c2 = y0 - 2.5 * y1 + 2 * y2 - 0.5 * y3
+  const c3 = 0.5 * (y3 - y0) + 1.5 * (y1 - y2)
+  return ((c3 * f + c2) * f + c1) * f + y1
+}
+```
+
+The worklet reports the playhead back to the page every 8 milliseconds, and the turntable on screen turns by that position, not by a timer. At normal speed it turns at 33⅓ rpm. When the sound stops the picture stops, and when you drag the sound backwards, the label turns backwards with it.
+
+Played with the keyboard, you hold the mouse button anywhere on the club, and the record follows the mouse up and down. This used to take Pointer Lock, which hides the cursor and frees the mouse from the edges of the screen. But a cursor that vanished as a run began, and came back only on **Esc**, looked like a bug, so now the cursor stays and the press is captured instead: a stroke that runs off the top of the window keeps turning the record. At the default sensitivity, a 300-pixel stroke moves the record about half a second, which is roughly the length of the "ahh". On a touch screen a finger on the record does the same, with a little more reach.
+
+## The Mouse Arrives in Lumps
+
+The obvious way to turn mouse movement into a speed is to take each movement event, divide how far it moved by the time since the previous one, and set the record's speed to that. It sounds terrible: a buzzing flutter rides on every scratch.
+
+The reason is how movement reaches the page. A mouse reports its position somewhere between 125 and 1,000 times a second, but the browser hands movement to the page once per display frame, 60 times a second on most screens. Everything the mouse reported since the last frame arrives at once. One `pointermove` event carries it, and `getCoalescedEvents()` returns the individual reports. If you divide by the time between _messages_, you get 16.7 ms of movement, then nothing, then 16.7 ms of movement. Played as the speed of a record, that is a 60 Hz flutter.
+
+The fix is to keep each report's own timestamp, the time the mouse made it, not the time the page got around to it. For every report the page sends the worklet three numbers: how far the record moved, and the start and end time of that movement.
+
+```js
+addMove(e, list) {
+  const t1 = e.timeStamp / 1000 // when the mouse reported it
+  const t0 = this.lastT // when the previous report was made
+  this.lastT = t1
+  list.push(-e.movementY * RECORD_PER_PIXEL * this.sensitivity, t0, t1) // up is forwards
+}
+```
+
+In Chrome and Edge the page listens to `pointerrawupdate` instead, which fires for each report as it arrives rather than once a frame. Either way, the worklet rebuilds the hand's path as a list of (time, position) points and replays it a few milliseconds behind real time. It runs far enough behind that the next report has usually arrived by the time the playhead needs it.
+
+How far behind is a measurement, not a guess. The page clock and the audio clock have an unknown offset, so the worklet notes, for every report, the audio time it arrived minus the page time it was made. The smallest of those over the recent past is the quickest path from the mouse to the audio thread, and the replay runs 3 ms behind that. Two more things handle what is left:
+
+- **A report that is late.** When the replay catches up with the last point that has arrived, the record carries on at the hand's recent speed for up to 25 ms. When the late report turns up, the record catches up with the real path over about 8 ms. If nothing turns up, the hand had stopped, and the record stops too.
+- **Lumps that are left over.** When the worklet sees movement arriving in frame-sized bursts, it also averages the speed over one burst.
+
+To tune all this I ran the worklet in Node with simulated mice. Each fake mouse reports at its own rate with a little timing jitter, and the reports reach the worklet the way a browser delivers them: batched once per display frame, or one at a time as raw events. Two movements were measured. One was a smooth back-and-forth twice a second, for ripple and delay. The other was a stroke at normal speed that stops dead, for start and stop times.
+
+| How movement reaches the page           | Ripple | Delay | Up to speed | Stopped |
+| --------------------------------------- | ------ | ----- | ----------- | ------- |
+| 125 Hz mouse, batched per 60 Hz frame   | 4%     | 17 ms | 28 ms       | 45 ms   |
+| 1000 Hz mouse, batched per 60 Hz frame  | 5%     | 17 ms | 28 ms       | 45 ms   |
+| 1000 Hz mouse, batched per 120 Hz frame | 11%    | 10 ms | 15 ms       | 27 ms   |
+| 125 Hz mouse, raw events                | 7%     | 8 ms  | 12 ms       | 32 ms   |
+| 1000 Hz mouse, raw events               | 5%     | 7 ms  | 12 ms       | 24 ms   |
+
+**Ripple** is how far the speed wanders from a smooth curve, as a share of the speed. **Delay** is how far the record's speed runs behind the hand's. **Up to speed** is how long a stroke takes to reach half the hand's speed. **Stopped** is how long after the hand stops dead the record falls below a tenth of normal speed.
+
+Most of the delay comes from the browser, not the worklet: a movement batched into the next frame can't be heard before that frame. Raw events roughly halve it. Seventeen milliseconds is about the delay of standing six metres from a speaker. You feel the record respond under your hand, and you don't notice the lag. Five seconds of busy scratching takes 17 ms of processing on my laptop, a third of one percent of real time.
+
+## Letting Go
+
+When the mouse button comes up, a record does one of two things. If your hand was holding it still or moving it slowly, it stays exactly where it is. The playhead doesn't move until you touch the record again or hit **VOX**, which plays the "ahh" from the cue point.
+
+If your hand was moving fast, at 2.5 times normal speed or more, the record has been flung, and it spins on with friction. It slows by a fixed amount per second plus a share of its current speed, so a hard flick whirs down quickly at first and then coasts. Flung at five times normal speed, it runs on for about 0.8 seconds:
+
+```js
+const decel = (FRICTION + DRAG * Math.abs(speed)) * dt // FRICTION = 3, DRAG = 1.5
+```
+
+There is a catch in telling a flick from a stop. The button usually comes up a few milliseconds _after_ the last movement report, while the hand is still moving. Replay the path as reported and the hand seems to stop dead just before letting go, so every flick dies under the hand. So when the release comes within 30 ms of the last report and the hand was moving fast, the path is extended to the moment of release at the speed it had. The opposite move, slapping your hand onto a spinning record, stops it within 15 ms.
+
+## Sounding Like Vinyl
+
+The playhead alone gives you the right pitch at the right time. Four details make it sound like a record rather than a sampler.
+
+**Aliasing.** Playing a sound four times faster moves everything up two octaves. Whatever lands above half the sample rate folds back down as harsh, out-of-tune tones. So at load time the game makes three extra copies of the record, each low-passed an octave further down, and the worklet reads from the copy whose top end still fits at the current speed, blending between neighbours. It is the audio version of a texture's mipmaps. Each copy is filtered forwards and then backwards, which cancels the filter's delay and keeps all four copies lined up sample for sample.
+
+**Slow means dark.** A record dragged slowly sounds muffled and quiet, not just low. A low-pass filter follows the speed every sample:
+
+```text
+cutoff = 220 + 17,500 × min(speed, 1)^1.7  Hz
+```
+
+At normal speed it is wide open. At a quarter speed it is down to about 1.9 kHz, and at a tenth it is about 570 Hz. The level dips too, to 40% when the record barely moves. The filter is a state-variable design that can change its cutoff on every sample without clicking.
+
+**Surface noise.** A moving stylus hisses and crackles. Hiss (filtered noise) and crackle (a few random pops a second) are added in proportion to how fast the record is going, so a stopped record is silent and a fast scratch sizzles.
+
+**No clicks.** Hitting **VOX** jumps the playhead back to the cue. A jump in the middle of a waveform is a click, so for 6 ms the old playhead keeps playing and fades out while the new one fades in. A record stopped mid-waveform would leave the output stuck at a level other than zero, and a 12 Hz high-pass lets it settle back.
+
+## A Beat From Nothing
+
+Everything is rendered at load time with `OfflineAudioContext`. That is the same graph of Web Audio nodes you would play live, rendered into buffers as fast as the processor allows.
+
+- **Drums.** The kick is a sine that drops from 180 Hz to 47 Hz in a few tens of milliseconds, with three milliseconds of bright noise for the beater. The snare is two tuned tones over high-passed noise, the clap is several noise bursts a few milliseconds apart, the hats are square waves filtered high, with a little noise for air, and the crash is a splash of detuned metal and noise that washes out over a couple of seconds. Each is rendered once as a one-shot. The pads play them one hit at a time, and the closed hats and ghost notes are sequenced into the backing, with a few milliseconds of human timing and a little wobble in their loudness.
+- **Swing.** In every pair of 16th notes the first takes 55% of the time, so the off-16ths land slightly late. Beats and 8th notes stay where they are.
+- **Chords.** Rootless jazz voicings in D minor (Dm9, B♭maj9, Gm9, A7♭9 and C6/9) on an electric piano, with a dotted-8th echo that gets darker on every repeat. Each voicing moves by a step or less to the next, and the bass plays the roots.
+- **Bass.** A sine for weight, plus a filtered saw so the line is still heard on laptop speakers. It ducks under every kick, dipping within a few milliseconds and swelling back over the next 200 or so, so the two never fight over the low end.
+- **Horns.** Brass stabs, with a slapback echo on one side and a little room. Each voicing the song uses is rendered once, so the **HORN** pad can play whichever one fits the chord.
+
+There are three four-bar loops: A for the verse, B for the scratch section (sparse on purpose, to leave room for the record) and C for the peak. Each is rendered as three stems (the backing drums, the bass and the keys), and each stem runs two seconds past the end of its loop, so echoes ring on into the next one. The pad part plays over the top, hit by hit.
+
+The scratch record starts as a sawtooth "voice" run through four band-pass filters at the formants of "ah" for a low voice: 730, 1,090, 2,440 and 3,400 Hz. A bit of breath noise, a vibrato that fades in and a fall in pitch at the end make it sound sung. A horn stab follows a beat later. A vowel with a sharp start and a stab is the classic shape for a scratch sample. The vowel makes a forward stroke and a backward stroke sound different, and the stab gives you something percussive to cut.
+
+## Judged on the Audio Clock
+
+A rhythm game can't judge timing with `performance.now()` or animation frames. The audio clock, `AudioContext.currentTime`, runs ahead of what you hear by the output latency, because the browser renders audio a little ahead into a buffer. On a laptop's own speakers that is ten or twenty milliseconds. On Bluetooth headphones it can be a couple of hundred.
+
+So the game asks the context which moment of audio is coming out of the speakers right now, with `getOutputTimestamp()`. That gives a pair of times, one on the page's clock and one on the audio clock. With it, an input's own `timeStamp` (when the key went down, the MIDI message arrived or the finger touched, not when the handler ran) turns into "what the player was hearing at that moment":
+
+```js
+update() {
+  const ts = this.ctx.getOutputTimestamp()
+  const shift = ts.contextTime - ts.performanceTime / 1000
+  this.shift += 0.05 * (shift - this.shift) // the two clocks drift; follow slowly
+}
+
+judged(pageMs) {
+  return pageMs / 1000 + this.shift - this.offset // offset: the player's calibration
+}
+```
+
+Where a browser doesn't have `getOutputTimestamp`, it falls back to the latency the context reports. The notes in the tunnel are drawn at the same judged time, so a note fills its pad at the moment you should hit it, as you hear it.
+
+People hit early or late in their own consistent way, and every setup adds its own delay, so the game asks you to calibrate. After a four-click count-in it plays eight clicks, you tap along, and your offset is the median of your errors. The median means one fumbled tap doesn't drag it off. After that a hit is judged against these windows:
+
+| Grade   | Window  | Points |
+| ------- | ------- | ------ |
+| Perfect | ±45 ms  | 300    |
+| Great   | ±90 ms  | 200    |
+| Good    | ±135 ms | 100    |
+
+A scratch note is graded differently, by the share of its window you spend moving the record the right way, faster than a quarter of normal speed. At least 72% is Perfect, 52% Great and 32% Good. A little slack at each end of the window leaves time to turn your hand around.
+
+## Charts Are Written in Beats
+
+The song's chart is a JSON file, and every position in it is in beats, not seconds. Trimmed down, it looks like this:
+
+```json
+{
+  "title": "Low Light",
+  "bpm": 95,
+  "lengthBeats": 144,
+  "arrangement": ["A", "A", "A", "B", "B", "C", "C", "C", "A"],
+  "sections": [{ "type": "freestyle", "label": "Freestyle", "startBeat": 80, "endBeat": 112 }],
+  "notes": [
+    { "type": "pad", "pad": "kick", "beat": 16 },
+    { "type": "pad", "pad": "snare", "beat": 17 },
+    { "type": "pad", "pad": "horn", "beat": 35.5 },
+    { "type": "scratch", "beat": 49, "dir": "up", "len": 1 },
+    { "type": "scratch", "beat": 50, "dir": "down", "len": 1 },
+    { "type": "fade", "beat": 113, "pos": "L" }
+  ]
+}
+```
+
+The arrangement says which loop plays in each block of 16 beats. The game turns beats into seconds with the same swing the music uses, so a note on an off-16th lands on the swung 16th you hear. Every kick, snare, clap, open hat and horn note has to sit on a hit the song really has, since that is the hit it hands to you. I checked with a short script that all 72 of them do.
+
+I wrote the Hard chart by hand. Medium and Easy are made from it by rules, so there is only one chart to keep in time with the music:
+
+- **Pads.** Medium keeps kicks on the beat only, drops the open hats, and keeps horn notes at least three 16ths apart, and vox notes too. Easy drops the kicks and hats, keeps the first horn note in each bar, keeps lasers on the beat, and keeps vox notes on the beat and at least two beats apart. Whatever is thinned out of the song's part, the song plays itself.
+- **Scratches.** Medium keeps back-and-forth chains but changes direction at most once a beat. Easy plays each chain as a single push in one direction.
+- **Crossfader.** Easy keeps only the first cut and the return that follows it.
+- **No pile-ups.** On Easy nothing comes within half a beat of another note. On Medium a laser never lands within a quarter beat of another note, and no pad note lands while the record is being scratched.
+
+| Level  | Notes |
+| ------ | ----- |
+| Easy   | 70    |
+| Medium | 103   |
+| Hard   | 132   |
+
+## The Crowd
+
+The crowd in front of the booth follows a hype meter that runs from 0 to 100. Hits raise it: a Perfect adds 4, a Great 2.5 and a Good 1, and every tenth note in a combo adds 4 more. A miss knocks off 8, and an extra hit 1.5. When it is full, **Space** doubles every point for eight beats, and the crowd goes wild. Separately, the combo multiplies your score: ×2 at 10 notes, ×3 at 20, ×4 at 30.
+
+The freestyle is scored as you play, on three things:
+
+- **Rhythm.** A pad hit, a cut or a scratch stroke within 35 ms of the swung 16th-note grid scores 60 if it lands on an 8th note and 45 if it lands between them. Within 70 ms it scores 25, and anything else scores 8. Only one scratch stroke counts per 16th, and two pad hits (a kick and a hat, say), so mashing every pad at once doesn't pay.
+- **Variety.** There are eight kinds of move: the drums, the laser, the vox, the horns, cuts, scratching forwards, scratching backwards and loop switches. Using _n_ of them in a bar scores 25 × *n*² as the bar ends, counting up to six. Switching to a loop you haven't used yet is worth more than going back to one you have.
+- **No dead air.** A whole beat with nothing happening costs points and some of the crowd's patience.
+
+At the end you get a grade from your accuracy (S at 95% or better, down to D) and a verdict from the crowd. The verdict mixes their average hype, your accuracy and your freestyle, and runs from "Heading for the bar" up to "Lost their minds".
+
+## A Club in three.js
+
+The first version of BACKSPIN was drawn on a 2D canvas: a note highway seen in perspective. Eight pads in two rows don't fit that picture. Put eight lanes side by side and the grid on screen no longer looks like the grid under your fingers. Put the top row's lanes behind the bottom row's and the notes cover each other.
+
+So the camera looks straight down a tunnel, level with the middle of the grid, and each pad is a gate at the near end. A note appears 64 units away, near the vanishing point, and flies straight at its gate, taking two seconds. Seen head-on, the top row's notes climb as they come and the bottom row's drop, so the rows never cross, and a note is due exactly when it fills its gate. Its distance is worked out every frame from the judged song time, `z = -(note.time - now) * 32`, so a note can't drift away from the music.
+
+Everything that moves comes from a fixed pool that is rewritten in place every frame: an instanced mesh for each kind of thing (note tiles, arrows, pad frames, light beams, lasers) and one buffer of 700 points for the sparks. Nothing is created while a song plays, so the garbage collector has nothing to stop for. A busy frame from the final section is 32 draw calls and about 8,500 triangles, plus 15 more calls for the glow and the edge smoothing.
+
+The crowd is 519 people on one instanced mesh, and the CPU never moves them once they are placed. Each person has three numbers of their own: a phase, so they don't bounce in lockstep, the level of energy at which their arms go up, and which of two bodies to draw. The vertex shader does the rest from two uniforms, the beat and the crowd's energy:
+
+```glsl
+float up = step(aArms, uEnergy); // arms up once the energy passes this person's level
+vUv = vec2((uv.x + aBody * 2.0 + up) / 4.0, uv.y); // one of four sprites: two bodies, arms down or up
+float s = sin(3.14159 * fract(uBeat + aPhase)); // a bounce on every beat, each a little out of step
+w.y += s * s * uBounce * instanceMatrix[1][1];
+```
+
+As the hype rises, more arms go up, and during a boost they all do.
+
+The neon glow is a bloom pass, three.js's `UnrealBloomPass`. The scene renders into a half-float target first, so the brightest notes and lasers can go past white and bloom without the dark gradients of the tunnel banding. One thing to watch for: asking for 4× multisampling on that target as well made Chrome render the whole scene black, on a software renderer and on an Apple GPU alike, even though WebGL reported the framebuffer as complete. Half float without multisampling works, and an FXAA pass smooths the edges instead. FXAA only runs on screens with a pixel ratio under 1.5, because on a high-density screen the pixels are small enough already.
+
+The glow had one more trap in it. Every few seconds the whole club went black for a single frame: a flicker. A script that read back every frame the game drew, on an Apple GPU, found one black frame in about every 250, even sitting on the menu. In each of them the glow pass's buffer was NaN from corner to corner. The bloom blurs the frame down to a few pixels and back up, so one NaN pixel anywhere spreads through the whole picture. That pixel came from the light cones. Their shader fades each beam along its length with `pow(1.0 - vAlong, 1.8)`, where `vAlong` runs from 0 at the lamp to 1 at the far end. Interpolated across a triangle, it now and then comes out a hair over 1, and `pow()` of a negative number is undefined in GLSL. Apple's GPUs answer NaN. Clamping it first took the count from 14 black frames a minute to none. The other shaders got the same treatment wherever they squared a number with `pow()` or divided by something that could be zero.
+
+If frames keep coming slower than 40 a second for two seconds, the game lowers the resolution, and if that isn't enough, it turns the glow off. It makes the change before it draws the next frame, because resizing a canvas wipes it. With reduced motion turned on, the camera doesn't shake, the crowd barely moves and the lights stay still.
+
+Words and numbers (the score, the combo, the hype meter, the pad names and how each hit landed) are drawn on a 2D canvas laid over the club. After every resize the scene works out where each gate, the decks and the fader are on screen. The labels go there, and the same layout is what taps and clicks are tested against. As before, text is only drawn again when its value changes.
+
+three.js arrives as one file: the parts the game uses, bundled and minified with esbuild from an entry file that names each one. It is 593 KB, or 148 KB gzipped. The game's own code still has no build step.
+
+## Testing It Without Hands
+
+Playing a 90-second song on three levels after every change gets old fast. Adding `?autoplay=easy,medium,hard` to the address starts a bot. It plays through the same input handlers a player does, with page timestamps. It presses each pad's key as its note reaches the pad, moves the record the way each scratch arrow points, and has a go at the freestyle: a finger-drummed groove, scratching on the 8ths, switching loops, cutting the fader and boosting when the meter fills. `&miss=0.15&jitter=0.12` makes it sloppy: it skips some notes and hits the rest up to 120 ms late.
+
+Add `&mouse` and the bot plays with the mouse instead, and on a touch screen it taps. Then it doesn't call the handlers at all. It sends pointer events to the page where a cursor or a finger would land: the middle of each pad, the record, the crossfader, the hype meter and the loop buttons. So the run tests the hit tests and the layout behind them as well as the game. The bot's mouse is one pointer as well, so it lets go of the record before it clicks anything else. `&hybrid` mixes the two: the bot presses **A**, **S** and **D** for the kick, the snare and the clap and **Space** to boost, and clicks everything else.
+
+Each run below played the whole song in headless Chrome with the sound muted, the touch one on an emulated tablet. A muted audio context still runs, so the judging uses the same clock a player gets. The last column is the timing line from the results: how late the hits landed on average, and how widely they spread.
+
+| Run            | Score   | Accuracy | Grade | Max combo | The crowd        | Timing      |
+| -------------- | ------- | -------- | ----- | --------- | ---------------- | ----------- |
+| Easy           | 109,180 | 100%     | S     | 70        | Lost their minds | +7 ms, ±4   |
+| Medium         | 174,180 | 100%     | S     | 103       | Lost their minds | +9 ms, ±5   |
+| Hard           | 225,500 | 100%     | S     | 132       | Lost their minds | +8 ms, ±5   |
+| Medium, sloppy | 48,360  | 65.5%    | C     | 13        | Hands in the air | +67 ms, ±31 |
+| Easy, mouse    | 99,485  | 100%     | S     | 70        | Lost their minds | +7 ms, ±5   |
+| Medium, mouse  | 139,125 | 100%     | S     | 91        | Lost their minds | +9 ms, ±5   |
+| Hard, mouse    | 185,865 | 100%     | S     | 116       | Lost their minds | +9 ms, ±5   |
+| Easy, Hybrid   | 94,260  | 100%     | S     | 66        | Lost their minds | +8 ms, ±5   |
+| Medium, Hybrid | 133,600 | 100%     | S     | 89        | Lost their minds | +8 ms, ±5   |
+| Hard, Hybrid   | 183,360 | 100%     | S     | 115       | Lost their minds | +9 ms, ±5   |
+| Hard, touch    | 206,765 | 100%     | S     | 132       | Lost their minds | +8 ms, ±5   |
+
+A perfect score from a bot says nothing about the bot's skill. It checks the timing chain. The bot presses a key on the first frame after a note reaches its pad, so it is up to one frame late, which at 60 frames a second is 8 ms on average. That is what the results measured, after each key press had been timed by the page, turned into audio time and judged. The sloppy run's +67 ms is the same 8 ms plus an average of 60 from the jitter. The mouse, Hybrid and touch runs land in the same place, so a click or a tap is timed as closely as a key. They score less because the mouse and Hybrid charts have fewer notes, and because the bot's freestyle with a pointer, one thing at a time, earns about half what its two-handed keyboard groove does. Hybrid's charts are a little shorter than Mouse's: they lose the laser and hat notes, and win back the kicks a lone mouse would have to drop.
+
+Metering the mix during these runs turned up one bug. Pressing **Space** again before a boost's first beat started a second riser on top of the first, and the effects bus peaked nearly 10 dB over full scale. Now a boost that is waiting for its beat can't be started again. Every run held 60 frames a second, with nothing in the console.
+
+The pointer bot skips one step, though. Its events go straight to the stage, so they never find out whether something on top of it would have caught them first. The HUD, for one, is a canvas laid over the whole club, and the clicks only reach the game because it lets them through. So another script drove headless Chrome through the DevTools Protocol, which delivers input the way the operating system does. With the mouse, it chose Mouse on the level screen, hit a pad, dragged the record, tapped the crossfader and slid it across, boosted from the meter, and paused and resumed. It also checked the cursor over each target and while it held the record, and that Pointer Lock never switched on. With the keyboard, it checked that the arrows showed over the whole club, that a press anywhere scratched, even once the stroke left the window, and that **Esc** paused and brought back the system cursor. With an emulated touch screen it did the same with fingers, and put a second finger on the kick pad while the first one was scratching.
+
+The same script checked the rest of this section. On the desktop the game started on the keyboard and offered Keyboard, Mouse and Hybrid, and on an emulated phone it started on touch and offered Keyboard and Touch. In Hybrid, six pads were on screen, centred, and the two that weren't had nowhere to click. **A**, **S** and **D** played the kick, the snare and the clap, the other pad keys played nothing, and **Space** and a click on the meter each set off the boost. And it measured the pads' squares in a laptop-sized window and on a phone held sideways: none overlapped, each met its neighbours, all of them stopped short of the record and the crossfader, and a click in the gap between two pads went to the nearer one.
+
+## Things to Try
+
+- Plug in a pad controller, connect it in Settings, and practise the verse at 75% with the guide on. Then play it again with the guide off.
+- In the **Sandbox**, press **4** to stop the song playing its own pad part, and drum the beat yourself over the bass and chords.
+- Hold the record and push it up very slowly. Listen to the "ahh" open up and brighten as it reaches normal speed.
+- Rock the record back and forth over the start of the "ahh". That is a baby scratch, the first one DJs learn.
+- Put the crossfader in the middle (**X**), push the record forwards and hit **C** as you pull it back. You hear the forward stroke and not the return.
+- Push the record well past the horn stab, then flick it down hard and let go mid-flick. The horn and the "ahh" whizz by backwards as it spins down.
+- On a touch screen, drum with one hand and scratch with the other.
+- Choose **Mouse** and play Medium with nothing but the mouse. Getting from the kick to the record and back in time is its own skill.
+- Choose **Hybrid**, keep the beat on **A**, **S** and **D**, and leave the record and the top row to the mouse.
+- If you are on Bluetooth headphones, calibrate first. The difference is easy to feel.
+
+## What Is Not in It
+
+There is one song and no chart editor, though a chart is a short JSON file in beats. A DJ controller's pads work like any other pads, but its jog wheels don't turn the record yet. That would be a natural next step, since the worklet already takes timestamped movement from anywhere. Best scores stay in your own browser.
+
+[**Play BACKSPIN**](/backspin)
