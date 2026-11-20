@@ -16,7 +16,13 @@ export default [
   {
     // app/chaos/teardown is vendored from elvarofficial/teardown and kept as close to upstream as possible.
     // lib/edition/fibreField.js is copied from raffi.website (composables/useFibreField.js) and kept identical.
-    ignores: ['next-env.d.ts', 'app/chaos/teardown/**', 'lib/edition/fibreField.js'],
+    // public/backspin/vendor/three.js is a minified bundle of three.js (built from three-entry.js).
+    ignores: [
+      'next-env.d.ts',
+      'app/chaos/teardown/**',
+      'lib/edition/fibreField.js',
+      'public/backspin/vendor/three.js',
+    ],
   },
   js.configs.recommended,
   ...compat.extends(
