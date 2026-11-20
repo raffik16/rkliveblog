@@ -19,11 +19,15 @@ const ContentSecurityPolicy = `
   frame-src giscus.app www.googletagmanager.com
 `
 
-// BACKSPIN (public/backspin) is a static page that loads its display face from Google Fonts
+// BACKSPIN (public/backspin) is a static page that loads its display face from Google Fonts.
+// On an iPhone before iOS 17 it also plays a silent track it makes itself (a blob: URL), which
+// stops the silent switch muting the game (src/engine.js)
 const BackspinPolicy = ContentSecurityPolicy.replace(
   "style-src 'self' 'unsafe-inline';",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;"
-).replace("font-src 'self';", "font-src 'self' https://fonts.gstatic.com;")
+)
+  .replace("font-src 'self';", "font-src 'self' https://fonts.gstatic.com;")
+  .replace("media-src 'self'", "media-src 'self' blob:")
 
 const securityHeaders = [
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP

@@ -216,7 +216,45 @@ function applyControls() {
   // plays it the way a finger does
   input.pointerPlay = controls !== 'keys'
   view.controls = controls
-  if (scene) scene.setControls(controls)
+  if (!scene) return
+  // Hybrid's narrower grid can change the fit, and the HUD's sizes go by the pads'
+  scene.setControls(controls)
+  hud.resize(scene.layout)
+}
+
+/**
+ * A run played on a touch screen goes full screen where the browser lets a page do that (on
+ * Android and on an iPad): the browser's bars stop taking room from the club, and a swipe from
+ * an edge can't scroll the page or go back. An iPhone doesn't allow it, so there it plays in the
+ * browser window. Called from the tap that starts the run, as browsers require.
+ */
+function fullscreenForTouch() {
+  if (controls !== 'touch' || autoQueue.length || AUTOPLAY.length) return
+  const doc = document
+  if (doc.fullscreenElement || doc.webkitFullscreenElement) return
+  if (!(doc.fullscreenEnabled || doc.webkitFullscreenEnabled)) return
+  const el = doc.documentElement
+  const go = el.requestFullscreen || el.webkitRequestFullscreen
+  try {
+    const asked = go.call(el, { navigationUI: 'hide' })
+    if (asked && asked.catch) asked.catch(() => {})
+  } catch {
+    // Not allowed here: play in the window
+  }
+}
+
+// While a run is on, a finger on the club is only ever playing it. touch-action: none (in the
+// stylesheet) already stops scrolling and zooming there, but Safari on an iPhone or an iPad can
+// still zoom on a quick double tap or a pinch, and show its magnifier when a finger rests on the
+// record. Its own gesture events, and touches on the club, are cancelled for that.
+const stopGesture = (e) => {
+  if (mode === 'play' || mode === 'sandbox' || e.target === stage) e.preventDefault()
+}
+for (const type of ['gesturestart', 'gesturechange']) {
+  document.addEventListener(type, stopGesture, { passive: false })
+}
+for (const type of ['touchstart', 'touchmove']) {
+  stage.addEventListener(type, (e) => e.preventDefault(), { passive: false })
 }
 
 // A trackpad or a mouse plugged into a tablet (or taken away) changes what's on offer
@@ -293,7 +331,15 @@ function setFade(pos, ms) {
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && !bot && (mode === 'play' || mode === 'sandbox')) pause()
+  // An older iPhone's silent track (engine.js) doesn't play on in the background; the next tap
+  // that needs sound starts it again
+  if (document.hidden) engine.media.off()
 })
+// The system took the audio away (on an iPhone: a call, Siri, an alarm): the song can't go on
+// without it, so the game pauses, and Resume brings the sound back
+engine.onHalt = () => {
+  if (mode === 'play' || mode === 'sandbox') pause()
+}
 
 // Calibration taps: any key but Escape, or a click on the circle
 window.addEventListener(
@@ -338,6 +384,7 @@ const actions = {
     open('difficulty')
   },
   level(el) {
+    fullscreenForTouch()
     startGame(el.dataset.level)
   },
   practice() {
@@ -362,9 +409,11 @@ const actions = {
     settings.setPractice({ guide: el.checked })
   },
   practiceStart() {
+    fullscreenForTouch()
     startPractice()
   },
   sandbox() {
+    fullscreenForTouch()
     startSandbox()
   },
   calibrate() {
@@ -390,6 +439,7 @@ const actions = {
     restart()
   },
   retry() {
+    fullscreenForTouch()
     if (lastResult && lastResult.practice) startPractice()
     else startGame(level)
   },
@@ -542,7 +592,9 @@ function ensureAudio() {
       })
   }
   return audioReady.then(async (ok) => {
-    if (ok && engine.ctx.state !== 'running') await engine.resume()
+    if (!ok) return ok
+    engine.media.on()
+    if (engine.ctx.state !== 'running') await engine.resume()
     return ok
   })
 }
@@ -754,7 +806,7 @@ let fps = 60
 let slowFor = 0 // seconds of slow frames in a row, to lower the quality
 let modeSince = 0
 let lastMode = mode
-let playingClass = false // body.playing: the page's styles know a run is on (the rotate hint)
+let playingClass = false // body.playing: the page's styles know a run is on
 const debugEl = DEBUG ? document.getElementById('debug') : null
 const onSongHit = (pad) => scene.songHit(pad)
 
