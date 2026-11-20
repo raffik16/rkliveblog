@@ -135,8 +135,18 @@ are as big as they are sideways, or bigger. On Android and on an iPad a run goes
 the browser's bars don't take room and an edge swipe can't scroll the page or go back (an iPhone
 doesn't let a page do that). While a run is on, Safari's double-tap zoom, pinch zoom and
 magnifier are switched off over the club, and the menus don't wait to see if a tap is a double
-tap. On an iPhone the game asks for media playback (`navigator.audioSession`, Safari 17 and
-later), so it plays with the silent switch on, the way a video does.
+tap.
+
+**Sound on an iPhone or an iPad.** iOS plays a page's Web Audio on the ringer's channel, so with the
+silent switch on (or silent mode on an iPad) a game is completely silent, with no sign why. Safari
+17 and later let a page ask for media playback (`navigator.audioSession.type = 'playback'`), and
+then it follows the media volume like a video. Older versions get the long-standing workaround: a
+silent HTML `<audio>` track loops alongside the game, which puts the page's Web Audio on the media
+channel too. That track is made in code (a second of silent MP3 frames at 48 kHz, the game's own
+rate, so it can't change the rate the hardware runs at; iOS mutes uncompressed audio in silent
+mode but not compressed) and served as a `blob:` URL, which the game's Content Security Policy
+allows (`next.config.js`). If iOS takes the audio away mid-song (a call, Siri, an alarm), the game
+pauses, and Resume brings the sound back (`MediaChannel` and `onHalt` in `src/engine.js`).
 
 **Fitting the screen.** The rig goes side by side on a wide screen: a deck either side of the pads
 and the crossfader under them. On a tall one that leaves the pads tiny, so it stacks instead: the

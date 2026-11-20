@@ -331,7 +331,15 @@ function setFade(pos, ms) {
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && !bot && (mode === 'play' || mode === 'sandbox')) pause()
+  // An older iPhone's silent track (engine.js) doesn't play on in the background; the next tap
+  // that needs sound starts it again
+  if (document.hidden) engine.media.off()
 })
+// The system took the audio away (on an iPhone: a call, Siri, an alarm): the song can't go on
+// without it, so the game pauses, and Resume brings the sound back
+engine.onHalt = () => {
+  if (mode === 'play' || mode === 'sandbox') pause()
+}
 
 // Calibration taps: any key but Escape, or a click on the circle
 window.addEventListener(
@@ -584,7 +592,9 @@ function ensureAudio() {
       })
   }
   return audioReady.then(async (ok) => {
-    if (ok && engine.ctx.state !== 'running') await engine.resume()
+    if (!ok) return ok
+    engine.media.on()
+    if (engine.ctx.state !== 'running') await engine.resume()
     return ok
   })
 }

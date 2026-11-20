@@ -64,6 +64,9 @@ export class AudioEngine {
     this.arrangement = [] // the loop in each 16-beat block (for the horns' chords)
     this.tempoSounds = new Map() // bpm -> { loops, fx } rendered for that tempo
     this.guide = false // practice: play the hits the chart gives you too, quietly, as a guide
+    this.media = new MediaChannel() // so an iPhone's silent switch doesn't mute the game
+    this.holding = false // the game paused the audio itself (pause()), so it isn't a halt
+    this.onHalt = null // called when something else stops the audio: a call, Siri, an alarm
   }
 
   /** Render every sound. Needs no AudioContext, so it can start before the first click. */
@@ -80,17 +83,12 @@ export class AudioEngine {
 
   /** Call from a click or key press: browsers only let a page make sound after one. */
   async start({ muted = false } = {}) {
+    // First, while this is still the tap: the silent track, where it's needed, has to be
+    // started by one
+    this.media.on()
     if (this.ctx) {
       await this.ctx.resume()
       return
-    }
-    // An iPhone plays a web page's sound through the ringer, so with its silent switch on the
-    // game would be silent. Saying the page plays media (Safari 17 and later) uses the media
-    // volume instead, like a video would.
-    try {
-      if (navigator.audioSession) navigator.audioSession.type = 'playback'
-    } catch {
-      // not this browser
     }
     let ctx
     try {
@@ -99,6 +97,11 @@ export class AudioEngine {
       ctx = new AudioContext({ latencyHint: 'interactive' })
     }
     this.ctx = ctx
+    // On an iPhone or an iPad the system can take the audio away mid-song (a phone call, Siri,
+    // an alarm): the context stops, and the game is told so it can pause
+    ctx.addEventListener('statechange', () => {
+      if (ctx.state !== 'running' && !this.holding && this.onHalt) this.onHalt(ctx.state)
+    })
     const resumed = ctx.resume()
     await this.prepare()
     if (ctx.sampleRate !== SAMPLE_RATE) {
@@ -523,15 +526,76 @@ export class AudioEngine {
   // ---- Pause --------------------------------------------------------------------------------
 
   async pause() {
+    this.holding = true
+    this.media.off()
     if (this.ctx && this.ctx.state === 'running') await this.ctx.suspend()
   }
 
   async resume() {
     if (!this.ctx) return
+    this.holding = false
+    this.media.on()
     await this.ctx.resume()
     // The audio clock stood still while the page clock ran on: let the deck re-measure
     this.scratch({ t: 'clock' })
   }
+}
+
+/**
+ * iPhones and iPads play a page's Web Audio on the ringer's channel, so with the silent switch on
+ * (or silent mode, on an iPad) the whole game is silent, with no sign why. Safari 17 and later
+ * let a page say it plays media (navigator.audioSession), and then it follows the media volume,
+ * like a video. Before that, the way round it is an HTML <audio> element playing alongside:
+ * while one plays, iOS puts the page's Web Audio on the media channel too. Its track is a second
+ * of silence, made here as MP3 (iOS keeps compressed audio playing in silent mode, but not
+ * uncompressed) at the game's own sample rate, so it can't change the rate the hardware runs at.
+ */
+class MediaChannel {
+  constructor() {
+    this.el = null
+    try {
+      if (navigator.audioSession) {
+        navigator.audioSession.type = 'playback'
+        return
+      }
+    } catch {
+      // not this browser
+    }
+    const ua = navigator.userAgent
+    // An iPad asking for desktop sites says it's a Mac, but a Mac has no touch screen
+    const ios = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+    if (!ios) return
+    const el = document.createElement('audio')
+    el.loop = true
+    el.preload = 'auto'
+    el.setAttribute('playsinline', '')
+    el.disableRemotePlayback = true
+    el.src = URL.createObjectURL(new Blob([silentMp3()], { type: 'audio/mpeg' }))
+    this.el = el
+  }
+
+  /** Keep the silent track playing. The first time, this has to be in a tap. */
+  on() {
+    if (this.el && this.el.paused) this.el.play().catch(() => {})
+  }
+
+  /** Let it stop (while paused, so it isn't playing silence in the background). */
+  off() {
+    if (this.el && !this.el.paused) this.el.pause()
+  }
+}
+
+/**
+ * A second of silent MP3 at 48 kHz (SAMPLE_RATE): MPEG-1 Layer III frames, mono at 32 kbit/s,
+ * each a 4-byte header and nothing else (all-zero side info means no sound in either granule).
+ */
+function silentMp3() {
+  const size = (144 * 32000) / 48000 // 96 bytes, 1152 samples
+  const frames = 42
+  const bytes = new Uint8Array(size * frames)
+  // Sync, MPEG-1, Layer III, no CRC | 32 kbit/s, 48 kHz, no padding | mono, original
+  for (let i = 0; i < frames; i++) bytes.set([0xff, 0xfb, 0x14, 0xc4], i * size)
+  return bytes
 }
 
 /** A harder hit is louder, but not in proportion: soft hits are still clearly heard. */
