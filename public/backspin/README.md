@@ -139,7 +139,7 @@ tap.
 
 **Sound on an iPhone or an iPad.** iOS plays a page's Web Audio on the ringer's channel, so with the
 silent switch on (or silent mode on an iPad) a game is completely silent, with no sign why. Safari
-17 and later let a page ask for media playback (`navigator.audioSession.type = 'playback'`), and
+16.4 and later let a page ask for media playback (`navigator.audioSession.type = 'playback'`), and
 then it follows the media volume like a video. Older versions get the long-standing workaround: a
 silent HTML `<audio>` track loops alongside the game, which puts the page's Web Audio on the media
 channel too. That track is made in code (a second of silent MP3 frames at 48 kHz, the game's own

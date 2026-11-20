@@ -20,7 +20,7 @@ const ContentSecurityPolicy = `
 `
 
 // BACKSPIN (public/backspin) is a static page that loads its display face from Google Fonts.
-// On an iPhone before iOS 17 it also plays a silent track it makes itself (a blob: URL), which
+// On an iPhone before iOS 16.4 it also plays a silent track it makes itself (a blob: URL), which
 // stops the silent switch muting the game (src/engine.js)
 const BackspinPolicy = ContentSecurityPolicy.replace(
   "style-src 'self' 'unsafe-inline';",
