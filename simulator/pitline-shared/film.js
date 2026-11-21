@@ -19,7 +19,7 @@ import {createSelection} from './select.js';
 import {thumb} from './thumbs.js';
 import {buildRaceCar, buildPitJack} from './cars.js';
 import {buildPitWallStand} from './circuit.js';
-import {buildWorld, aeroSweep, AERO, stopPlan} from './world.js';
+import {buildWorld, aeroSweep, stopPlan} from './world.js';
 import {CARS, carAt, pitOf, DISPLAY, LAP, LAP_TIME, U_IN, U_OUT, lapT, RACE_LAP, PIT} from './layout.js';
 import {tAt} from './race.js';
 import {runStrategy} from './strategy.js';
@@ -89,8 +89,8 @@ const KEYS = [
   {t: 15.9, x: 0, z: 6, d: 62},
   {t: 16.6, x: 18, z: 10, d: 96},
   {t: 22.4, x: 150, z: -56, d: 130},
-  {t: 24.6, x: AERO.x, z: AERO.z, d: 78},
-  {t: 30.6, x: AERO.x, z: AERO.z, d: 76},
+  {t: 24.6, at: 'lab', d: 46},
+  {t: 30.6, at: 'lab', d: 44},
   {t: 32.5, x: 30, z: 6, d: 70},
   {t: 35.7, x: 30, z: 6, d: 68},
   {t: 40.3, x: 176, z: -28, d: 118},
@@ -117,6 +117,11 @@ const DROP = [
 
 export function runPitlineFilm() {
   return runFilm({duration: DUR, fps: 60, chapters: CHAPTERS, post: '/blog/pitline-race-strategy-simulator', title: 'Pitline · a race team simulator'}, async ({frame, canvas, capture}) => {
+    // the strategy engine runs once, first, before the 3D world is built: the odds are seeded, the milliseconds are
+    // this machine's. A short warm-up run first lets the JavaScript engine compile it, as a real tool would be warm.
+    const gap = (CARS.find((c) => c.id === 'c9').offset - CARS.find((c) => c.id === 'c3').offset) * DISPLAY.gap;
+    runStrategy({perOption: 150, gap});
+    const STRAT = runStrategy({gap});
     const st = createToyStage(canvas, {fov: 28});
     const W = buildWorld();
     st.scene.add(W.root);
@@ -132,8 +137,6 @@ export function runPitlineFilm() {
       model: thumb(buildRaceCar({team: 'halcyon', number: '9', compound: 'medium'}).group, {az: 70, el: 14}),
     };
 
-    // the strategy engine runs once, as the page loads: the odds are seeded, the milliseconds are this machine's
-    const STRAT = runStrategy({gap: (W.carById('c9').offset - W.carById('c3').offset) * DISPLAY.gap});
     const hero = W.carById('c9');
     const rival = W.carById('c3');
     const PH = pitOf(hero);
@@ -169,7 +172,9 @@ export function runPitlineFilm() {
       const k = Math.floor(d / LAP);
       const t1 = W.timeAtD(car, k * LAP, t);
       const t0 = W.timeAtD(car, (k - 1) * LAP, t);
-      return t1 != null && t0 != null ? (t1 - t0) * DISPLAY.lap : null;
+      // the base lap reads at DISPLAY.lap; any difference from it (a pit stop, worn tyres) at DISPLAY.gap, the same
+      // scale as the gaps, so a lap with a stop in it is slower by the pit loss the strategy card shows
+      return t1 != null && t0 != null ? LAP_TIME * DISPLAY.lap + (t1 - t0 - LAP_TIME) * DISPLAY.gap : null;
     };
     const leaderLap = (t) => {
       const d = Math.max(...CARS.map((c) => carAt(c, t).D));
@@ -232,6 +237,13 @@ export function runPitlineFilm() {
       if (t < PH.t1) return ['Pit lane', 'Released · pit exit ahead', 'in'];
       return ['Racing', `Out-lap on mediums · P${posOf(hero, t)}`, 'go'];
     };
+    const rivalState = (t) => {
+      if (t < PR.t0) return ['Racing', `P${posOf(rival, t)} · softs falling off`, 'go'];
+      if (t < PR.tStop0) return ['Pit lane', 'Limiter 80 km/h · to box 4', 'in'];
+      if (t < PR.tStop1) return ['In box', 'Slow front-left', 'wait'];
+      if (t < PR.t1) return ['Pit lane', 'Released · pit exit ahead', 'in'];
+      return ['Racing', `Rejoined P${posOf(rival, t)} · behind car 9`, 'go'];
+    };
     const stopClock = (pc, t) => clamp(t - pc.tStop0, 0, pc.tStop1 - pc.tStop0);
 
     const cardAt = (t, kind, t0) => {
@@ -239,7 +251,7 @@ export function runPitlineFilm() {
       if (kind === 'c9' || kind === 'c3') {
         const car = kind === 'c9' ? hero : rival;
         const T = tele(car, t);
-        const [s, txt, cls] = car === hero ? heroState(t) : ['Racing', 'P' + posOf(rival, t), 'go'];
+        const [s, txt, cls] = car === hero ? heroState(t) : rivalState(t);
         const ord = order(t);
         const i = ord.indexOf(car);
         const ahead = ord[i - 1];
@@ -296,7 +308,7 @@ export function runPitlineFilm() {
       const A = aeroSweep(t);
       const df = 450 * A.cl;
       const drag = 450 * A.cd;
-      const run = ((t % 9) + 9) % 9 / 9;
+      const run = ((((t - 24.6) % 9) + 9) % 9) / 9;
       let path1 = '';
       let path2 = '';
       for (let i = 0; i <= 40; i++) {
@@ -310,7 +322,7 @@ export function runPitlineFilm() {
       const mx = 320 * A.k;
       const chart = `<polyline points="${path1}" fill="none" stroke="#3166ea" stroke-width="2.4"/><polyline points="${path2}" fill="none" stroke="#ff8a3d" stroke-width="2.4"/><line x1="${mx.toFixed(1)}" x2="${mx.toFixed(1)}" y1="2" y2="68" stroke="#0f1730" stroke-width="1.4" stroke-dasharray="3 3"/><circle cx="${mx.toFixed(1)}" cy="${(66 - ((A.cl - 2.9) / 1.2) * 58).toFixed(1)}" r="4.5" fill="#3166ea" stroke="#fff" stroke-width="2"/><circle cx="${mx.toFixed(1)}" cy="${(66 - ((A.cd - 0.7) / 0.62) * 58).toFixed(1)}" r="4.5" fill="#ff8a3d" stroke="#fff" stroke-width="2"/>`;
       return {
-        pop, thumb: TH.model, org: 'AERO LAB · TUNNEL 1', title: 'Run 214 · 60% model', sub: 'Rear wing sweep · 50 m/s · rolling road',
+        pop, thumb: TH.model, org: 'AERO LAB · TUNNEL 1', title: 'Run 214', sub: '60% model · rear wing sweep · 50 m/s',
         stat: 'Running', statCls: 'go', statText: `Flap ${A.angle.toFixed(1)}° · yaw 0° · ride 30 mm`, prog: run, progText: `step ${1 + Math.floor(run * 6)}/6`,
         stats: [['Downforce', `${Math.round(df).toLocaleString('en-US')} kg`, 'at 250 km/h', A.cl / 4.2], ['Drag', `${Math.round(drag)} kg`, 'at 250 km/h', A.cd / 1.4, 1], ['Efficiency', (A.cl / A.cd).toFixed(2), 'L/D'], ['Balance', `${(41.8 + 2.6 * A.k).toFixed(1)}%`, 'front']],
         aero: {chart, chartLabel: 'flap 4° → 30°'},
@@ -342,11 +354,15 @@ export function runPitlineFilm() {
     const ANCHOR = {c9: 'c9', c3: 'c3', strat: 'wall', box: 'box', box3: 'c3', aero: 'lab'};
     const ROUTE = {c9: (t) => W.routes.c9(t), c3: (t) => W.routes.c3(t)};
 
+    // keys that point at a thing in the world take its position (the wind tunnel's model)
+    W.root.updateMatrixWorld(true);
+    const LAB = W.anchors.lab();
+    const K = KEYS.map((k) => (k.at === 'lab' ? {...k, x: LAB.x + 1.5, z: LAB.z + 1.5} : k));
     const keyCam = (t) => {
       let i = 0;
-      while (i < KEYS.length - 2 && KEYS[i + 1].t <= t) i++;
-      const a = KEYS[i];
-      const b = KEYS[i + 1];
+      while (i < K.length - 2 && K[i + 1].t <= t) i++;
+      const a = K[i];
+      const b = K[i + 1];
       const k = ss(a.t, b.t, t);
       const far = Math.hypot(b.x - a.x, b.z - a.z);
       const arc = far > 80 ? 0.45 * Math.sin(Math.PI * k) : 0;
@@ -412,7 +428,7 @@ export function runPitlineFilm() {
       const life = fresh ? Math.max(92, 100 - Math.round((t - pc.tStop1) * 0.25)) : Math.max(9, Math.round(18 - t * 0.35));
       return {
         a: [`${lap}/52`, `${52 - lap} to go`, `Harbour Park · ${((LAP * DISPLAY.km) / 1000).toFixed(2)} km`, 'flat'],
-        b: [`${f2(Math.abs(g))} s`, behind ? 'behind' : 'ahead', t > PR.t1 ? 'undercut complete' : t > PH.t0 ? 'through the stops' : 'interval at the line', behind ? 'down' : 'up'],
+        b: [`${Math.abs(g) < 10 ? f2(Math.abs(g)) : Math.abs(g).toFixed(1)} s`, behind ? 'behind' : 'ahead', t > PR.t1 ? 'undercut complete' : t > PH.t0 ? 'through the stops' : 'interval at the line', behind ? 'down' : 'up'],
         c: [`${life}%`, fresh ? 'Mediums' : 'Softs', fresh ? 'new set' : `${ageOf(hero, t)} laps old`, fresh ? 'up' : 'down'],
       };
     };
@@ -486,6 +502,7 @@ export function runPitlineFilm() {
       resize,
       render(t) {
         W.pose(t);
+        W.objects.smoke.resolution(st.size.w, st.size.h);
         const s = selection(t);
         const site = siteAt(t);
         const obj = SEL_OBJ[s.kind]?.();

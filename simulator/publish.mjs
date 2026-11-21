@@ -29,7 +29,7 @@ let html = fs.readFileSync(path.join(out, 'dist', 'pitline-film.html'), 'utf8');
 
 const SITE = 'https://me.raffi.website';
 const TITLE = 'Pitline · a race team simulator';
-const DESC = 'A toy race circuit that runs itself: live telemetry, a strategy call made in milliseconds, a 2.4 s pit stop, a wind tunnel run and an undercut, all in code.';
+const DESC = 'A toy race circuit that runs itself: live telemetry, a strategy call made in milliseconds, a 2.4 s pit stop, a wind tunnel run and an undercut, in code.';
 const ICON =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M20 3l15 8.5v17L20 37 5 28.5v-17z' fill='%232448c8'/%3E%3Cpath d='M20 3l15 8.5L20 20 5 11.5z' fill='%236f98f7'/%3E%3Cpath d='M20 20l15-8.5v17L20 37z' fill='%233166ea'/%3E%3C/svg%3E";
 const head = `<title>${TITLE}</title>
@@ -44,6 +44,8 @@ const head = `<title>${TITLE}</title>
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="${ICON}">`;
 html = html.replace(/<title>[^<]*<\/title>/, head);
+// the kit inlines JetBrains Mono for its film HUD; Pitline's app is all Inter, so the page leaves it out
+html = html.replace(/@font-face\{font-family:'JetBrains Mono'[^}]*\}\n?/g, '');
 // what the canvas shows, for screen readers and for anyone without JavaScript
 html = html.replace(
   '<div id="app"></div>',

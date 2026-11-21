@@ -14,8 +14,8 @@
 //       The middle of each garage (|x - centre.x| < 3) is kept clear for a car. raceControl = its block's centre.
 //   buildPitWall({length}) -> {group}         along local x, 1.2 m high, 0.8 thick; catch fence on the -z side.
 //   buildPitWallStand({team}) -> {group, anchor}   8 m long, straddles the pit wall's line (z = 0); the track side
-//       is local +z (monitors face +z), the strategists' deck and bench on the pit-lane side (-z, out to z = -1.8).
-//       anchor = Vector3 above the canopy.
+//       is local +z (monitors face +z), the strategists' deck and stools on the pit-lane side (-z, out to z = -1.9),
+//       a canopy in the team's colours at 3.9 m with the name on top. anchor = Vector3 above the canopy.
 //   buildGrandstand({length = 80, rows = 8}) -> {group}   faces +z (front wall at z = 0, rows rising toward -z),
 //       5.9 m high, 0.4 + rows * 0.9 deep.
 //   buildStartGantry({span = 18}) -> {group, setLights(n)}   beam along local x at 6.5 m (posts at x = +-span/2),
@@ -28,8 +28,10 @@
 //       Air flows toward -x through the test section. mount = Object3D at the belt's surface, (0, 0.82, 4), where a
 //       60% car sits facing +x. flow = {x0: -6, x1: 6, y0: 0.82, y1: 3.38, z0: 1.55, z1: 6.45}. setFan(a) turns the
 //       rotor to angle a (rad), setBelt(d) moves the belt d metres (its surface runs toward -x). strut = the overhead
-//       sting (tip 0.95 above the belt at x = -0.4); hide it if the model does not want it.
-//   buildMotorhome({team}) -> {group}       20 x 8, two storeys (7.3 m), faces +z, team-colour glass bands and roof.
+//       balance strut, a slim blade with a small cap on the roof (tip 0.95 above the belt at x = -0.4); hide it if
+//       the model does not want it.
+//   buildMotorhome({team}) -> {group}       20 x 8, two storeys (7.3 m), faces +z, team-colour glass bands, the team's
+//       name on its white roof.
 //   buildMarshalPost() -> {group}           a hut with a flag board, faces +z.
 //   buildToyTree({size, kind}), buildToyTrees([{x, z, size, kind, rot}])   copied from the skill's airside.js.
 //
@@ -48,11 +50,11 @@ export const CIRCUIT = {
   epoxy: '#f4f6fd', // the garages' epoxy floor
   post: '#98a3c6', // fence posts and rails
   pane: '#eef1fb', // translucent fence and balustrade panels
-  tunnelGlass: '#cfdcff', // the test section's glass
+  tunnelGlass: '#f7f9ff', // the test section's glass: near white and very clear, so the model reads through it
   steel: '#c3cbe3',
   ink: '#1d2231',
   screen: '#121a30', // screens, before their picture
-  ductIn: '#7f8bb3', // the inside of the tunnel's ducts
+  ductIn: '#4e5a86', // the inside of the tunnel's ducts
   fanIn: '#2c3a5e', // the inside of the fan housing
 };
 
@@ -121,7 +123,9 @@ class Kit {
     return this;
   }
   box(mat, w, h, d, x, y, z, r = null, rx = 0, ry = 0, rz = 0) {
-    return this.add(mat, rbox(w, h, d, r ?? Math.min(w, h, d) * 0.2), mat4(x, y, z, rx, ry, rz));
+    const rr = r ?? Math.min(w, h, d) * 0.2;
+    // small bevels get fewer segments: a 5 cm round reads the same with one chamfer step, at a fifth of the triangles
+    return this.add(mat, rbox(w, h, d, rr, rr < 0.07 ? 1 : rr < 0.15 ? 2 : 3), mat4(x, y, z, rx, ry, rz));
   }
   /** a plain box for small repeated ribs (bevels under 5 cm never show) */
   flat(mat, w, h, d, x, y, z, rx = 0, ry = 0, rz = 0) {
@@ -242,6 +246,17 @@ function paneMat(color, opacity, rough = 0.2) {
   }
   return PANE.get(key);
 }
+/** the test section's glass: an unlit near-white film. A lit pane, even a faint one, picks up the sun and washes
+ *  out the dark belt and the model behind it; this one only lifts what is behind a little and never darkens it */
+function filmMat(opacity) {
+  const key = `film|${opacity}`;
+  if (!PANE.has(key)) {
+    const m = new THREE.MeshBasicMaterial({color: '#ffffff', transparent: true, opacity, depthWrite: false});
+    m.userData.noAO = true;
+    PANE.set(key, m);
+  }
+  return PANE.get(key);
+}
 let MATS = null;
 function mats() {
   if (MATS) return MATS;
@@ -269,8 +284,9 @@ function mats() {
     floor: floorPaint(CIRCUIT.floor, 0, 0.92),
     pane: paneMat(CIRCUIT.pane, 0.5, 0.3),
     rail: paneMat('#dfe7ff', 0.38, 0.15),
-    tunnel: paneMat(CIRCUIT.tunnelGlass, 0.2, 0.12),
-    tunnelTop: paneMat('#dfe8ff', 0.12, 0.12),
+    tunnel: filmMat(0.09),
+    tunnelTop: filmMat(0.05),
+    glint: filmMat(0.32),
     room: sideMat(CIRCUIT.interior, THREE.BackSide, 0.9),
     ductIn: sideMat(CIRCUIT.ductIn, THREE.BackSide, 0.85),
     fanIn: sideMat(CIRCUIT.fanIn, THREE.BackSide, 0.8),
@@ -534,9 +550,8 @@ const flowTex = once(() =>
 /** the marshals' flag board: yellow, green, blue, red-and-yellow, white, chequered */
 const flagTex = once(() =>
   canvasTex(384, 256, (g, w, h) => {
-    rr(g, 0, 0, w, h, 26);
     g.fillStyle = '#ffffff';
-    g.fill();
+    g.fillRect(0, 0, w, h);
     const cw = 104;
     const ch = 92;
     const cell = (i, draw) => {
@@ -754,30 +769,28 @@ export function buildPitBuilding({teams = DEFAULT_TEAMS, bay = 30} = {}) {
     K.box(M.wall, 0.5, PIT.slab[0], D, x0 + 0.25, PIT.slab[0] / 2, -D / 2, 0.12);
     K.box(M.wall, Lg, PIT.slab[0] - top + 0.1, D - 0.8, mid, (PIT.slab[0] + top) / 2, -D / 2 - 0.4, 0.1);
     // the hospitality storey: a dark glass ribbon with white mullions over a white sill
-    K.box(M.glass, Lg - 0.4, PIT.slab[0] - top - 0.1, 0.3, mid, (PIT.slab[0] + top) / 2, -0.55, 0.08);
-    for (let x = x0 + 1.5; x < xr0 - 0.5; x += 3) K.box(M.white, 0.16, PIT.slab[0] - top - 0.1, 0.16, x, (PIT.slab[0] + top) / 2, -0.38, 0.05);
-    K.box(M.white, Lg + 0.3, 0.26, 1.0, mid, top + 0.03, -0.12, 0.1);
+    K.box(M.glass, Lg - 0.4, PIT.slab[0] - top - 0.1, 0.3, mid, (PIT.slab[0] + top) / 2, -0.12, 0.08);
+    for (let x = x0 + 1.5; x < xr0 - 0.5; x += 3) K.box(M.white, 0.16, PIT.slab[0] - top - 0.1, 0.14, x, (PIT.slab[0] + top) / 2, 0.06, 0.05);
+    K.box(M.white, Lg + 0.3, 0.22, 0.75, mid, top + 0.02, 0.0, 0.09);
     // the roof slab overhangs the glass; a blue fascia along its front edge
     const [s0, s1] = PIT.slab;
-    K.box(M.white, Lg + 0.5, s1 - s0, D + 1.1, mid - 0.25, (s0 + s1) / 2, -D / 2 + 0.55, 0.2);
-    K.box(M.blue, Lg + 0.56, 0.3, 0.2, mid - 0.25, (s0 + s1) / 2, 1.12, 0.08);
+    K.box(M.white, Lg + 0.5, s1 - s0, D + 0.5, mid - 0.25, (s0 + s1) / 2, -D / 2 + 0.25, 0.2);
+    K.box(M.blue, Lg + 0.56, 0.3, 0.2, mid - 0.25, (s0 + s1) / 2, 0.52, 0.08);
     // the roof: a blue ribbed field over the back, the terrace deck along the front behind a glass balustrade
     const zt = -4.4;
     K.box(M.roof, Lg - 0.5, 0.1, D + zt - 0.3, mid, s1 + 0.04, (zt - D) / 2 - 0.05, 0.04);
     for (let x = x0 + 0.9; x < xr0 - 0.6; x += 0.92) K.flat(M.roof, 0.18, 0.08, D + zt - 0.6, x, s1 + 0.12, (zt - D) / 2 - 0.05);
-    K.box(M.panel, Lg - 0.5, 0.08, -zt + 0.6, mid, s1 + 0.03, zt / 2 + 0.3, 0.03);
+    K.box(M.panel, Lg - 0.5, 0.08, -zt + 0.2, mid, s1 + 0.03, zt / 2 + 0.1, 0.03);
     K.box(M.white, Lg - 0.5, 0.32, 0.3, mid, s1 + 0.15, zt, 0.1);
-    for (let x = x0 + 0.5; x <= xr0 - 0.4; x += 3) K.box(M.white, 0.12, 0.92, 0.12, x, s1 + 0.46, 0.75, 0.04);
-    K.add(M.rail, cached(`rail|${Lg}`, () => new THREE.BoxGeometry(Lg - 1, 0.78, 0.04)), mat4(mid, s1 + 0.44, 0.75));
-    K.box(M.white, Lg - 0.9, 0.12, 0.18, mid, s1 + 0.92, 0.75, 0.05);
-    for (const z of [zt + 0.5, -1.6]) K.box(M.white, 0.12, 0.92, 0.12, x0 + 0.5, s1 + 0.46, z, 0.04);
-    K.box(M.white, 0.18, 0.12, -zt + 0.4, x0 + 0.5, s1 + 0.92, zt / 2 + 0.35, 0.05);
-    K.add(M.rail, cached(`railEnd`, () => new THREE.BoxGeometry(0.04, 0.78, -zt + 0.2)), mat4(x0 + 0.5, s1 + 0.44, zt / 2 + 0.35));
-    // planters along the terrace, low hedges in them
-    for (let x = x0 + 8; x < xr0 - 4; x += 15) {
-      K.box(M.white, 3.2, 0.42, 0.9, x, s1 + 0.21, zt + 0.95, 0.14);
-      K.add(M.greenDeep, cached('hedge', () => new THREE.SphereGeometry(1, 24, 10, 0, TAU, 0, PI / 2).scale(1.45, 0.42, 0.36)), mat4(x, s1 + 0.4, zt + 0.95));
-    }
+    const zr = 0.25;
+    for (let x = x0 + 0.5; x <= xr0 - 0.4; x += 3) K.box(M.white, 0.12, 0.92, 0.12, x, s1 + 0.46, zr, 0.04);
+    K.add(M.rail, cached(`rail|${Lg}`, () => new THREE.BoxGeometry(Lg - 1, 0.78, 0.04)), mat4(mid, s1 + 0.44, zr));
+    K.box(M.white, Lg - 0.9, 0.12, 0.18, mid, s1 + 0.92, zr, 0.05);
+    for (const z of [zt + 0.5, -1.9]) K.box(M.white, 0.12, 0.92, 0.12, x0 + 0.5, s1 + 0.46, z, 0.04);
+    K.box(M.white, 0.18, 0.12, -zt + zr - 0.1, x0 + 0.5, s1 + 0.92, (zt + zr) / 2 + 0.05, 0.05);
+    K.add(M.rail, cached(`railEnd`, () => new THREE.BoxGeometry(0.04, 0.78, -zt + zr - 0.3)), mat4(x0 + 0.5, s1 + 0.44, (zt + zr) / 2 + 0.05));
+    // low white benches along the terrace
+    for (let x = x0 + 8; x < xr0 - 4; x += 15) K.box(M.white, 3.0, 0.36, 0.7, x, s1 + 0.18, zt + 0.9, 0.12);
     // plant units on the blue field
     for (let x = x0 + 18; x < xr0 - 10; x += 30) {
       K.box(M.white, 3.6, 0.6, 2.4, x, s1 + 0.38, -11.8, 0.2);
@@ -794,8 +807,7 @@ export function buildPitBuilding({teams = DEFAULT_TEAMS, bay = 30} = {}) {
     K.box(M.blue, rw + 0.3, 0.4, D + 0.3, xrc, 6.7, -D / 2, 0.14);
     K.box(M.glass, 7.2, 3.2, 0.2, xrc - 3.2, 1.6, 0.02, 0.08);
     for (let x = xrc - 6.4; x <= xrc + 0.1; x += 2.4) K.box(M.white, 0.14, 3.2, 0.14, x, 1.6, 0.12, 0.04);
-    K.box(M.blue, 8.6, 0.3, 2.4, xrc - 3.2, 3.5, 1.05, 0.12);
-    for (const s of [-1, 1]) K.box(M.white, 0.2, 3.35, 0.2, xrc - 3.2 + s * 4.0, 1.68, 2.05, 0.06);
+    K.box(M.blue, 8.4, 0.42, 1.9, xrc - 3.2, 3.5, 0.9, 0.16);
     // a window band on the +x end
     K.box(M.glass, 0.2, 1.5, D - 4, xr0 + rw + 0.02, 4.4, -D / 2, 0.08);
     const rcBot = [xr0 + 0.4, xr0 + rw - 0.2, -D + 0.3, -0.3];
@@ -815,7 +827,7 @@ export function buildPitBuilding({teams = DEFAULT_TEAMS, bay = 30} = {}) {
     const t = teams[i];
     const Lv = TOY.livery[t] ?? TOY.livery.halcyon;
     const p = plate(teamName(t), {bg: null, fg: Lv.trim, px: 104, h: 150, padX: 0.1, italic: true});
-    stick(group, p.tex, p.aspect, 0.72, cx, 6.68, 0.315);
+    stick(group, p.tex, p.aspect, 0.84, cx, 6.73, 0.315);
   });
   // race control's name on its front and its +x end, the mark on its roof
   const rc = plate('RACE CONTROL', {bg: TOY.white, fg: TOY.blue, px: 96, h: 150, padX: 0.3});
@@ -839,8 +851,8 @@ function garage(K, cx, team) {
   for (const s of [-1, 1]) K.box(M.blue, f, openH + f, 0.75, cx + s * (openW / 2 + f / 2 - 0.04), (openH + f) / 2, 0.08, 0.2);
   K.box(M.blue, openW + 2 * f - 0.08, f, 0.75, cx, openH + f / 2, 0.08, 0.2);
   // the team board: the body colour, an accent line along its foot
-  K.box(paint(Lv.body), 11.2, 0.95, 0.3, cx, 6.62, 0.16, 0.14);
-  K.box(paint(Lv.accent), 10.9, 0.1, 0.06, cx, 6.22, 0.32, 0.03);
+  K.box(paint(Lv.body), 15.0, 1.05, 0.3, cx, 6.67, 0.16, 0.16);
+  K.box(paint(Lv.accent), 14.6, 0.1, 0.06, cx, 6.22, 0.32, 0.03);
   // the room, lit, seen from inside
   K.add(M.room, cached(`room`, () => new THREE.BoxGeometry(roomW, 6.2, roomD)), mat4(cx, 3.09, -0.45 - roomD / 2));
   K.patch(lit(CIRCUIT.epoxy, {rough: 0.4, sheen: true}), roomW - 0.1, roomD - 0.1, cx, 0.012, -0.5 - roomD / 2);
@@ -859,21 +871,19 @@ function garage(K, cx, team) {
     for (const dz of [-0.5, 0.5]) K.cyl(navy, 0.07, 0.07, 0.08, x, 0.07, z + dz, 'x', 0.02, 12);
   }
   // the engineers' desk and the timing screen behind it, facing the opening
-  const ex = cx - 6.4;
-  K.box(white, 4.6, 0.12, 1.0, ex, 0.98, -2.55, 0.04);
-  for (const s of [-1, 1]) K.box(white, 0.12, 0.92, 0.9, ex + s * 2.2, 0.48, -2.55, 0.04);
-  [-1.45, 0, 1.45].forEach((dx, k) => {
-    K.box(navy, 1.1, 0.68, 0.08, ex + dx, 1.48, -2.75, 0.03);
-    K.pic(screenMat(monitorTex(k)), 1.0, 0.6, ex + dx, 1.48, -2.705);
-    K.box(steel, 0.08, 0.2, 0.08, ex + dx, 1.1, -2.78, 0.02);
+  const ex = cx - 6.2;
+  K.box(white, 4.4, 0.1, 0.9, ex, 0.8, -2.3, 0.04);
+  for (const s of [-1, 1]) K.box(white, 0.12, 0.76, 0.8, ex + s * 2.1, 0.4, -2.3, 0.04);
+  [-1.4, 0, 1.4].forEach((dx, k) => {
+    K.box(navy, 0.8, 0.05, 0.55, ex + dx, 0.88, -2.2, 0.02);
+    K.box(navy, 0.8, 0.5, 0.05, ex + dx, 1.12, -2.48, 0.02, -0.25, 0, 0);
+    K.pic(screenMat(monitorTex(k)), 0.72, 0.42, ex + dx, 1.12, -2.45);
+    K.cyl(navy, 0.25, 0.25, 0.1, ex + dx, 0.62, -1.55, 'y', 0.04, 16);
+    K.cyl(steel, 0.05, 0.05, 0.5, ex + dx, 0.32, -1.55, 'y', 0.02, 8);
   });
-  for (const dx of [-1.4, 0, 1.4]) {
-    K.cyl(navy, 0.26, 0.26, 0.12, ex + dx, 0.72, -1.75, 'y', 0.04, 16);
-    K.cyl(steel, 0.05, 0.05, 0.62, ex + dx, 0.35, -1.75, 'y', 0.02, 8);
-  }
-  for (const s of [-1, 1]) K.box(steel, 0.1, 2.3, 0.1, ex + s * 1.6, 1.15, -3.5, 0.03);
-  K.box(navy, 3.6, 1.2, 0.12, ex, 1.85, -3.46, 0.05);
-  K.pic(screenMat(timingTex(), 0.8), 3.45, 1.08, ex, 1.85, -3.395);
+  for (const s of [-1, 1]) K.box(steel, 0.12, 2.0, 0.12, ex + s * 2.05, 1.0, -3.3, 0.03);
+  K.box(navy, 4.3, 1.28, 0.12, ex, 1.62, -3.26, 0.05);
+  K.pic(screenMat(timingTex(), 0.8), 4.14, 1.16, ex, 1.62, -3.195);
   // tyres in blankets: a two-level rack of six standing wheels, and a stack of four lying flat
   const rx = cx + 5.6;
   const rz = -2.2;
@@ -883,22 +893,21 @@ function garage(K, cx, team) {
   K.box(white, 4.84, 0.14, 0.2, rx, 3.2, rz, 0.05);
   for (const s of [-1, 1]) for (const e of [-1, 1]) K.cyl(navy, 0.09, 0.09, 0.08, rx + s * 2.1, 0.1, rz + e * 0.35, 'z', 0.02, 12);
   for (const y of [1.04, 2.5]) for (const dx of [-1.45, 0, 1.45]) blanketWheel(K, rx + dx, y, rz, 'z', y > 2 ? TOY.medium : TOY.soft);
-  for (let k = 0; k < 4; k++) blanketWheel(K, cx + 9.4, 0.33 + k * 0.62, -1.15, 'y', TOY.hard);
+  for (let k = 0; k < 4; k++) blanketWheel(K, cx + 9.4, 0.33 + k * 0.62, -1.15, 'y', TOY.hard, k === 3);
 }
 /** a wheel in a blue tyre blanket: the blanket, the rim showing in the middle, a band in the compound colour */
-function blanketWheel(K, x, y, z, axis, band) {
+function blanketWheel(K, x, y, z, axis, band, top = true) {
   const blanket = lit(TOY.blue, {sheen: true, rough: 0.55});
   const navy = lit(TOY.navy, {rough: 0.7});
   const hub = lit('#c9cfdf', {rough: 0.42});
-  K.cyl(blanket, 0.66, 0.66, 0.6, x, y, z, axis, 0.2, 28);
-  K.cyl(navy, 0.36, 0.36, 0.64, x, y, z, axis, 0.05, 20);
-  K.cyl(hub, 0.17, 0.17, 0.68, x, y, z, axis, 0.04, 14);
-  const ring = cached('blanketBand', () => new THREE.TorusGeometry(0.5, 0.045, 8, 36));
+  K.cyl(blanket, 0.66, 0.66, 0.6, x, y, z, axis, 0.2, 22);
+  if (!top) return;
+  K.cyl(navy, 0.36, 0.36, 0.64, x, y, z, axis, 0.05, 16);
+  K.cyl(hub, 0.17, 0.17, 0.68, x, y, z, axis, 0.04, 10);
+  const ring = cached('blanketBand', () => new THREE.TorusGeometry(0.5, 0.045, 6, 28));
   const m = lit(band, {rough: 0.5});
-  for (const s of [-1, 1]) {
-    if (axis === 'z') K.add(m, ring, mat4(x, y, z + s * 0.3));
-    else K.add(m, ring, mat4(x, y + s * 0.3, z, PI / 2, 0, 0));
-  }
+  if (axis === 'z') K.add(m, ring, mat4(x, y, z + 0.3));
+  else K.add(m, ring, mat4(x, y + 0.3, z, PI / 2, 0, 0));
 }
 
 // ================================================================================================ the pit wall
@@ -964,14 +973,14 @@ export function buildPitWallStand({team = 'halcyon'} = {}) {
     K.box(M.steel, L - 0.4, 0.08, 0.08, 0, 1.25, -0.7, 0.03);
     // the canopy: posts at the back, a slab in the team colour, a white edge
     for (const x of [-3.7, 3.7]) K.box(M.white, 0.2, 3.0, 0.2, x, 2.4, -1.75, 0.06);
-    K.box(paint(ink), L + 0.6, 0.3, 2.3, 0, 3.92, -0.8, 0.12);
+    K.box(paint(Lv.body), L + 0.6, 0.3, 2.3, 0, 3.92, -0.8, 0.12);
     K.box(M.white, L + 0.66, 0.1, 2.36, 0, 3.74, -0.8, 0.04);
     K.box(paint(Lv.accent), L + 0.64, 0.08, 0.06, 0, 3.86, 0.37, 0.03);
     return K.freeze();
   });
   const group = thaw(frozen);
   group.name = 'pit-wall-stand';
-  const p = plate(teamName(team), {bg: null, fg: ink === Lv.trim ? TOY.white : Lv.trim, px: 104, h: 150, padX: 0.1, italic: true});
+  const p = plate(teamName(team), {bg: null, fg: Lv.trim, px: 104, h: 150, padX: 0.1, italic: true});
   stick(group, p.tex, p.aspect, 0.22, 0, 3.92, 0.36);
   stick(group, p.tex, p.aspect, 0.22, 0, 3.92, -1.96, PI);
   stick(group, p.tex, p.aspect, 1.05, 0, 4.075, -0.8, 0, true);
@@ -1015,24 +1024,42 @@ export function buildGrandstand({length = 80, rows = 8} = {}) {
   });
   const group = thaw(frozen);
   group.name = 'grandstand';
-  // the seats, instanced
-  const seat = cached('seat', () => {
-    const a = clean(rbox(0.46, 0.14, 0.42, 0.06)).translate(0, 0.42, 0.02);
-    const b = clean(rbox(0.46, 0.46, 0.1, 0.05)).translate(0, 0.66, -0.2);
-    const c = clean(rbox(0.12, 0.36, 0.12, 0.04)).translate(0, 0.18, 0);
-    return mergeGeometries([a, b, c], false);
-  });
+  // the seats: one unit per section and row (a seat pan and a back, split every 0.56 m), instanced
+  const edges = [-length / 2 + 0.3, ...aisles.flatMap((a) => [a - 0.75, a + 0.75]), length / 2 - 0.3];
+  const runs = [];
+  for (let i = 0; i < edges.length; i += 2) runs.push([edges[i], edges[i + 1]]);
   const list = [];
-  for (let k = 0; k < rows; k++)
-    for (let x = -length / 2 + 0.55; x <= length / 2 - 0.5; x += 0.56) {
-      if (aisles.some((a) => Math.abs(x - a) < 0.95)) continue;
-      list.push(mat4(x, yRow(k), zRow(k) + 0.1));
-    }
-  const im = new THREE.InstancedMesh(seat, paint(TOY.blue, 0.46), list.length);
-  list.forEach((m, i) => im.setMatrixAt(i, m));
-  im.castShadow = im.receiveShadow = true;
-  im.computeBoundingSphere();
-  group.add(im);
+  for (const [a, b] of runs) {
+    const w = b - a;
+    const n = Math.max(1, Math.round(w / 0.56));
+    for (let k = 0; k < rows; k++) list.push({w, n, m: mat4((a + b) / 2, yRow(k), zRow(k) + 0.08)});
+  }
+  const byW = new Map();
+  for (const it of list) {
+    const key = `${it.w.toFixed(3)}|${it.n}`;
+    if (!byW.has(key)) byW.set(key, []);
+    byW.get(key).push(it);
+  }
+  for (const [key, items] of byW) {
+    const {w, n} = items[0];
+    const geo = cached(`seatRow|${key}`, () => {
+      const parts = [];
+      const pw = w / n;
+      for (let i = 0; i < n; i++) {
+        const x = -w / 2 + pw * (i + 0.5);
+        // bevels this small never show from the camera: plain boxes keep a 90 m stand to a few thousand triangles
+        parts.push(clean(cached('seatPan', () => new THREE.BoxGeometry(0.5, 0.16, 0.44))).translate(x, 0.4, 0.02));
+        parts.push(clean(cached('seatBack', () => new THREE.BoxGeometry(0.5, 0.48, 0.12))).translate(x, 0.62, -0.2));
+      }
+      parts.push(clean(rbox(w, 0.3, 0.3, 0.06, 2)).translate(0, 0.16, -0.05));
+      return mergeGeometries(parts, false);
+    });
+    const im = new THREE.InstancedMesh(geo, paint(TOY.blue, 0.46), items.length);
+    items.forEach((it, i) => im.setMatrixAt(i, it.m));
+    im.castShadow = im.receiveShadow = true;
+    im.computeBoundingSphere();
+    group.add(im);
+  }
   return {group};
 }
 
@@ -1067,8 +1094,8 @@ export function buildStartGantry({span = 18} = {}) {
   });
   const LAMP = once(() => ({
     off: toyMat('#2a3352', {rough: 0.3}),
-    red: new THREE.MeshStandardMaterial({color: TOY.red, emissive: TOY.red, emissiveIntensity: 1.8, roughness: 0.3}),
-    green: new THREE.MeshStandardMaterial({color: '#3fd67a', emissive: '#3fd67a', emissiveIntensity: 1.6, roughness: 0.3}),
+    red: new THREE.MeshStandardMaterial({color: '#ff2b2b', emissive: '#ff1a1a', emissiveIntensity: 1.0, roughness: 0.3}),
+    green: new THREE.MeshStandardMaterial({color: '#22d66a', emissive: '#14c85a', emissiveIntensity: 1.0, roughness: 0.3}),
   }))();
   const pods = [];
   for (let i = 0; i < 5; i++) {
@@ -1087,7 +1114,7 @@ export function buildStartGantry({span = 18} = {}) {
 }
 
 // ================================================================================================ the aero lab
-const LAB = {W: 70, D: 30, H: 8, low: 2.4, t: 0.5, zT: 4, xT: 6, belt: 0.8, tsW: 5, tsH: 2.6, yR: 3.6, rR: 3.1, zB: -8.5, xC: 19.5, cS: 8, cH: 7.6};
+const LAB = {W: 70, D: 30, H: 8, low: 2.4, t: 0.5, zT: 4, xT: 6, belt: 0.8, tsW: 5, tsH: 2.6, yR: 3.6, rR: 3.1, zB: -8.5, xC: 19.5, cS: 7.4, cH: 7.1};
 export function buildAeroLab() {
   const M = mats();
   const {W, D, H, low, t, zT, xT, belt, tsW, tsH, yR, rR, zB, xC, cS, cH} = LAB;
@@ -1130,16 +1157,29 @@ export function buildAeroLab() {
       [W / 2, D / 2, low],
     ])
       K.box(M.blue, 0.9, h + 0.45, 0.9, x, (h + 0.45) / 2, z, 0.26);
+    // a zone plate under the tunnel, a step darker than the floor, a white keep-out line round it
+    K.add(floorPaint('#dbe2f6', 1, 0.9), cached('labZone', () => new THREE.ShapeGeometry(roundedShape([[-25, -10.4], [25, -10.4], [25, 13], [-25, 13]], 2.5), 6).rotateX(-PI / 2)), mat4(0, 0.016, 0));
     // ---- the tunnel: the test section's plinth and frame, glass sides and roof
     const yTop = belt + tsH;
     K.box(M.paintWhite, 2 * xT + 0.4, belt, tsW + 1.4, 0, belt / 2, zT, 0.16);
-    K.box(lit(CIRCUIT.steel, {rough: 0.5}), 2 * xT, 0.03, tsW - 0.1, 0, belt + 0.005, zT, 0.01);
+    // the floor plate stays below the belt's surface (belt + 0.02), so the two never fight
+    K.box(lit(CIRCUIT.steel, {rough: 0.5}), 2 * xT, 0.03, tsW - 0.1, 0, belt - 0.01, zT, 0.01);
     for (const s of [-1, 1]) {
       K.box(M.blue, 10.6, 0.08, 0.16, 0, belt + 0.04, zT + s * 1.88, 0.03);
       // the glass walls, a white sill under them and an edge beam over them
       K.add(M.tunnel, cached('tsSide', () => new THREE.BoxGeometry(2 * xT, tsH, 0.05)), mat4(0, belt + tsH / 2, zT + s * (tsW / 2 + 0.03)));
       K.box(M.paintWhite, 2 * xT, 0.16, 0.32, 0, belt + 0.08, zT + s * (tsW / 2 + 0.08), 0.06);
-      K.box(M.paintWhite, 2 * xT, 0.2, 0.3, 0, yTop + 0.06, zT + s * (tsW / 2 + 0.08), 0.08);
+      // the roof's edge beam only on the far side: a beam on the near edge would cross the model in the camera's view
+      if (s < 0) K.box(M.paintWhite, 2 * xT, 0.2, 0.3, 0, yTop + 0.06, zT + s * (tsW / 2 + 0.08), 0.08);
+      // glints on the glass, at the ends where they never cross the model
+      if (s > 0)
+        for (const [gx, gw] of [
+          [-5.1, 0.34],
+          [-4.6, 0.14],
+          [4.4, 0.34],
+          [4.9, 0.14],
+        ])
+          K.add(M.glint, cached(`glint|${gw}`, () => new THREE.PlaneGeometry(gw, tsH * 0.8)), mat4(gx, belt + tsH / 2, zT + tsW / 2 + 0.06, 0, 0, -0.5));
     }
     K.add(M.tunnelTop, cached('tsTop', () => new THREE.BoxGeometry(2 * xT, 0.05, tsW + 0.1)), mat4(0, yTop + 0.03, zT));
     // the end frames: blue rings where the cone and the diffuser join
@@ -1148,11 +1188,8 @@ export function buildAeroLab() {
       K.box(M.paintBlue, 0.5, 0.36, tsW + 0.9, x, yTop + 0.12, zT, 0.12);
       for (const e of [-1, 1]) K.box(M.paintBlue, 0.5, tsH + 0.5, 0.36, x, belt + tsH / 2, zT + e * (tsW / 2 + 0.2), 0.12);
     }
-    // the overhead strut's housing on the roof (the strut itself is its own mesh)
-    K.box(M.paintBlue, 1.6, 0.5, 1.1, -0.4, yTop + 0.3, zT, 0.18);
-    K.box(M.paintWhite, 2.6, 0.24, 1.8, -0.4, yTop + 0.1, zT, 0.08);
+
     // the contraction: the floor stays flat, the walls and the roof open out into the settling chamber
-    const xs = [];
     const sm5 = (u) => u * u * u * (u * (u * 6 - 15) + 10);
     const cone = [];
     for (let k = 0; k <= 16; k++) {
@@ -1183,8 +1220,8 @@ export function buildAeroLab() {
     K.add(M.ductIn, diffGeo);
     // the corners: chunky blocks with a mitred outer corner, blue bands where the ducts go in
     const corner = (cx, cz, sx, sz, w = cS, d = cS) => {
-      const c = 3.2;
-      const bv = 0.4;
+      const c = 3.0;
+      const bv = 0.3;
       const hw = w / 2 - bv;
       const hd = d / 2 - bv;
       const pts = [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]];
@@ -1198,15 +1235,24 @@ export function buildAeroLab() {
         const kb = c / Math.hypot(bx - x, bz - z);
         out.push([x + (ax - x) * ka, z + (az - z) * ka], [x + (bx - x) * kb, z + (bz - z) * kb]);
       });
-      const g = plinthGeo(`corner|${w}|${d}|${sx}|${sz}`, out, 1.0, 0, cH, bv);
+      const g = plinthGeo(`corner|${w}|${d}|${sx}|${sz}`, out, 0.7, 0.15, cH, bv);
       K.add(M.paintWhite, g, mat4(cx, 0, cz));
-      // a blue band round the block's middle
-      K.add(M.paintBlue, plinthGeo(`cband|${w}|${d}|${sx}|${sz}`, out.map(([x, z]) => [x * 1.012 + Math.sign(x) * 0.33, z * 1.012 + Math.sign(z) * 0.33]), 1.0, cH - 1.05, cH - 0.55, 0.12), mat4(cx, 0, cz));
+      K.add(M.paintBlue, plinthGeo(`cfoot|${w}|${d}|${sx}|${sz}`, out, 0.7, 0, 0.36, 0.1), mat4(cx, 0, cz));
+      // the turning vanes behind the mitre: a blue panel with white slats on the cut face
+      const ax = cx + sx * (w / 2 - bv - c / 2 + bv * Math.SQRT1_2 + 0.05);
+      const az = cz + sz * (d / 2 - bv - c / 2 + bv * Math.SQRT1_2 + 0.05);
+      const ry = Math.atan2(sx, sz);
+      const vw = c * Math.SQRT2 - 1.4;
+      K.add(M.paintBlue, rbox(vw, cH - 1.6, 0.16, 0.06), mat4(ax + sx * 0.02, cH / 2 + 0.1, az + sz * 0.02, 0, ry, 0));
+      for (let k = 0; k < 5; k++) {
+        const u = (k / 4 - 0.5) * (vw - 0.6);
+        K.add(M.paintWhite, rbox(0.12, cH - 2.0, 0.1, 0.04), new THREE.Matrix4().makeTranslation(ax + sx * 0.02, cH / 2 + 0.1, az + sz * 0.02).multiply(new THREE.Matrix4().makeRotationY(ry)).multiply(mat4(u, 0, 0.1)));
+      }
     };
     corner(-xC, zT, -1, 1);
     corner(-xC, zB, -1, -1);
     corner(xC, zB, 1, -1);
-    corner(xC, zT, 1, 1, cS, 10.4);
+    corner(xC, zT, 1, 1, cS, 10.2);
     // the return circuit: round ducts on saddles, the fan in its housing on the back leg
     const xF0 = -7.5;
     const xF1 = 0.5;
@@ -1218,7 +1264,7 @@ export function buildAeroLab() {
       K.add(M.ductIn, g, mat4(0, 0, zB));
     }
     const legL = ductGeo([round(zB + cS / 2 - 0.2), round(zT - cS / 2 + 0.2)]);
-    const legR = ductGeo([round(zB + cS / 2 - 0.2), round(zT - 5.2 + 0.2)]);
+    const legR = ductGeo([round(zB + cS / 2 - 0.2), round(zT - 5.1 + 0.2)]);
     K.add(M.paintWhite, legL, mat4(-xC, 0, 0, 0, -PI / 2, 0));
     K.add(M.paintWhite, legR, mat4(xC, 0, 0, 0, -PI / 2, 0));
     // flanges: blue rings at the joints
@@ -1228,7 +1274,7 @@ export function buildAeroLab() {
       [-xC, zB + cS / 2 + 0.3],
       [-xC, zT - cS / 2 - 0.3],
       [xC, zB + cS / 2 + 0.3],
-      [xC, zT - 5.2 - 0.3],
+      [xC, zT - 5.1 - 0.3],
     ])
       K.add(M.paintBlue, ring, mat4(x, yR, z));
     K.add(M.paintBlue, cached('flangeD', () => new THREE.TorusGeometry(rR + 0.04, 0.2, 12, 64)), mat4(-xC + cS / 2 + 0.3, yR, zT, 0, PI / 2, 0));
@@ -1323,10 +1369,10 @@ export function buildAeroLab() {
   const sh = 2.2;
   const sw = sg.aspect * sh;
   const sp = new THREE.Mesh(rbox(sw + 0.2, sh + 0.2, 0.2, 0.1), M.white);
-  sp.position.set(9, H - 1.75, -D / 2 + t / 2 + 0.12);
+  sp.position.set(10, H - 1.75, -D / 2 + 0.85);
   sp.castShadow = sp.receiveShadow = true;
   group.add(sp);
-  stick(group, sg.tex, sg.aspect, sh, 9, H - 1.75, -D / 2 + t / 2 + 0.23);
+  stick(group, sg.tex, sg.aspect, sh, 10, H - 1.75, -D / 2 + 0.96);
   const np = plate('AERO LAB', {bg: TOY.blue, fg: '#ffffff', px: 100, h: 150, padX: 0.3});
   stick(group, np.tex, np.aspect, 1.0, -22, low / 2 + 0.1, D / 2 + t / 2 + 0.11);
   const tp = plate('TUNNEL 1', {bg: TOY.blue, fg: '#ffffff', px: 100, h: 150, padX: 0.3});
@@ -1363,10 +1409,12 @@ export function buildAeroLab() {
   strut.name = 'strut';
   {
     const K = new Kit();
+    // a slim blade from the roof glass to the airbox, a small balance cap on the roof (all part of `strut`)
     const y0 = belt + 0.02 + 0.95;
     const y1 = belt + tsH + 0.05;
-    K.box(M.paintWhite, 0.5, y1 - y0, 0.12, -0.4, (y0 + y1) / 2, zT, 0.05);
-    K.box(M.paintBlue, 0.6, 0.18, 0.2, -0.4, y0 + 0.06, zT, 0.06);
+    K.box(M.paintWhite, 0.3, y1 - y0, 0.06, -0.4, (y0 + y1) / 2, zT, 0.025);
+    K.box(M.paintBlue, 0.36, 0.1, 0.1, -0.4, y0 + 0.04, zT, 0.03);
+    K.box(M.paintBlue, 0.8, 0.24, 0.5, -0.4, y1 + 0.14, zT, 0.1);
     thaw(K.freeze(), strut);
   }
   group.add(strut);
@@ -1415,7 +1463,7 @@ export function buildMotorhome({team = 'halcyon'} = {}) {
   const D = 8;
   const frozen = cached(`motorhome|${team}`, () => {
     const K = new Kit();
-    const tint = toyMat('#' + new THREE.Color(ink).lerp(new THREE.Color(TOY.glass), 0.3).getHexString(), {rough: 0.14});
+    const tint = toyMat('#' + new THREE.Color(ink).lerp(new THREE.Color(TOY.glass), 0.5).getHexString(), {rough: 0.14});
     // the ground storey: white, a team-colour glass band across the front and round the +x end
     K.box(M.white, L, 3.3, D, 0, 1.65, 0, 0.3);
     K.box(tint, L - 2.4, 2.1, 0.2, 0.6, 1.55, D / 2 + 0.01, 0.08);
@@ -1430,21 +1478,17 @@ export function buildMotorhome({team = 'halcyon'} = {}) {
     K.box(tint, L - 1.6, 1.4, 0.2, 0, 4.95, D / 2 + 0.81, 0.08);
     K.box(tint, 0.2, 1.4, D - 1.2, L / 2 + 0.01, 4.95, 0.4, 0.08);
     for (let x = -L / 2 + 2.4; x < L / 2 - 1.6; x += 3.2) K.box(M.white, 0.16, 1.4, 0.16, x, 4.95, D / 2 + 0.92, 0.05);
-    K.box(paint(ink), L + 0.5, 0.42, D + 1.3, 0, 6.8, 0.4, 0.16);
-    K.box(M.white, L + 0.56, 0.12, D + 1.36, 0, 6.62, 0.4, 0.04);
-    K.box(paint(Lv.accent), L + 0.54, 0.1, 0.06, 0, 6.98, D / 2 + 1.07, 0.03);
-    // a roof unit and planters by the door
-    K.box(M.white, 4, 0.5, 2.4, 4, 7.26, -1.4, 0.18);
-    for (const x of [-L / 2 + 4.6, L / 2 - 1.2]) {
-      K.box(M.white, 1.4, 0.6, 1.0, x, 0.3, D / 2 + 1.0, 0.14);
-      K.add(M.greenDeep, cached('hedgeS', () => new THREE.SphereGeometry(1, 20, 10, 0, TAU, 0, PI / 2).scale(0.62, 0.5, 0.44)), mat4(x, 0.58, D / 2 + 1.0));
-    }
+    K.box(M.paintWhite, L + 0.5, 0.42, D + 1.3, 0, 6.8, 0.4, 0.16);
+    K.box(paint(ink), L + 0.56, 0.16, D + 1.36, 0, 6.68, 0.4, 0.05);
+    // a roof unit at the back
+    K.box(M.white, 4, 0.5, 1.8, 6, 7.26, -2.6, 0.18);
     return K.freeze();
   });
   const group = thaw(frozen);
   group.name = 'motorhome';
   const p = plate(teamName(team), {bg: null, fg: ink, px: 104, h: 150, padX: 0.1, italic: true});
-  stick(group, p.tex, p.aspect, 0.56, -2, 6.12, D / 2 + 0.82);
+  stick(group, p.tex, p.aspect, 0.62, -2, 6.08, D / 2 + 0.82);
+  stick(group, p.tex, p.aspect, 1.9, -1.5, 7.015, 1.4, 0, true);
   return {group};
 }
 
@@ -1459,9 +1503,9 @@ export function buildMarshalPost() {
     K.box(M.glass, 0.12, 0.85, 1.2, 1.1, 1.8, -0.2, 0.05);
     K.box(M.blue, 3.1, 0.32, 2.8, -0.2, 2.62, 0, 0.12);
     // the flag board on two posts, facing +z
-    for (const x of [1.25, 2.75]) K.box(M.post, 0.12, 2.9, 0.12, x, 1.45, 0.85, 0.04);
-    K.box(M.white, 1.9, 1.32, 0.12, 2.0, 2.3, 0.88, 0.06);
-    K.pic(new THREE.MeshStandardMaterial({map: flagTex(), roughness: 0.5}), 1.8, 1.2, 2.0, 2.3, 0.945);
+    for (const x of [1.85, 3.35]) K.box(M.post, 0.14, 2.9, 0.14, x, 1.45, 0.85, 0.04);
+    K.box(M.white, 1.96, 1.38, 0.14, 2.6, 2.3, 0.88, 0.07);
+    K.pic(new THREE.MeshStandardMaterial({map: flagTex(), roughness: 0.5}), 1.8, 1.2, 2.6, 2.3, 0.955);
     return K.freeze();
   });
   const group = thaw(frozen);

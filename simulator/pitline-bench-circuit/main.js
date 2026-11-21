@@ -101,6 +101,23 @@ runSim({duration: 10, fps: 60, theme: 'light', hud: {enabled: false, title: 'ben
     lab.setBelt(cfg.belt ?? 0);
   }
   if (gantry) gantry.setLights(cfg.lights ?? 3);
+  // --config {"stats": true}: draw calls and triangles per top-level model, printed through console.error
+  if (cfg.stats) {
+    const rows = [];
+    for (const o of st.scene.children) {
+      let calls = 0;
+      let tris = 0;
+      o.traverse((m) => {
+        if (!m.isMesh || !m.visible) return;
+        calls++;
+        const g = m.geometry;
+        const n = (g.index ? g.index.count : g.attributes.position.count) / 3;
+        tris += n * (m.isInstancedMesh ? m.count : 1);
+      });
+      if (calls) rows.push(`${o.name || o.type}: ${calls} calls, ${Math.round(tris / 1000)}k tris`);
+    }
+    console.error('stats\n' + rows.join('\n'));
+  }
   const cam = {x: 0, z: 0, d: 60, az: 38, el: 36, ty: 1, ...(cfg.cam || {})};
   const resize = () => {
     app.style.transform = `scale(${Math.min(innerWidth / 1600, innerHeight / 900)})`;

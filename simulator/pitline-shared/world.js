@@ -2,6 +2,9 @@
 // of time. pose(t) places every car from scratch (layout.js), runs the two pit stops (jacks and wheel machines in place
 // of a crew: no people are built in this world), turns the wind tunnel's fan and belt and moves its smoke.
 import * as THREE from 'three';
+import {Line2} from 'three/addons/lines/Line2.js';
+import {LineGeometry} from 'three/addons/lines/LineGeometry.js';
+import {LineMaterial} from 'three/addons/lines/LineMaterial.js';
 import {TOY, toyMat} from './style.js';
 import {buildCircuitSurface, TRACK_HALF} from './track.js';
 import {buildRaceCar, buildWheel, buildWheelCart, buildPitJack, buildPitLight, buildTyreRack, buildTeamTruck} from './cars.js';
@@ -83,13 +86,15 @@ export function buildWorld() {
     root.add(m.group);
   }
 
-  // the paddock: a motorhome and a transporter behind each garage
+  // the paddock: a motorhome behind each garage, the transporters parked in a row to the west, clear of the chicane
+  // (anything tall between the camera and the back of the circuit hides the cars there)
   TEAMS.forEach((team, i) => {
     const mh = buildMotorhome({team});
     mh.group.position.set(GARAGE_X[i], 0, -30);
     root.add(mh.group);
     const tr = buildTeamTruck({team});
-    tr.group.position.set(GARAGE_X[i] + 2, 0, -46);
+    tr.group.position.set(-132 + i * 21, 0, -46);
+    tr.group.rotation.y = Math.PI / 2;
     root.add(tr.group);
   });
 
@@ -121,7 +126,7 @@ export function buildWorld() {
     if (Math.abs(x - AERO.x) < 60 && Math.abs(z - AERO.z) < 30) continue;
     trees.push({x, z, size: 0.9 + r(i + 7) * 0.5, kind: r(i + 3) > 0.75 ? 'bush' : 'tree'});
   }
-  for (const [x, z] of [[-110, -30], [-104, -40], [100, -26], [108, -38], [-130, -50], [125, -50], [AERO.x - 52, AERO.z + 22], [AERO.x + 52, AERO.z + 22], [AERO.x - 60, AERO.z - 10], [AERO.x + 60, AERO.z - 6]]) trees.push({x, z, size: 1.1});
+  for (const [x, z] of [[-152, -28], [-146, -12], [100, -26], [108, -38], [125, -50], [AERO.x - 52, AERO.z + 22], [AERO.x + 52, AERO.z + 22], [AERO.x - 60, AERO.z - 10], [AERO.x + 60, AERO.z - 6]]) trees.push({x, z, size: 1.1});
   root.add(buildToyTrees(trees));
 
   // the cars
@@ -141,24 +146,27 @@ export function buildWorld() {
       rear: buildPitJack({end: 'rear'}),
       carts: [0, 1, 2, 3].map(() => buildWheelCart()),
       light: buildPitLight(),
-      old: [0, 1, 2, 3].map((i) => buildWheel({compound: c.tyre, side: i % 2 ? -1 : 1})),
-      fresh: [0, 1, 2, 3].map((i) => buildWheel({compound: c.stop.to, side: i % 2 ? -1 : 1})),
+      // loose wheels for the cradles: the FL and RL are on the car's -z side (cars.js), front wheels narrower
+      old: [0, 1, 2, 3].map((i) => buildWheel({compound: c.tyre, side: i % 2 ? 1 : -1, front: i < 2})),
+      fresh: [0, 1, 2, 3].map((i) => buildWheel({compound: c.stop.to, side: i % 2 ? 1 : -1, front: i < 2})),
       bx,
     };
     for (const m of [crew.front, crew.rear, ...crew.carts]) root.add(m.group);
     crew.carts.forEach((cart, i) => {
-      // the wheels ride the cradles with their axles along the cradle's axis (local x): turn them a quarter
-      crew.old[i].group.rotation.y = Math.PI / 2;
-      crew.fresh[i].group.rotation.y = Math.PI / 2;
+      // a slot's frame is turned so a wheel added with no transform has its axle along the cart's x
       cart.slots[0].add(crew.old[i].group);
       cart.slots[1].add(crew.fresh[i].group);
     });
+    // the box frame: where and which way the car stands while it is stationary
+    const pc = pitOf(c);
+    const at = carAt(c, pc.tStop0 + 0.01);
+    crew.box = {x: at.x, z: at.z, yaw: yawOf(at.tx, at.tz)};
     crew.light.group.position.set(bx + 7.2, 0, PIT.front + 1.2);
     root.add(crew.light.group);
     crews[c.id] = crew;
   }
   GARAGE_X.forEach((x, i) => {
-    for (const [dx, comp] of [[-9, 'medium'], [9, 'hard']]) {
+    for (const [dx, comp] of [[-12.5, 'medium'], [12.5, 'hard']]) {
       const rk = buildTyreRack({compound: comp, n: 4});
       rk.group.position.set(x + dx, 0, PIT.front + 1.4);
       root.add(rk.group);
@@ -233,56 +241,54 @@ export function buildWorld() {
   const beltSpeed = 22; // m/s of belt, scene
 
   // ---- the stop: poses of the crew machines for a car stationary at its box ----
-  const outward = (i) => (i % 2 === 0 ? 1 : -1); // FL, RL on +z; FR, RR on -z (wheels 0 FL, 1 FR, 2 RL, 3 RR)
-  const hubX = (i) => (i < 2 ? 2.6 : -2.6);
-  const tmpV = new THREE.Vector3();
-  const placeBySlot = (cart, slotIdx, target, yaw) => {
-    cart.group.position.set(0, 0, 0);
-    cart.group.rotation.set(0, yaw, 0);
-    cart.group.updateMatrixWorld(true);
-    cart.slots[slotIdx].getWorldPosition(tmpV);
-    cart.group.position.set(target.x - tmpV.x, 0, target.z - tmpV.z);
-  };
-  const crewPose = (crew, car, o, t) => {
+  // wheels 0 FL, 1 FR, 2 RL, 3 RR; FL and RL on the car's -z side (cars.js)
+  const outward = (i) => (i % 2 === 0 ? -1 : 1);
+  const HUB = [[2.6, -1.22], [2.6, 1.22], [-2.6, -1.22], [-2.6, 1.22]];
+  const planOf = (car) => stopPlan(car.stop.still, car.id === 'c3' ? 0 : -1, car.id === 'c3' ? 0.5 : 0);
+  /** how far the jacks have the car up (0..0.32) at t */
+  const liftAt = (car, t) => {
     const pc = pitOf(car);
-    const plan = stopPlan(car.stop.still, car.id === 'c3' ? 0 : -1, car.id === 'c3' ? 0.5 : 0);
+    const plan = planOf(car);
     const tau = t - pc.tStop0;
-    const bx = crew.bx;
-    const z0 = PIT.box;
-    const stopped = tau >= 0 && tau < plan.still;
-    // the lift: up over plan.lift, down over plan.drop
-    const lift = stopped ? 0.32 * ss(plan.lift[0], plan.lift[1], tau) * (1 - ss(plan.drop[0], plan.drop[1], tau)) : 0;
-    // the jacks: waiting in front and to the side behind; in under the car as it stops; away after the drop
-    const fl = crew.front.length ?? 2.6;
-    const rl = crew.rear.length ?? 2.6;
-    const fIn = ss(-0.25, 0.15, tau) * (1 - ss(plan.drop[1], plan.drop[1] + 0.3, tau));
-    const fAway = ss(plan.drop[1], plan.drop[1] + 0.3, tau);
-    crew.front.group.rotation.y = Math.PI; // faces -x, toward the nose
-    crew.front.group.position.set(bx + 4.2 + fl / 2 + 2.2 * (1 - fIn) * (1 - fAway), 0, z0 - 3.8 * fAway);
-    crew.front.setLift(lift);
-    const rIn = ss(-0.05, 0.3, tau) * (1 - ss(plan.drop[1], plan.drop[1] + 0.35, tau));
-    crew.rear.group.rotation.y = 0; // faces +x, toward the tail
-    crew.rear.group.position.set(bx - 4.0 - rl / 2 - 3.4 * (1 - rIn), 0, z0 - 3.6 * (1 - rIn));
-    crew.rear.setLift(lift);
-    // the wheel machines: each waits 1.4 m out from its corner, comes in, swaps, backs off
+    if (tau < 0 || tau >= plan.still) return 0;
+    return 0.32 * ss(plan.lift[0], plan.lift[1], tau) * (1 - ss(plan.drop[0], plan.drop[1], tau));
+  };
+  const crewPose = (crew, car, o, t, lift) => {
+    const pc = pitOf(car);
+    const plan = planOf(car);
+    const tau = t - pc.tStop0;
+    const B = crew.box;
+    const cy = Math.cos(B.yaw);
+    const sy = Math.sin(B.yaw);
+    // a point in the box frame (x along the car, z across it, as the car's own local axes) to the world
+    const W = (lx, lz) => ({x: B.x + lx * cy + lz * sy, z: B.z - lx * sy + lz * cy});
+    // the jacks: the front one waits ahead of the box, the rear one off to the side behind; they roll in as the car
+    // stops, their pads rise 0.12 m to meet it and then lift it; after the drop they pull away toward the garage
+    const meet = 0.12 * ss(0.02, plan.lift[0], tau) * (1 - ss(plan.drop[1], plan.drop[1] + 0.12, tau));
+    const fIn = ss(-0.25, 0.12, tau);
+    const fAway = ss(plan.drop[1] + 0.05, plan.drop[1] + 0.35, tau);
+    const fp = W(5.2 + 2.2 * (1 - fIn) * (1 - fAway), -3.8 * fAway);
+    crew.front.group.position.set(fp.x, 0, fp.z);
+    crew.front.group.rotation.y = B.yaw + Math.PI; // faces the nose
+    crew.front.setLift(meet + lift);
+    const rIn = ss(-0.05, 0.3, tau) * (1 - ss(plan.drop[1] + 0.05, plan.drop[1] + 0.4, tau));
+    const rp = W(-5.0 - 3.4 * (1 - rIn), -3.6 * (1 - rIn));
+    crew.rear.group.position.set(rp.x, 0, rp.z);
+    crew.rear.group.rotation.y = B.yaw; // faces the tail
+    crew.rear.setLift(meet + lift);
+    // the wheel machines: each waits 1.4 m out from its corner, comes in, swaps, backs off. Facing the car along -n,
+    // with its origin at hub + n (0.9 + slotX), its centreline cradle is exactly where the wheel slides out to.
     for (let i = 0; i < 4; i++) {
       const w = plan.wheels[i];
       const cart = crew.carts[i];
-      const side = outward(i);
-      const yaw = side > 0 ? Math.PI / 2 : -Math.PI / 2; // face the car
+      const n = outward(i);
       const inK = ss(-0.15, 0.25, tau) * (1 - ss(w.back[0], w.back[1], tau));
-      const shift = ss(w.shift[0], w.shift[1], tau);
-      cart.setShift(shift);
-      const hubZ = z0 + side * (1.22 + 0.9);
-      const target = {x: bx + hubX(i), z: hubZ + side * 1.4 * (1 - inK)};
-      // with the cradles shifted, line up whichever slot is at the hub; place by slot a before the shift
-      placeBySlot(cart, 0, target, yaw);
-      // the shift moves the cradles, not the machine: undo the slide so the machine itself stays put
-      if (shift > 0) {
-        cart.setShift(0);
-        placeBySlot(cart, 0, target, yaw);
-        cart.setShift(shift);
-      }
+      const [hx, hz] = HUB[i];
+      const cp = W(hx, hz + n * (0.9 + 0.86 + 1.4 * (1 - inK)));
+      cart.group.position.set(cp.x, 0, cp.z);
+      cart.group.rotation.y = B.yaw + (n > 0 ? Math.PI / 2 : -Math.PI / 2); // local +x toward the car
+      cart.setShift(ss(w.shift[0], w.shift[1], tau));
+      cart.setCradle(0.62 + lift);
       const offK = ss(w.off[0], w.off[1], tau);
       const onK = ss(w.on[0], w.on[1], tau);
       // the old wheel rides the car until it is fully out, then cradle a; the new one rides cradle b until it goes on
@@ -302,20 +308,13 @@ export function buildWorld() {
     const S = {t, cars: {}};
     for (const {car, o} of cars) {
       const p = carAt(car, t);
-      let lift = 0;
-      if (car.stop) {
-        const pc = pitOf(car);
-        const r = crewPose(crews[car.id], car, o, t);
-        lift = r.lift;
-        // after the stop the car carries its new tyres
-        if (t >= pc.tStop1) for (let i = 0; i < 4; i++) o.setCompound(i, car.stop.to);
-        S.cars[car.id + 'Stop'] = r;
-      }
+      const lift = car.stop ? liftAt(car, t) : 0;
       o.group.position.set(p.x, lift, p.z);
       o.group.rotation.y = yawOf(p.tx, p.tz);
-      // wheels: distance rolled; steering from the path's curvature
+      if (car.stop) S.cars[car.id + 'Stop'] = crewPose(crews[car.id], car, o, t, lift);
+      // wheels: distance rolled; steering from the path's curvature (positive curvature turns right; a > 0 steers left)
       o.roll(p.pit ? pitOf(car).Din + p.s : p.D);
-      o.setSteer(clamp(Math.atan(5.2 * (p.k ?? 0)) * 1.6, -0.45, 0.45));
+      o.setSteer(-clamp(Math.atan(5.2 * (p.k ?? 0)) * 1.6, -0.45, 0.45));
       o.setDRS(drsK(car, t));
       S.cars[car.id] = p;
     }
@@ -363,8 +362,8 @@ export function buildWorld() {
 
 /** the wind tunnel's run: the rear flap sweeps from 0 to 1 and back, as a function of film time */
 export function aeroSweep(t) {
-  // one run of the sweep every 9 s: hold, open, hold, close
-  const c = ((t % 9) + 9) % 9;
+  // one run of the sweep every 9 s: hold, open, hold, close (phased so the film's visit, from 24.6 s, sees it open)
+  const c = ((((t - 24.6) % 9) + 9) % 9);
   const k = ss(1.2, 3.6, c) * (1 - ss(6.0, 8.4, c));
   // the numbers this wing angle gives (a simple aero map: lift and drag coefficients against flap angle)
   const angle = 4 + 26 * k; // degrees of flap
@@ -383,15 +382,15 @@ function buildSmoke(flow, mount) {
   const yb = mount.y;
   const zc = mount.z;
   const lines = [];
-  const NY = 5;
-  const NZ = 7;
+  const NY = 3;
+  const NZ = 5;
   const zHalf = Math.min(2.4, (z1 - z0) / 2 - 0.2);
   const yTop = Math.min(2.2, y1 - yb - 0.2);
   for (let a = 0; a < NY; a++)
     for (let b = 0; b < NZ; b++) {
       const dy = lerp(0.18, yTop, a / (NY - 1));
       const dz = lerp(-zHalf, zHalf, b / (NZ - 1));
-      lines.push({dy, dz, near: Math.abs(dz) < 1.0 && dy < 1.2});
+      lines.push({dy, dz, near: Math.abs(dz) < 0.7 && dy < 1.4});
     }
   // a streamline's height and sideways drift at x, for a flap setting k: up over the nose and the airbox, and thrown
   // up behind the car by the rear wing (more as the flap closes and the wing works harder)
@@ -405,20 +404,20 @@ function buildSmoke(flow, mount) {
     return [Math.min(yb + L.dy + up, y1 - 0.05), zc + L.dz + side];
   };
   const N = 60;
-  const lineMat = new THREE.LineBasicMaterial({color: '#ffffff', transparent: true, opacity: 0.55, depthWrite: false});
-  const lineMatNear = new THREE.LineBasicMaterial({color: TOY.blue, transparent: true, opacity: 0.7, depthWrite: false});
-  const geos = [];
+  // screen-space lines (the selection marks' technique): 2.4 px blue near the car, 1.4 px white elsewhere
+  const lineMat = new LineMaterial({color: '#ffffff', linewidth: 1.1, transparent: true, opacity: 0.55, depthWrite: false});
+  const lineMatNear = new LineMaterial({color: TOY.blue, linewidth: 2.4, transparent: true, opacity: 0.9, depthWrite: false});
+  const strands = [];
   for (const L of lines) {
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(N * 3), 3));
-    const ln = new THREE.Line(geo, L.near ? lineMatNear : lineMat);
+    const ln = new Line2(new LineGeometry(), L.near ? lineMatNear : lineMat);
     ln.renderOrder = 6;
     g.add(ln);
-    geos.push(geo);
+    strands.push(ln);
   }
+  let shapedFor = null; // the lines' shape depends only on the flap, so they are rebuilt only when it moves
   // puffs: small soft capsules riding the lines downstream (toward -x)
-  const PER = 7;
-  const puff = new THREE.InstancedMesh(new THREE.SphereGeometry(0.11, 10, 8), new THREE.MeshBasicMaterial({color: '#ffffff', transparent: true, opacity: 0.9, depthWrite: false}), lines.length * PER);
+  const PER = 3;
+  const puff = new THREE.InstancedMesh(new THREE.SphereGeometry(0.07, 10, 8), new THREE.MeshBasicMaterial({color: '#ffffff', transparent: true, opacity: 0.85, depthWrite: false}), lines.length * PER);
   puff.renderOrder = 7;
   g.add(puff);
   const m4 = new THREE.Matrix4();
@@ -427,17 +426,27 @@ function buildSmoke(flow, mount) {
   const pv = new THREE.Vector3();
   return {
     group: g,
+    resolution(w, h) {
+      lineMat.resolution.set(w, h);
+      lineMatNear.resolution.set(w, h);
+    },
     update(t, k) {
+      const reshape = shapedFor == null || Math.abs(k - shapedFor) > 0.002;
+      if (reshape) shapedFor = k;
       lines.forEach((L, li) => {
-        const arr = geos[li].attributes.position.array;
-        for (let i = 0; i < N; i++) {
-          const x = lerp(x1, x0, i / (N - 1));
-          const [y, z] = shape(L, x, k);
-          arr[3 * i] = x;
-          arr[3 * i + 1] = y;
-          arr[3 * i + 2] = z;
+        if (reshape) {
+          const arr = new Float32Array(N * 3);
+          for (let i = 0; i < N; i++) {
+            const x = lerp(x1, x0, i / (N - 1));
+            const [y, z] = shape(L, x, k);
+            arr[3 * i] = x;
+            arr[3 * i + 1] = y;
+            arr[3 * i + 2] = z;
+          }
+          const old = strands[li].geometry;
+          strands[li].geometry = new LineGeometry().setPositions(arr);
+          old.dispose();
         }
-        geos[li].attributes.position.needsUpdate = true;
         for (let j = 0; j < PER; j++) {
           const f = (((t * 0.55 + j / PER + li * 0.137) % 1) + 1) % 1;
           const x = lerp(x1, x0, f);

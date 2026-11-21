@@ -140,12 +140,14 @@ export async function runFilm({duration, fps = 60, chapters = [], post = null, t
     else return;
     e.preventDefault();
   });
-  const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+  const fmt = (t) => `${Math.floor(Math.max(0, t) / 60)}:${String(Math.floor(Math.max(0, t) % 60)).padStart(2, '0')}`;
   if (reduce) cur = chapters[1]?.[0] ?? 0;
   let last = performance.now();
-  const loop = (now) => {
-    // a hidden tab or a slow frame never jumps the film more than a tenth of a second
-    const dt = Math.min(0.1, (now - last) / 1000);
+  const loop = () => {
+    // the clock is read here rather than taken from requestAnimationFrame, whose timestamp can be earlier than a
+    // reading taken before the first frame; a hidden tab or a slow frame never jumps the film more than 0.1 s
+    const now = performance.now();
+    const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;
     if (playing && !scrubbing) cur = (cur + dt) % duration;
     draw(cur);

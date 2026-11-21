@@ -7,6 +7,7 @@
 // The geometry kit (Parts / tpl: static parts merged per material and cached per variant, prep, profile, roundedPoly,
 // extrude, roller, steerer, the cab-over cab and the printed truck side) is copied from the simulator skill's
 // sims/airport-shared/gse.js (MIT, Nyxera0x/simulator); loft() follows taperedSlab in airside.js, rcylG machines.js.
+// sweep() (a rounded section swept through stations) is new here: it sculpts the car's hull, sidepods and engine cover.
 //
 // Metres, y up, every model faces +x, the right side is +z, the origin is on the ground. Every builder returns {group, ...}.
 //
@@ -17,14 +18,15 @@
 //     scale is applied to group.scale, so hub(i) is in the group's UNSCALED local units (the numbers above) and
 //     group.localToWorld(car.hub(i)) (or car.hubWorld(i)) is the true point at any scale; roll(d) takes the distance
 //     in the parent's (world) metres. setSteer(a): a > 0 steers left. setDRS(k): the upper flap pivots up to 35 deg
-//     about its trailing edge (as on the real car: the leading edge lifts and the slot gap opens). setWheelOff(i, k):
-//     wheel i slides 0.9 m outward along its axle at k = 1. Jack points (unjacked): front x = 4.2, rear x = -4.0, both
-//     y = 0.30 on the car's centreline. A jacked car is group.position.y = 0.32.
+//     about its trailing edge (as on the real car: the leading edge lifts and the slot gap opens, and the wing stays
+//     inside its 1.5 m top). setWheelOff(i, k): wheel i slides 0.9 m outward along its axle at k = 1. Jack points
+//     (unjacked): front x = 4.2, rear x = -4.0, both y = 0.30 on the car's centreline. A jacked car is at y = 0.32.
 //   buildWheel({compound = 'medium', side = 1, front = false}) -> {group, roll(d), setCompound(c), radius: 0.62, width}
 //     axle along local z; side = -1 turns it round (its outer face toward -z). front: 0.55 wide, else 0.70.
 //   buildWheelCart() -> {group, roll(d), setShift(k), setCradle(y), slots: [a, b], slotX: 0.86, length: 2.6}
-//     slots: Object3Ds at the wheel centres, local (0.86, y, 0.8 - 1.6k -/+ 0.8): k = 0 puts slot a on the centreline,
-//     k = 1 slot b. setCradle(y) sets the slots' wheel-centre height (0.62 car down, 0.94 car jacked; default 0.62).
+//     slots: Object3Ds at the wheel centres, local x = 0.86, slot a at z = -1.6k, slot b at z = 1.6(1 - k): k = 0 puts
+//     slot a on the centreline, k = 1 slot b. setCradle(y) sets the slots' wheel-centre height (0.62 car down, 0.94
+//     car jacked; default 0.62).
 //     A slot's own frame is turned so a buildWheel().group added with no transform has its axle along the cart's x.
 //     To serve hub H whose outward axle direction is n (car +-z), face the cart along -n and put its origin at
 //     H + n * (0.9 + slotX) on the ground: the centreline slot is then exactly where setWheelOff(i, 1) leaves the wheel.
@@ -36,8 +38,8 @@
 //   buildTyreRack({compound = 'medium', n = 4}) -> {group, length}  wheels in blue blankets, 2 levels, along x
 //   buildTeamTruck({team = 'halcyon'}) -> {group, roll(d), setSteer(a), length: 16}
 //
-// Static parts are merged per material and cached per variant, so a second car only costs draw calls (about 17 per
-// car: 8 static, the DRS flap, two per wheel); moving parts (wheels, the flap, the cart's carriage, the jack's pad) are
+// Static parts are merged per material and cached per variant, so a second car only costs draw calls (18 per car:
+// 9 static, the DRS flap, two per wheel); moving parts (wheels, the flap, the cart's carriage, the jack's pad) are
 // separate meshes on shared geometry. Text uses Inter: build after document.fonts has loaded it (runSim does).
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -712,6 +714,7 @@ function carStatic(P, team, number) {
   }
   // the sidepods: one broad body across the car on the floor, coke-bottling in to the gearbox, dark intakes in front
   P.add(body, sweep('pods', PODS, {e: 0.2, slices: 36}));
+  P.add(carbon, sweep('undercut', PODS.map((p) => ({x: p.x + (p.x > 0.9 ? 0.02 : 0), w: p.w + 0.03, wt: p.w - 0.02, h: 0.19, y: 0.285, r: 0.6})), {e: 0.08, slices: 36}));
   for (const s of [-1, 1]) P.ext(ink, 0.84, 1.0, 0.4, 0.7, s > 0 ? 0.5 : -0.94, s > 0 ? 0.94 : -0.5, 0.08);
   // the engine cover rising to the airbox over the driver, its dark intake, the fin
   P.add(body, sweep('cover', COVER, {e: 0.13, slices: 40}));
@@ -724,14 +727,14 @@ function carStatic(P, team, number) {
   P.ext(M.rain, -4.18, -4.1, 0.41, 0.49, -0.07, 0.07, 0.02);
   // the front wing: two halves of mainplane + two trim flaps either side of the nose, endplates, pylons to the nose
   for (const s of [-1, 1]) {
-    P.add(body, rb(0.64, 0.09, 1.18, 0.04), 4.3, 0.15, s * 0.81);
+    P.add(body, rb(0.64, 0.09, 1.18, 0.04), 4.27, 0.15, s * 0.81);
     P.add(trim, rb(0.38, 0.065, 1.14, 0.03), 4.0, 0.27, s * 0.83, 0, 0, -0.32);
     P.add(trim, rb(0.28, 0.055, 1.04, 0.025), 3.8, 0.39, s * 0.88, 0, 0, -0.62);
-    P.add(body, extrude('fw-end', () => roundedPoly([V2(3.64, 0.06), V2(4.64, 0.06), V2(4.64, 0.24), V2(4.32, 0.47), V2(3.64, 0.47)], [0.04, 0.05, 0.1, 0.1, 0.06]), 0.06, 0.02), 0, 0, s * 1.42);
+    P.add(body, extrude('fw-end', () => roundedPoly([V2(3.62, 0.06), V2(4.58, 0.06), V2(4.58, 0.24), V2(4.28, 0.47), V2(3.62, 0.47)], [0.04, 0.05, 0.1, 0.1, 0.06]), 0.06, 0.02), 0, 0, s * 1.42);
     P.ext(ink, 3.98, 4.34, 0.2, 0.4, s > 0 ? 0.13 : -0.27, s > 0 ? 0.27 : -0.13, 0.03);
   }
   // the rear wing: endplates, mainplane, beam wing, a swan-neck pylon
-  for (const s of [-1, 1]) P.add(body, extrude('rw-end', () => roundedPoly([V2(-3.8, 0.64), V2(-3.22, 0.64), V2(-3.0, 1.02), V2(-3.0, 1.48), V2(-3.8, 1.48)], [0.05, 0.1, 0.12, 0.08, 0.06]), 0.06, 0.02), 0, 0, s * 0.89);
+  for (const s of [-1, 1]) P.add(body, extrude('rw-end', () => roundedPoly([V2(-3.78, 0.64), V2(-3.22, 0.64), V2(-3.0, 1.02), V2(-3.0, 1.48), V2(-3.78, 1.48)], [0.05, 0.1, 0.12, 0.08, 0.06]), 0.06, 0.02), 0, 0, s * 0.89);
   P.add(body, rb(0.46, 0.09, 1.76, 0.04), -3.3, 1.12, 0, 0, 0, -0.12);
   P.add(carbon, rb(0.32, 0.06, 1.76, 0.025), -3.46, 0.71, 0, 0, 0, -0.18);
   P.add(ink, extrude('rw-pylon', () => roundedPoly([V2(-3.62, 0.48), V2(-3.36, 0.48), V2(-3.18, 1.1), V2(-3.38, 1.1)], 0.04), 0.06, 0.02));

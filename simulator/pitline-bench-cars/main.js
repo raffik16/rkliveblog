@@ -67,6 +67,31 @@ runSim({duration: 10, fps: 60, theme: 'light', hud: {enabled: false, title: 'ben
     if (team === 'vela') c.setSteer(0.35);
     c.roll(0.7 * k);
   });
+  if (cfg.check) {
+    const c = buildRaceCar({});
+    c.group.updateMatrixWorld(true);
+    const b = new THREE.Box3();
+    c.group.traverse((o) => {
+      if (o.isMesh && !o.material.transparent) b.expandByObject(o);
+    });
+    const r = (v) => [v.x, v.y, v.z].map((n) => n.toFixed(3)).join(', ');
+    console.error('car box min', r(b.min), 'max', r(b.max));
+    const m = buildRaceCar({scale: 0.6});
+    console.error('hub(1)', r(m.hub(1)), 'hubWorld(1) at 0.6', r(m.hubWorld(1)), 'length', m.length);
+    // the nose underside and the rear crash structure underside on the centreline: cast rays up
+    const ray = new THREE.Raycaster();
+    for (const x of [4.2, -4.0, 2.6]) {
+      ray.set(new THREE.Vector3(x, -1, 0), new THREE.Vector3(0, 1, 0));
+      const hit = ray.intersectObject(c.group, true).find((h) => !h.object.material.transparent);
+      console.error('underside at x =', x, 'y =', hit && hit.point.y.toFixed(3));
+    }
+    ray.set(new THREE.Vector3(0.3, 5, 0), new THREE.Vector3(0, -1, 0));
+    for (const x of [0.6, -0.3, -3.4]) {
+      ray.set(new THREE.Vector3(x, 5, 0), new THREE.Vector3(0, -1, 0));
+      const hit = ray.intersectObject(c.group, true).find((h) => !h.object.material.transparent);
+      console.error('top at x =', x, 'y =', hit && hit.point.y.toFixed(3));
+    }
+  }
   const model = buildRaceCar({team: 'halcyon', number: '9', compound: 'medium', scale: 0.6});
   add(model.group, 34, -14);
 
