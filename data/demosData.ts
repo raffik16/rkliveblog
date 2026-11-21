@@ -15,6 +15,16 @@ export interface Demo {
 // this list, and demos from the same day keep the order they're written in.
 const demos: Demo[] = [
   {
+    slug: 'padline',
+    title: 'Padline',
+    href: '/padline',
+    postHref: '/blog/padline-launch-site-simulator',
+    date: '2026-11-21',
+    description:
+      'A toy launch site that runs itself. A transporter-erector rolls a reusable rocket out of its hangar and stands it up, the farm loads it, it lifts off on a column of steam, and the booster turns round, burns back and lands on its legs by the sea. Then the site switcher jumps to the space station, where the capsule docks. One camera, a product dashboard on top, and every model, vehicle and frame is code.',
+    tech: ['three.js', 'WebGL', 'simulator', 'Claude Code'],
+  },
+  {
     slug: 'backspin',
     title: 'BACKSPIN',
     href: '/backspin',

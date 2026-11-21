@@ -4,3 +4,7 @@ app/chaos/teardown
 lib/edition/fibreField.js
 # A minified bundle of three.js, built from public/backspin/vendor/three-entry.js
 public/backspin/vendor/three.js
+# Vendored from Nyxera0x/simulator (simulator/README.md); kept as they are upstream
+simulator/sims/airport-shared
+# The Padline page's bundle, built from simulator/ by simulator/build.mjs
+public/padline/padline.js
