@@ -24,6 +24,7 @@ const OTHER_PAGES = [
   'chaos',
   'chaos/hotdog',
   'backspin',
+  'pitline',
 ]
 
 const day = (date: string) => new Date(date).toISOString().slice(0, 10)

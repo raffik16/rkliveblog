@@ -1,0 +1,209 @@
+---
+title: 'Pitline: Live Telemetry, Aero and a Strategy Call in Milliseconds'
+date: '2026-11-21'
+lastmod: '2026-11-21'
+tags: ['simulation', 'threejs', 'webgl', 'claude-code', 'motorsport', 'javascript']
+draft: true
+summary: "A toy race circuit that runs itself under a race team's app: live telemetry, a wind tunnel, a 2.4 s pit stop and an undercut called in milliseconds."
+images: ['/static/images/og/pitline.jpg']
+authors: ['default']
+layout: PostLayout
+---
+
+**[Open Pitline](/pitline)**. It runs on a phone, and it looks best on a big screen.
+
+Pitline is a race team's operations app laid over a toy race circuit that runs itself. Eight cars lap Harbour Park on one clock. The app follows car 9, which is running fourth, half a second behind car 3. Car 3's soft tyres are about to fall off a cliff, so the pit wall calls car 9 in a lap early. Car 9's tyres are changed in 2.4 seconds, it rejoins seventh, and it waits. A lap later car 3 stops too, loses a little more time with a slow front-left, and comes out of the pit lane 0.84 seconds behind car 9. That move is called the undercut, and the whole film is about one of them.
+
+On the way the app shows you car 9's live telemetry, the strategy engine's numbers, the pit stop as it happens and the team's wind tunnel, where a 60% model sits on a rolling road under smoke while its rear wing sweeps through a run. Every model in it is code, and so is every number on screen. Each one is read from the scene.
+
+<figure className="not-prose mx-auto my-8 w-full">
+  <video
+    className="w-full rounded-2xl shadow-lg"
+    src="/static/videos/pitline-film.mp4"
+    poster="/static/images/pitline/poster.jpg"
+    width="1600"
+    height="900"
+    controls
+    playsInline
+    preload="metadata"
+  >
+    <a href="/static/videos/pitline-film.mp4">Watch the 47-second film (MP4)</a>
+  </video>
+  <figcaption className="mt-3 text-center text-sm text-gray-500 dark:text-gray-400">
+    The whole film: the box call, the stop, the wind tunnel and the undercut.
+  </figcaption>
+</figure>
+
+## What Happens in the 47 Seconds
+
+The page plays one 46.7-second film on a loop. A bar along the bottom pauses it and scrubs it, and its four marks are the chapters:
+
+| Time   | Chapter  | What happens                                                                                                                                                                  |
+| ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0:00   | Box call | Car 9 on the back straight, 0.85 s behind car 3. A click opens its telemetry, a click on the Halcyon pit wall runs the strategy engine, and the card says BOX. |
+| 0:10   | Pit stop | The camera rides car 9 down the pit lane at 80 km/h. Two jacks and four wheel machines meet it at its box. It stands still for 2.40 s and rejoins seventh on mediums.          |
+| 0:21   | Aero lab | The site switcher jumps to the team's wind tunnel: run 214, a 60% model on a rolling road, its rear flap sweeping from 4° to 30° under smoke.                                   |
+| 0:31   | Undercut | Back at the pits, car 3 stops a lap later and stands for 2.90 s. It reaches the end of the pit lane half a second after car 9 has gone past. Then the camera pulls back over the whole circuit. |
+
+**Space** pauses, the arrow keys skip two seconds, **1** to **4** jump to the chapters and **F** goes full screen.
+
+## Built With the Simulator Skill
+
+[simulator](https://github.com/Nyxera0x/simulator) is a skill for Claude Code that rebuilds an industry as a live simulator: an isometric toy-scale world where every vehicle works on one clock, one item is followed from the first second to the last, and a product app sits over the map. It came with four systems, all MIT licensed: Rampline (an airport), Plantline (a car plant), Buildline (a construction site) and Stockline (a warehouse network). Each one is a single HTML file with no 3D models in it, because every model is built in code.
+
+Pitline is a fifth system, built with the skill's method and its kit. The skill's five rules held up well for motorsport:
+
+- **One camera.** One angle for the whole film, 38° round and 36° up. It only pans and zooms, like a person with a mouse. When the story moves to the wind tunnel, the camera flies there, pulling back on the way.
+- **Toy scale.** The cars are 8.4 m long, about 1.5 times real size, against a circuit that is about a sixth of a real one.
+- **Two colours.** Blue and white on a lavender ground. Yellow only on the working machines, which here are the pit equipment. The other four teams get teal, orange, navy and white, in small amounts.
+- **Real software on top.** A site switcher with a dropdown, three live cards, a tracker, a timing table. Every number reads from the scene.
+- **Game-style selection.** A wireframe box round whatever you clicked, a glow under it and its route drawn on the ground. Click car 9 and the route shows its next nine seconds: round the final corner and into the pit lane.
+
+The skill also warns to _keep everything low_, because a camera 36° up over tall things sees the things, not the work. A race is about as low as work gets.
+
+The method is the skill's own. I wrote a brief from its template (it is in the repository as `simulator/BRIEF.md`), with the palette, a scale contract and the list of models. Two subagents built the models in parallel against it: one did the circuit's buildings and the wind tunnel, the other the cars and the pit equipment. Each worked on a bench page and checked its own stills from the film's angle. Meanwhile I wrote the race, the world, the app and the film on top of their APIs, against a set of stand-in boxes with the same API, so the timing could be checked before the models existed. Pitline reuses the kit's lit stage, the selection marks, the card thumbnails and the product app, with new cards for telemetry, strategy, the pit stop and the wind tunnel.
+
+## The Race Is a Function of Time
+
+The skill's central rule is that `render(t)` is a pure function of time. Render any second out of order and it looks the same: no physics engine, no random timers, no state carried from one frame to the next. That is what lets the film be recorded one frame at a time, and it is why the scrub bar can jump anywhere.
+
+For a race that means every car's position comes from a schedule, worked out once when the page loads. A car that doesn't stop has one piece: it runs the lap at its own pace for the whole film. A car that stops has four: the track up to the pit entry, the pit lane with the stop spliced into the middle, and the track again from the pit exit, on new tyres. Placing a car is a lookup:
+
+```js
+export function carAt(car, t) {
+  const pc = car.pieces.find((p) => t >= p.t0 && t < p.t1)
+  if (pc.kind === 'track') {
+    const w = pc.w0 + pc.f * t // where it is in the lap, in seconds of the base lap
+    const lap = Math.floor(w / LAP_TIME)
+    const r = sAt(lapT, lapV, w - lap * LAP_TIME) // metres along the lap, speed, acceleration
+    return { ...track.at(r.s), v: r.v * pc.f, a: r.a * pc.f * pc.f, D: lap * LAP + r.s }
+  }
+  // in the pit lane: the same lookup on the car's own pit path, frozen at the box while it stands
+}
+```
+
+`f` is the car's pace. The six cars that don't stop run between 0.9988 and 1.0015 of the base lap, which spreads their lap times by about a tenth of a second. Car 3's worn softs run at 0.985 on its last lap before it stops, and car 9 runs at 1.012 on its new mediums. Those two numbers are the undercut.
+
+`D` is race distance in metres. Positions come from sorting by it, and the timing gaps from asking when the car ahead was at the same distance, which is how real timing loops work.
+
+## A Lap From Its Curvature
+
+The circuit is a centripetal Catmull-Rom curve through 21 points, resampled every half metre: 915.5 m round, with a main straight past the pits, a long right-hand loop, a chicane on the back section and a tight final corner. How fast a car can go anywhere on it follows from three limits. In a corner it can't go faster than `sqrt(grip / curvature)`, it can only gain speed so fast on the way out, and it can only lose it so fast on the way in. Two passes over the lap apply them:
+
+```js
+for (let i = 0; i < n; i++) v[i] = Math.min(vtop, Math.sqrt(alat / Math.abs(K[i])), limit(i * DS))
+for (let i = 1; i <= n; i++) v[i % n] = Math.min(v[i % n], Math.sqrt(v[i - 1] ** 2 + 2 * acc * DS)) // accelerate
+for (let i = n; i >= 0; i--) v[i % n] = Math.min(v[i % n], Math.sqrt(v[(i + 1) % n] ** 2 + 2 * brk * DS)) // brake
+```
+
+What comes out has braking zones and traction zones where a real lap has them. Integrating it gives the lap time, 18.43 s. The time table adds up `2 ds / (v0 + v1)` for each half metre, which is exact for constant acceleration and stays finite when the speed reaches zero. So the same code brakes a car to a standstill in its pit box without dividing by zero.
+
+The pit lane is a second curve that leaves the track before the final corner, runs past the five garages and joins the track again after the second corner. Each car that stops gets its own copy of it, with a swerve into its own box, and the same profile code runs along it with two more limits: 80 km/h from the pit entry line to the exit line, and zero at the box.
+
+## Telemetry, Read From the Scene
+
+The car 9 card is a live telemetry screen. Its speed, gear, throttle and brake, its DRS and ERS state and the speed trace of its last 12 seconds all come from the car's speed and acceleration at that moment.
+
+The circuit is a toy, so the app reads the scene through fixed maps, the way the skill's other films print km/h and arrival times:
+
+| On screen  | From the scene                                                                                     |
+| ---------- | -------------------------------------------------------------------------------------------------- |
+| Speed      | 0 to 30 m/s reads 0 to 80 km/h, the pit limiter; 30 to 78 m/s reads 80 to 322 km/h                |
+| Gear       | A band of the displayed speed: about every 42 km/h                                                 |
+| Throttle   | 100% at the top speed, more the harder the car accelerates, a quarter on the pit limiter           |
+| Brake      | The deceleration against the hardest braking the profile allows                                    |
+| Gaps       | Scene seconds × 1.7                                                                                 |
+| Lap times  | Scene seconds × 4.55: an 18.43 s lap reads 1:23.878                                                |
+| Distance   | Scene metres × 5.69: the lap reads 5.21 km                                                         |
+
+DRS works like the real rule. Harbour Park has two zones, the main straight and the back straight, each with a detection line before it. A car's rear flap opens in a zone if it crossed that zone's line less than a second behind the car in front. In the film only one car qualifies: car 9, 0.85 s behind car 3 as they come out of the chicane. Its flap opens 1.7 s in and closes at 4.0 s, braking for the final corner, and the model's flap really moves: `setDRS` pivots the upper element of the rear wing up by 35°. Each car's DRS is decided once per zone, at its detection line, and then remembered rather than worked out again every frame.
+
+## A Strategy Call in Milliseconds
+
+The undercut works because new tyres are faster than old ones. The car that stops first gets a lap on new tyres while its rival drives a lap on worn ones. If that lap is worth more than the gap between them, the car that stopped first is ahead once both have stopped. It is one of the commonest strategy fights in Formula 1, and the call has to be made before the car reaches the pit entry, which is often only a few seconds away.
+
+Pitline's strategy card doesn't fake that decision. When the page loads, `strategy.js` races car 9 against car 3 from lap 31 to the flag, 4,200 times for each of three options: box this lap, box next lap, stay out. Each race has lap-time noise, soft tyres that fall off a cliff after 19 laps, a spread of stop times with the odd slow one, and a rule for dirty air: a car stuck behind another can't pass unless it is nearly a second a lap faster. That rule is why track position is worth so much, and why stopping first matters.
+
+```js
+if (onTrack && was9Behind && n9 < n3 && l3 - l9 < PASS) {
+  t9 = n3 + STUCK // faster, but stuck in dirty air a quarter of a second behind
+  t3 = n3
+}
+```
+
+Then it counts how often car 9 finishes ahead of car 3:
+
+| Option       | Car 9 ahead of car 3 |
+| ------------ | -------------------- |
+| Box this lap | 81%                  |
+| Box next lap | 23%                  |
+| Stay out     | 0%                   |
+
+All 12,600 races took between 32 and 66 milliseconds each time I ran them in Node while building this, and the card shows how long they took on your machine. The odds come from a seeded random generator, so they are the same on every load, and the film still renders the same at any second. When you click the pit wall, the card plays the run back: the race count and the clock climb to the real figures in half a second, and the call lights up: BOX BOX.
+
+The engine knows nothing about the 3D scene, and the scene doesn't ask it what to do: the film's race is fixed. What the engine shows is that the fixed race is the right call. Its model is small (two cars, three options, a tyre curve with a cliff), but it is the same kind of model a real strategy tool runs, many races with noise and a rule for track position, and on a modern laptop a few thousand of them fit in a frame or two.
+
+## A Pit Stop Without a Crew
+
+The skill doesn't build people. Its cabs get dark glass and its forklifts drive themselves, so Pitline's pit crew is machines: a front jack, a rear jack and four small yellow wheel changers, one at each corner, each carrying a new wheel in one cradle and an empty cradle beside it.
+
+The stop is a plan in seconds after the car comes to rest:
+
+```js
+export function stopPlan(still, slow = -1, extra = 0) {
+  const W = [0, 1, 2, 3].map((i) => {
+    const d = i === slow ? extra : 0
+    const j = [0.0, 0.04, 0.07, 0.02][i] // no two corners finish together
+    return {
+      off: [0.42 + j, 0.78 + j], // the old wheel slides out onto the empty cradle
+      shift: [0.8 + j, 1.08 + j + d * 0.5], // the cradles slide across: the new wheel lines up
+      on: [1.1 + j + d * 0.5, 1.48 + j + d], // and slides on
+      back: [1.52 + j + d, 1.78 + j + d], // the machine backs away
+    }
+  })
+  const done = Math.max(...W.map((w) => w.on[1]))
+  return { wheels: W, lift: [0.18, 0.4], drop: [done + 0.06, done + 0.26], green: done + 0.5, still }
+}
+```
+
+The jacks lift the car 32 cm in the first 0.4 s, which takes the hub height from 0.62 m to the cradles' 0.94. Each wheel then slides out along its axle onto the empty cradle. The cradles slide across, the new wheel slides on, and the machine backs off. When the last wheel is on, the car drops, and half a second later the light on the post turns green. Car 9's stop takes 2.40 s. Car 3's front-left is half a second slow, which is where its 2.90 s comes from, and the card for its box shows that corner still changing after the other three are done.
+
+Everything is placed from scratch every frame, the way the skill places anything carried. A wheel is on the car until it is fully out, then on the machine's cradle, and the swap happens at an instant when both are in the same place, so you never see it jump.
+
+## The Wind Tunnel
+
+Halfway through, the site switcher jumps to the team's aero lab across the road, and the camera flies there. Inside an open-topped hall is a closed-circuit wind tunnel laid flat: the fan, the return duct round the loop, the contraction cone, and the test section with glass sides and a rolling road in its floor. On the road sits a 60% model of car 9. It is the same `buildRaceCar` as the cars on the track, scaled down, so its rear flap moves the same way.
+
+Run 214 sweeps that flap from 4° to 30° and back every nine seconds. The card reads the flap angle and plots it on a simple aero map: downforce rises with the angle and levels off, drag rises faster, so the efficiency, downforce over drag, falls. At 250 km/h that runs from about 1,370 kg of downforce for 350 kg of drag with the flap flat to 1,820 kg for 580 kg with it steep. Those are made-up curves of the right shape, not a fluid simulation.
+
+The smoke is 35 streamlines through the test section, with puffs drifting along them. Each line's height is a function of where it is along the model: it rises over the nose and the airbox, and behind the car it is thrown upward by the rear wing, more steeply when the flap is steep and the wing is working harder. The lines nearest the car's centre are drawn in blue. Like everything else they are computed from the time and the flap angle, so they look the same at any second you scrub to.
+
+## Checking It
+
+The skill's review loop is stills and a collision sweep, and both caught things.
+
+The collision sweep is `simulator/pitline-collide/sweep.mjs`. Every hundredth of a second of the film, every pair of the eight cars is tested as two 8.4 m by 3 m oriented boxes. That is 4,671 instants, 28 pairs each. No two cars ever touch. The closest pair is car 3 and car 9 nose to tail through the chicane, 0.41 s in, 4.03 m apart. The first version had car 9 0.3 s behind car 3, which put their centres 7.7 m apart in the chicane: two 8.4 m cars inside each other. That is why the gap is half a second.
+
+Contact sheets at the beats showed the rest: the barrier round the inside of the circuit instead of the outside (a sign the wrong way round), a click on car 9 landing under the detail card, and a click on its pit box at a moment the box was still off screen. A small script now projects every click's target to the screen at the time of the click and checks it lands in open view.
+
+## Running It Yourself
+
+The source is in the blog's repository, in `simulator/`. The race, the strategy engine and the collision sweep need nothing but Node:
+
+```bash
+node simulator/pitline-collide/sweep.mjs
+```
+
+The page is built by the skill's own build script, which bundles three.js and the fonts into one HTML file that works offline:
+
+```bash
+npx skills add Nyxera0x/simulator -g -a claude-code
+# then, once, in the folder it installed into: npm install
+SIMULATOR_SKILL=/path/to/the/installed/skill node simulator/publish.mjs
+```
+
+## What Is Not in It
+
+There is one race and one film, and the race is fixed: the strategy engine explains the call but doesn't make the cars do anything else. The numbers on screen are read from a toy circuit through fixed maps, so the speeds and lap times are plausible rather than measured. The wind tunnel's aero map is a pair of curves, and its smoke follows a formula, not the air. There is no sound yet: the skill can score a film from its timetable, and that would be the next step. The teams, the drivers' numbers and the circuit are made up.
+
+[**Open Pitline**](/pitline)

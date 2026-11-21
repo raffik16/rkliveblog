@@ -15,6 +15,16 @@ export interface Demo {
 // this list, and demos from the same day keep the order they're written in.
 const demos: Demo[] = [
   {
+    slug: 'pitline',
+    title: 'Pitline',
+    href: '/pitline',
+    postHref: '/blog/pitline-race-strategy-simulator',
+    date: '2026-11-21',
+    description:
+      'A toy race circuit that runs itself, with a race team’s app over it. Eight cars lap on one clock, and the app reads them live: speed, gear, throttle, brake, DRS and tyre temperatures. The strategy engine calls car 9 in for an undercut, four wheel machines change its tyres in 2.4 seconds, the team’s wind tunnel sweeps a rear wing under smoke, and car 3 comes out of the pits half a second behind. Built with the simulator skill for Claude Code: every model and every number is code.',
+    tech: ['three.js', 'WebGL', 'Claude Code', 'simulator skill'],
+  },
+  {
     slug: 'backspin',
     title: 'BACKSPIN',
     href: '/backspin',
