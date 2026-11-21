@@ -29,6 +29,13 @@ const BackspinPolicy = ContentSecurityPolicy.replace(
   .replace("font-src 'self';", "font-src 'self' https://fonts.gstatic.com;")
   .replace("media-src 'self'", "media-src 'self' blob:")
 
+// Trickline (public/trickline) is a static page that sets its film and its labels in Inter from
+// Google Fonts
+const TricklinePolicy = ContentSecurityPolicy.replace(
+  "style-src 'self' 'unsafe-inline';",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;"
+).replace("font-src 'self';", "font-src 'self' https://fonts.gstatic.com;")
+
 const securityHeaders = [
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
   {
@@ -127,12 +134,25 @@ module.exports = () => {
           source: '/backspin/:path*',
           headers: [{ key: 'Content-Security-Policy', value: BackspinPolicy.replace(/\n/g, '') }],
         },
+        // The Trickline film: the site's policy plus Google Fonts
+        {
+          source: '/trickline',
+          headers: [{ key: 'Content-Security-Policy', value: TricklinePolicy.replace(/\n/g, '') }],
+        },
+        {
+          source: '/trickline/:path*',
+          headers: [{ key: 'Content-Security-Policy', value: TricklinePolicy.replace(/\n/g, '') }],
+        },
       ]
     },
-    // BACKSPIN is plain HTML in public/backspin. Next.js serves public files as they are but
-    // doesn't map a folder to its index.html, so /backspin is pointed at it here.
+    // BACKSPIN and Trickline are plain HTML in public/backspin and public/trickline. Next.js
+    // serves public files as they are but doesn't map a folder to its index.html, so each one is
+    // pointed at it here.
     async rewrites() {
-      return [{ source: '/backspin', destination: '/backspin/index.html' }]
+      return [
+        { source: '/backspin', destination: '/backspin/index.html' },
+        { source: '/trickline', destination: '/trickline/index.html' },
+      ]
     },
     webpack: (config, options) => {
       config.module.rules.push({

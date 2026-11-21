@@ -15,6 +15,16 @@ export interface Demo {
 // this list, and demos from the same day keep the order they're written in.
 const demos: Demo[] = [
   {
+    slug: 'trickline',
+    title: 'Trickline',
+    href: '/trickline',
+    postHref: '/blog/trickline-skate-tricks-production-line',
+    date: '2026-11-21',
+    description:
+      'One skater’s run through a street plaza, followed like a work item down a factory line. R-07 hardflips a fountain channel, laser flips a four-stair and kickflips into a backside 50-50 down a ten-stair handrail. Each spot is a station with its own process sheet, filled in as the trick happens: pop, flip, catch, lock, grind and landing, with every speed, angle and air time read from the 3D scene, in slow motion through each trick.',
+    tech: ['three.js', 'simulator', 'two-bone IK', 'esbuild'],
+  },
+  {
     slug: 'backspin',
     title: 'BACKSPIN',
     href: '/backspin',
