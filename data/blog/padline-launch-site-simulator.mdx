@@ -3,7 +3,7 @@ title: 'Padline: A Rocket Launch, Landing and Docking, All in Code'
 date: '2026-11-21'
 lastmod: '2026-11-21'
 tags: ['threejs', 'simulation', 'claude-code', 'webgl', 'javascript']
-draft: true
+draft: false
 summary: 'A toy reusable rocket rolls out, flies, lands back by the sea, and its capsule docks at the space station: a new system for the simulator skill.'
 images: ['/static/images/og/padline.jpg']
 authors: ['default']
@@ -12,4 +12,195 @@ layout: PostLayout
 
 [**Watch Padline**](/padline)
 
-DRAFT
+![The erector rolls the rocket out of its hangar toward Pad 7, under the Padline dashboard](/static/images/padline/rollout.jpg)
+
+A reusable rocket lies on its side on a long blue strongback, halfway out of its hangar. The strongback rolls it along the rails to the pad and stands it up. The tank farm loads it while vapour pours off the second stage, and the strongback leans back. Then it lifts off on a column of steam. Three minutes into the flight (seven seconds of film), the booster lets go of the second stage, turns round, burns back toward the coast, falls engines first and lands on its legs on a pad by the sea. Then the site switcher in the dashboard jumps to the space station, where the cargo capsule from the top of that rocket closes in, holds at 20 m and docks.
+
+That is Padline: a toy launch site that runs itself, 48.7 seconds long, with a product dashboard on top whose every number comes from the scene. Every model in it, the rocket, the station, the hangar, the trucks, is code. There is no 3D file in it and nothing to download but one script and a font.
+
+It started as a one-line request to Claude Code: a SpaceX rocket or the ISS, built with [simulator](https://github.com/Nyxera0x/simulator). It did both. This post is how it is put together.
+
+## What Happens in 48.7 Seconds
+
+| Film time | On the ground (or in orbit)                                                      | In the dashboard                       |
+| --------- | -------------------------------------------------------------------------------- | -------------------------------------- |
+| 0 to 7.0  | The transporter-erector rolls booster B1107 and its capsule 64 m to Pad 7        | TE-2's card: metres to go              |
+| 7.6–13.4  | The strongback swings the rocket up to vertical; the hold-downs close            | The stack's card: angle, then fuelling |
+| 11.0–17.0 | The farm loads propellant; vapour boils off the vents; the strongback leans back | The tank farm: oxygen and kerosene     |
+| 17.4–18.0 | Ignition, the clamps let go, liftoff                                             | The clock flips from T− to T+          |
+| 18.0–25.2 | The climb, pitching out over the sea                                             | Altitude and speed                     |
+| 25.2–36.4 | Separation. The booster flips, burns back, falls and lands on LZ-2               | B1107's card, its route to LZ-2        |
+| 36.4–40.9 | The recovery crew drives out to the landed booster                               | CR-1, the crane                        |
+| 40.9–48.7 | The switcher jumps to the station; the capsule docks at the forward port         | SR-19: range and closing rate          |
+
+Time is compressed: the countdown runs at ten times film speed and the flight at twenty-five. The dashboard's clocks follow those rates, so they read like a real launch even though the film is under a minute.
+
+## The Simulator Kit
+
+[simulator](https://github.com/Nyxera0x/simulator), by Nyxera0x and whaleyxbt, is a Claude Code skill: a `SKILL.md` that teaches the method, plus a kit of three.js code. Name a system and it builds the whole operation as one page, a toy-scale world in which every vehicle works on one clock, and it follows one item through it. It ships four: an airport, a car plant, a construction site and a warehouse network.
+
+The method is strict, which is most of why the results look good:
+
+- **One camera.** Azimuth 38°, elevation 36°, for the whole film. It pans and zooms like someone with a mouse, and never cuts.
+- **Toy scale.** Big simple shapes and generous bevels. Small real details are left out; the ones that stay are made bigger.
+- **Two colours.** Blue and white on a lavender ground. Yellow only on working machines, green only on trees.
+- **Real software on top.** A site switcher with a dropdown, live cards, a tracker and a fleet table, with a scripted cursor that clicks through them.
+- **`render(t)` is a pure function of time.** No physics, no timers, no state carried between frames. Render any second out of order and it looks the same.
+
+That last rule shapes everything below. It is also why the page can have a scrubber: jumping to 0:36 is just rendering second 36.
+
+Padline is a fifth system on that kit. It reuses seven of the kit's files unchanged: the palette and materials, the lit stage, the dashboard, the selection marks, the card thumbnails, and the trees, fences and trucks. It adds about 6,000 lines of its own.
+
+## A Toy Falcon 9 in Code
+
+![The landed booster on LZ-2: four legs down, grid fins out, a ring of dust round it](/static/images/padline/landed.jpg)
+
+The rocket is shaped like a Falcon 9 with a cargo capsule on top, with no logos and invented names. It is built at toy proportions: 44.6 m tall and 4.6 m across, so it is about ten times as tall as it is wide where the real one is nineteen. Fat reads better from 36° up.
+
+| Part         | Toy                                                                                                 |
+| ------------ | --------------------------------------------------------------------------------------------------- |
+| Booster      | White, 27 m to the interstage, nine engine bells on a dark skirt                                    |
+| Landing legs | Four dark blades folded along the body; down, their feet sit 1.5 m below the nozzles and 10.5 m out |
+| Grid fins    | Four lattice paddles folded against the interstage, swung out flat for the descent                  |
+| Interstage   | Dark and hollow: when the second stage pulls out you can see its engine bell was inside             |
+| Upper stage  | White, with the big vacuum bell hanging into the interstage                                         |
+| Capsule      | A white cone on a trunk half wrapped in solar cells, with a nose cap that swings open over its port |
+
+Each part is a function that returns a three.js group and a few setters, in the kit's pattern: `setLegs(k)`, `setFins(k)`, `setNose(k)`, with `k` from 0 to 1. The world calls them every frame from the clock. The static geometry is merged per material, so the whole booster is a handful of draw calls.
+
+The legs carry the most arithmetic. Each one is hinged at the bottom and swings 112° from folded to down. Its strut is rebuilt every frame between a fixed point on the body and a point 4.2 m along the leg, so it stretches as the leg opens. The legs and grid fins line up on the four quarters, like the real rocket's. They started on the diagonals, but the launch mount's hold-down clamps were built on the diagonals too.
+
+## Standing It Up
+
+The transporter-erector is a rolling frame with a white lattice strongback that pivots at one end. Two yellow rams push it up. The rocket rides in four blue cradles whose upper halves swing open just before launch.
+
+All of it follows from where the hinge is. The rocket's nozzles have to land on the launch deck at exactly 6 m when the strongback reaches 90°. So the rocket sits a fixed distance behind and above the hinge, and a quarter turn about the hinge carries one point onto the other:
+
+```js
+// the strongback pivots about (-7.5, 0.9); the rocket's nozzles sit 5.1 m back along it and 7.5 m above it.
+// A quarter turn maps (-5.1, 7.5) to (7.5, 5.1): from the hinge that is (0, 6.0), the middle of the deck.
+rocketMatrix(out = new THREE.Matrix4()) {
+  pivot.updateMatrix()
+  return out.copy(pivot.matrix).multiply(mat4(TE.rocketBase, TE.rocketAxis, 0, 0, 0, PI / 2))
+}
+```
+
+The first version had the hinge 4.6 m from the pad. Working it through before anything was built showed the strongback would swing straight through the 10 m deck on the way up. Moving the hinge to 7.5 m puts the standing strongback just outside the deck's edge, with the cradle arms reaching across the gap. The rams have no fixed length: each frame, a sleeve and a rod slide along the line between their two lugs.
+
+## One Clock for a Whole Flight
+
+There is no physics engine. The flight is a set of tables built once, which `render(t)` only looks things up in.
+
+The climb is a path, integrated in half-metre steps, that tilts toward the sea by up to 28°. The distance flown along it grows with the cube of the time since liftoff. So the rocket creeps off the pad, 1.25 m in the first second, and is moving fast by separation:
+
+```js
+const ASC = (() => {
+  const ds = 0.5
+  const pts = [V(0, MOUNT_Y, 0)]
+  const dirs = [V(0, 1, 0)]
+  for (let s = ds; s <= 4200; s += ds) {
+    const phi = ((28 * PI) / 180) * clamp((s - 30) / 520) ** 1.2
+    const d = V(0, Math.cos(phi), -Math.sin(phi))
+    pts.push(pts[pts.length - 1].clone().addScaledVector(d, ds))
+    dirs.push(d)
+  }
+  return { ds, pts, dirs }
+})()
+const ascS = (tau) => 1.25 * Math.max(0, tau) ** 3
+```
+
+The way home is a centripetal Catmull-Rom curve through seven points, from the separation point up over the top and down onto LZ-2. A speed profile shaped like x<sup>0.7</sup>(1 − x)<sup>1.35</sup>, integrated into a table, moves the booster along it. That makes it slow over the top, fastest in the fall, and braking to nothing at touchdown.
+
+Which way the booster points is a separate function of time: four attitudes, joined by quaternion slerps.
+
+```js
+const boosterQ = (t) => {
+  const q = new THREE.Quaternion()
+  if (t < T.flip[0]) return q.copy(Q_SEP)
+  if (t < T.boostback[1]) return q.slerpQuaternions(Q_SEP, Q_BACK, ss(...T.flip, t))
+  if (t < T.landing[0])
+    return q.slerpQuaternions(Q_BACK, Q_DOWN, ss(T.boostback[1], T.upright[1] + 1.0, t))
+  return q.slerpQuaternions(Q_DOWN, Q_VERT, ss(T.landing[0], T.touch - 0.25, t))
+}
+```
+
+The burns sit on the same timetable: the boostback on all nine engines, then a short entry burn and the landing burn on the centre one. The legs come down a second and a half before touchdown.
+
+## Making the Flip Read
+
+![The booster on its side over the sea, burning back toward LZ-2](/static/images/padline/boostback.jpg)
+
+The first full run had a problem the numbers didn't show. The booster turned round and burned back, and on screen nothing seemed to happen. The landing zone was almost straight toward the camera, so a booster turning to face it was turning toward the lens, and it looked upright the whole time.
+
+A fixed camera makes this kind of mistake easy to spot and easy to fix. Moving LZ-2 out east along the shore turned the trip home sideways across the frame. Now the booster tips onto its side, its flame points back the way it came, and it leans visibly into the fall before standing up for the landing. The pad by the sea also gave the landing a horizon.
+
+## Steam Without Physics
+
+![Liftoff: steam pours out of the flame trench while the strongback leans back](/static/images/padline/liftoff.jpg)
+
+All the smoke in the film comes from one `InstancedMesh` of 520 white spheres. That covers the steam out of the flame trench, the ring round the deck, the contrail, the oxygen boiling off the vents, the booster's cold-gas thrusters, the landing dust and the capsule's thrusters. It is redrawn from scratch every frame.
+
+Every puff is a function of its own birth time. Each emitter is a loop over the puffs it could have made. A puff born in the future, or already gone, is skipped; a live one is placed from its age. The contrail leaves one puff every 0.045 s, at wherever the rocket was when it was born:
+
+```js
+for (let i = 0; i < 150; i++) {
+  const b = T.lift + 0.5 + i * 0.045 // this puff's birth time
+  if (b > T.sep) break
+  const L = 5.5
+  const age = t - b
+  if (age <= 0 || age >= L) continue
+  const p = ascAt(ascS(b - T.lift)).p // where the rocket was then
+  const g = 1 + 0.5 * (b - T.lift)
+  puffs.puff(
+    p.x + 2 * (hash(i, 21) - 0.5) + 1.2 * age, // drifting with the wind
+    p.y - 2 + 3 * (hash(i, 22) - 0.5),
+    p.z + 2 * (hash(i, 23) - 0.5),
+    (1.4 + 0.9 * g) * life(age, L) // grows, holds, shrinks away
+  )
+}
+```
+
+The randomness is a hash of the puff's index, so the same puff always lands in the same place. Scrubbing backwards through liftoff un-billows the steam exactly.
+
+## The Station and the Ground, From a Brief
+
+![The capsule closing on the station's forward port, with the Earth below](/static/images/padline/docking.jpg)
+
+The kit's method has subagents build the models while the lead builds the world, and Padline followed it. Claude Code's main session wrote a scale contract: the rocket's dimensions, the deck height of 6.0 m, the hinge position, the docking ring's radius, where everything stands. It also wrote a bench page template for checking models. Then two subagents each built one file of models from a brief while the rocket, the erector and the world were being written.
+
+- **The ground** (`complex.js`): the integration hangar with sliding doors, the rails, the launch mount with its flame trench and clamps, the tank farm, the water tower, the lightning towers, LZ-2, the recovery crane and trailer, and launch control.
+- **The station** (`orbit.js`): the ISS at toy scale. A long truss, eight solar wings that turn, white radiators, the modules in a line with a cupola, a two-boom arm, and a docking port with a target cross. The station is 26 draw calls. Below it the Earth is a sphere 4 km in radius: its coastlines are drawn in the shader so they stay crisp at any distance, its clouds are instanced, and a glow runs along its edge.
+
+The contract is what made it work. The mount's builder knew the strongback would stand at x −7.7 to −5.3 and kept that space clear. The station's builder scanned the 30 m in front of the docking port at every arm and array angle: the nearest part of the station is 23.5 m off the capsule's path. Fitting the three together took four fixes, all found by reading each other's numbers. The rails were 0.22 m higher than the erector's wheels expected. The clamps sat on the leg diagonals. The trailer's 36 m didn't fit the queue on the access road. And in orbit the camera's far plane clipped the edge of the Earth.
+
+## The Numbers on the Dashboard
+
+Every number on screen is computed from the scene, the way the kit's films do it. The altitude and speed cards read the booster's real position and velocity, then scale them. The toy flies at 1:150 in height and twelve times slower than the real thing. That puts separation at about 68 km and 8,400 km/h, close to a real first-stage cutoff, and brings the booster down to 0 km/h on the pad.
+
+The range to the docking port, the closing rate, the propellant percentages, the erector's angle and the crane's metres to go all come from the same `pose(t)` that places the models.
+
+## Checking It
+
+The kit reviews a film with contact sheets: stills at the story's beats, tiled into one image. Padline went through about ten. They caught the empty opening frame (the rollout now starts before the film does), the invisible flip, a booster hanging in fog at altitude (the fog now draws back as the camera climbs), and a recovery convoy that arrived hidden under a card.
+
+The kit also has a collision sweep. It poses the world every 0.1 s and tests every pair of vehicles as oriented boxes, plus every vehicle against every tree. Over the 48.7 seconds it found one overlap, a parked tanker standing on the pad's apron, and then none.
+
+## The Page Around It
+
+The kit's own runtime is made for recording frames at exactly 1600 × 900. [The page](/padline) has a small runtime of its own instead, which:
+
+- letterboxes the 1600 × 900 frame into any window, centred;
+- renders the 3D at the pixel density the frame actually has on screen, then lowers the resolution in steps if a device can't hold 36 frames a second;
+- compiles every shader while the poster frame still covers the page, by drawing a moment from liftoff, the return, the landing and the station first;
+- adds a player: play and pause, restart, a scrubber with a tick at every click in the film, a switch that hides the dashboard to watch the world alone, and full screen. **Space**, **R**, the arrow keys, **H** and **F** do the same;
+- starts paused if your system asks for reduced motion.
+
+It keeps the kit's capture contract (`window.SIM.render(t)`), so the same page renders the stills in this post.
+
+The whole thing is one 810 KB script, 224 KB gzipped, plus a font and a poster frame. The source is in the blog's repository under `simulator/`, with the kit's MIT licence for the files it reuses.
+
+## What Is Not in It
+
+It is a film, not a game: the cursor is scripted, and nothing on the map is clickable. There is no physics anywhere, by design. Heights, speeds and times are compressed and the toy proportions are not the real ones, so it is a picture of how a launch goes, not a model of one. There is no drone ship: the booster always comes home to LZ-2.
+
+[**Watch Padline**](/padline)

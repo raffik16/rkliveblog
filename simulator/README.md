@@ -13,21 +13,21 @@ node simulator/build.mjs
 ```
 
 That bundles `sims/launch-page/main.js` and everything it imports, three.js included, into `public/padline/padline.js`
-(about 850 KB, 230 KB gzipped). It uses the blog's own `esbuild` and `three` (0.186.1, the version the kit pins), so
+(about 810 KB, 224 KB gzipped). It uses the blog's own `esbuild` and `three` (0.186.1, the version the kit pins), so
 nothing else needs installing. `public/padline/index.html`, `inter.woff2` and `poster.jpg` are plain files.
 
 ## What is where
 
-| Path                          | What                                                                                     |
-| ----------------------------- | ---------------------------------------------------------------------------------------- |
-| `sims/launch-shared/rocket.js`  | The booster (legs, grid fins), the upper stage, the capsule, the transporter-erector     |
-| `sims/launch-shared/complex.js` | The ground: hangar, rails, launch mount, tank farm, towers, LZ-2, the recovery vehicles  |
+| Path                            | What                                                                                    |
+| ------------------------------- | --------------------------------------------------------------------------------------- |
+| `sims/launch-shared/rocket.js`  | The booster (legs, grid fins), the upper stage, the capsule, the transporter-erector    |
+| `sims/launch-shared/complex.js` | The ground: hangar, rails, launch mount, tank farm, towers, LZ-2, the recovery vehicles |
 | `sims/launch-shared/orbit.js`   | The space station and the Earth below it, and the colours for the sky in orbit          |
-| `sims/launch-shared/effects.js` | Exhaust flames and the instanced puffs (steam, contrail, vapour, thrusters, dust)        |
-| `sims/launch-shared/world.js`   | The layout, the timetable `T`, the flight paths and `pose(t)`                            |
-| `sims/launch-shared/film.js`    | The camera, the clicks, every card and number in the product UI                          |
-| `sims/launch-shared/run.js`     | The page's runtime: the letterboxed frame and the player under it                        |
-| `sims/airport-shared/`          | Vendored from the kit (see below)                                                        |
+| `sims/launch-shared/effects.js` | Exhaust flames and the instanced puffs (steam, contrail, vapour, thrusters, dust)       |
+| `sims/launch-shared/world.js`   | The layout, the timetable `T`, the flight paths and `pose(t)`                           |
+| `sims/launch-shared/film.js`    | The camera, the clicks, every card and number in the product UI                         |
+| `sims/launch-shared/run.js`     | The page's runtime: the letterboxed frame and the player under it                       |
+| `sims/airport-shared/`          | Vendored from the kit (see below)                                                       |
 
 Every model is code. `render(t)` is a pure function of time, so the player's scrubber can jump anywhere and the frame
 is the same as playing up to it.
