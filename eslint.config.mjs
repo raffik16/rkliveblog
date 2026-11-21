@@ -17,11 +17,15 @@ export default [
     // app/chaos/teardown is vendored from elvarofficial/teardown and kept as close to upstream as possible.
     // lib/edition/fibreField.js is copied from raffi.website (composables/useFibreField.js) and kept identical.
     // public/backspin/vendor/three.js is a minified bundle of three.js (built from three-entry.js).
+    // simulator/sims/airport-shared is vendored from Nyxera0x/simulator and kept as it is upstream;
+    // public/padline/padline.js is the Padline page's bundle (built by simulator/build.mjs).
     ignores: [
       'next-env.d.ts',
       'app/chaos/teardown/**',
       'lib/edition/fibreField.js',
       'public/backspin/vendor/three.js',
+      'simulator/sims/airport-shared/**',
+      'public/padline/padline.js',
     ],
   },
   js.configs.recommended,

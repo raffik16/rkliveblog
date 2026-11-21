@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Padline · a launch site that runs itself</title>
+    <meta
+      name="description"
+      content="A toy rocket rolls out, launches, lands back on its pad, and its capsule docks at the space station: a live simulator where every model is code."
+    />
+    <link rel="canonical" href="https://me.raffi.website/padline" />
+    <meta name="theme-color" content="#dfe6fa" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Padline · a launch site that runs itself" />
+    <meta
+      property="og:description"
+      content="Rollout, liftoff, a booster landing and a docking at the space station, in one toy-scale simulator. Every model, every vehicle and every frame is code."
+    />
+    <meta property="og:url" content="https://me.raffi.website/padline" />
+    <meta property="og:image" content="https://me.raffi.website/static/images/og/padline.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233166ea'/%3E%3Cpath d='M16 4c4 3 5 8 5 13v6h-10v-6c0-5 1-10 5-13z' fill='%23fff'/%3E%3Cpath d='M13 25h6l-1 4h-4z' fill='%23f2b33a'/%3E%3C/svg%3E"
+    />
+    <link rel="preload" href="/padline/inter.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="modulepreload" href="/padline/padline.js" />
+    <style>
+      @font-face {
+        font-family: 'Inter';
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: block;
+        src: url(/padline/inter.woff2) format('woff2');
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #dfe6fa;
+        overflow: hidden;
+      }
+      noscript p {
+        position: fixed;
+        inset: auto 0 40% 0;
+        text-align: center;
+        font:
+          600 16px system-ui,
+          sans-serif;
+        color: #0f1730;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <img id="poster" src="/padline/poster.jpg" alt="" width="1600" height="900" />
+    </div>
+    <a class="pl-link" href="/blog/padline-launch-site-simulator">How it was built</a>
+    <noscript
+      ><p>Padline is a 3D film drawn live in the browser, so it needs JavaScript.</p></noscript
+    >
+    <script type="module" src="/padline/padline.js"></script>
+  </body>
+</html>

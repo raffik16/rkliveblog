@@ -129,10 +129,13 @@ module.exports = () => {
         },
       ]
     },
-    // BACKSPIN is plain HTML in public/backspin. Next.js serves public files as they are but
-    // doesn't map a folder to its index.html, so /backspin is pointed at it here.
+    // BACKSPIN and Padline are plain HTML in public/. Next.js serves public files as they are
+    // but doesn't map a folder to its index.html, so each is pointed at it here.
     async rewrites() {
-      return [{ source: '/backspin', destination: '/backspin/index.html' }]
+      return [
+        { source: '/backspin', destination: '/backspin/index.html' },
+        { source: '/padline', destination: '/padline/index.html' },
+      ]
     },
     webpack: (config, options) => {
       config.module.rules.push({
