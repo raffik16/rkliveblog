@@ -17,11 +17,15 @@ export default [
     // app/chaos/teardown is vendored from elvarofficial/teardown and kept as close to upstream as possible.
     // lib/edition/fibreField.js is copied from raffi.website (composables/useFibreField.js) and kept identical.
     // public/backspin/vendor/three.js is a minified bundle of three.js (built from three-entry.js).
+    // public/trickline/trickline.js is Trickline's film bundled by esbuild, and public/trickline/src/simulator
+    // is vendored from Nyxera0x/simulator and kept as close to upstream as possible.
     ignores: [
       'next-env.d.ts',
       'app/chaos/teardown/**',
       'lib/edition/fibreField.js',
       'public/backspin/vendor/three.js',
+      'public/trickline/trickline.js',
+      'public/trickline/src/simulator/**',
     ],
   },
   js.configs.recommended,

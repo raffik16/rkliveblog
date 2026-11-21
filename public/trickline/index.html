@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <script>
+      // Served at /trickline (no trailing slash), relative links would point one folder up. A <base> for this
+      // folder fixes that; it has to come before any of them. The film's script is added here too, after the
+      // <base>: written in the markup, the browser's preload scanner would fetch it from the wrong folder first.
+      ;(function () {
+        var path = location.pathname
+        if (!/\/$|\.html$/.test(path)) {
+          var base = document.createElement('base')
+          base.href = path + '/'
+          document.head.appendChild(base)
+        }
+        var preload = document.createElement('link')
+        preload.rel = 'modulepreload'
+        preload.href = 'trickline.js'
+        document.head.appendChild(preload)
+        // the player reads the page as it starts, so it runs once the page is parsed
+        document.addEventListener('DOMContentLoaded', function () {
+          var main = document.createElement('script')
+          main.type = 'module'
+          main.src = 'trickline.js'
+          document.head.appendChild(main)
+        })
+      })()
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trickline · three skate tricks run like a production line</title>
+    <meta
+      name="description"
+      content="One skater, three street spots, run like a factory line: a hardflip over a gap, a laser flip down a four-stair and a kickflip 50-50 down a rail."
+    />
+    <link rel="canonical" href="https://me.raffi.website/trickline" />
+    <meta name="theme-color" content="#dfe6fa" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Trickline · three skate tricks run like a production line" />
+    <meta
+      property="og:description"
+      content="A 3D film of one skater's run through three stations, with live process sheets: every speed, angle and air time read from the scene."
+    />
+    <meta property="og:url" content="https://me.raffi.website/trickline" />
+    <meta property="og:image" content="https://me.raffi.website/static/images/og/trickline.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233166ea'/%3E%3Crect x='5' y='13' width='22' height='5' rx='2.5' fill='%23f2b33a'/%3E%3Ccircle cx='10' cy='22' r='2.6' fill='%23fff'/%3E%3Ccircle cx='22' cy='22' r='2.6' fill='%23fff'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,800&display=swap"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #dfe6fa;
+        color: #0f1730;
+        font-family: Inter, system-ui, sans-serif;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        overflow: hidden;
+      }
+      #frame {
+        position: relative;
+        overflow: hidden;
+        border-radius: 10px;
+        background: #dfe6fa;
+        box-shadow: 0 20px 50px rgba(32, 48, 110, 0.18);
+      }
+      #app {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1600px;
+        height: 900px;
+        transform-origin: 0 0;
+      }
+      #gl {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 1600px;
+        height: 900px;
+      }
+      #status {
+        position: absolute;
+        inset: 0;
+        z-index: 20;
+        display: grid;
+        place-items: center;
+        margin: 0;
+        padding: 16px;
+        background: #dfe6fa;
+        color: #2448c8;
+        font-weight: 700;
+        text-align: center;
+      }
+      #bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-sizing: border-box;
+        padding: 0 2px;
+        font-size: 13px;
+      }
+      #bar button {
+        border: 1px solid #c9d3f1;
+        border-radius: 8px;
+        padding: 6px 11px;
+        background: #fff;
+        color: #0f1730;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      #play {
+        min-width: 64px;
+      }
+      #chapters {
+        display: flex;
+        gap: 6px;
+      }
+      #scrub {
+        flex: 1;
+        min-width: 60px;
+        accent-color: #3166ea;
+      }
+      #time {
+        color: #4b5570;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      #bar a {
+        color: #2448c8;
+        font-weight: 700;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      #bar a:hover {
+        text-decoration: underline;
+      }
+      #bar button:focus-visible,
+      #bar input:focus-visible,
+      #bar a:focus-visible {
+        outline: 2px solid #3166ea;
+        outline-offset: 2px;
+      }
+      body.capture {
+        display: block;
+      }
+      body.capture #bar {
+        display: none;
+      }
+      body.capture #frame {
+        border-radius: 0;
+        box-shadow: none;
+      }
+      @media (max-width: 720px) {
+        #time {
+          display: none;
+        }
+        #bar {
+          gap: 6px;
+          font-size: 12px;
+        }
+        #bar button {
+          padding: 5px 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="frame"
+      role="img"
+      aria-label="A 3D film of a skate plaza run like a factory: a rider pushes along a terrace, hardflips a fountain channel, laser flips a four-stair and kickflips into a 50-50 down a handrail, while cards beside the scene fill with each trick's numbers"
+    >
+      <div id="app"><canvas id="gl"></canvas></div>
+      <p id="status" aria-live="polite">Building the plaza…</p>
+    </div>
+    <div id="bar">
+      <button id="play" type="button" aria-pressed="false">Play</button>
+      <span id="chapters" role="group" aria-label="Jump to a station"></span>
+      <input
+        id="scrub"
+        type="range"
+        min="0"
+        max="40"
+        step="0.01"
+        value="0"
+        aria-label="Film time"
+      />
+      <span id="time"></span>
+      <a href="/blog/trickline-skate-tricks-production-line">About this build</a>
+    </div>
+    <noscript>
+      <p>Trickline is a 3D film drawn as it plays, so it needs JavaScript and WebGL.</p>
+    </noscript>
+  </body>
+</html>

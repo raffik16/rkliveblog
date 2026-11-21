@@ -1,0 +1,187 @@
+---
+title: 'Trickline: Three Skate Tricks Run Like a Production Line'
+date: '2026-11-21'
+lastmod: '2026-11-21'
+tags: ['threejs', 'simulation', 'animation', 'webgl', 'javascript']
+draft: false
+summary: 'A street plaza run like a factory line: a hardflip, a laser flip and a kickflip 50-50 down a handrail, each one a station with a live process sheet.'
+images: ['/static/images/og/trickline.jpg']
+authors: ['default']
+layout: PostLayout
+---
+
+[**Watch Trickline**](/trickline)
+
+Trickline is a 40-second film of one skater's run through a street plaza, shown the way a factory shows a part going down its line. The skater is R-07 and the part is board 0712. The line has three stations, and each one is a trick:
+
+| Station | Spot                                                   | Trick                                              |
+| ------- | ------------------------------------------------------ | -------------------------------------------------- |
+| S1      | A 1.7 m fountain channel across the upper terrace      | Hardflip                                           |
+| S2      | Four steps down to the middle terrace, 0.8 m in all    | Laser flip                                         |
+| S3      | A ten-stair handrail down to the lower plaza, at 26.6° | Kickflip into a backside 50-50, popped off the end |
+
+Over the plaza sits the software a line supervisor would have open: a station switcher, three KPI cards, a run tracker, a table of the people, boards and spots, and a card for whatever the cursor clicks. Each station's card holds a process sheet, and its rows fill in as the trick happens. Every number on the screen, from the speed to how far the board has turned, is read from the 3D scene in that frame. The film slows to a quarter or a fifth of real speed through each trick, so you can watch the numbers move.
+
+## Built With the Simulator Toolkit
+
+The look and the rules come from [simulator](https://github.com/Nyxera0x/simulator), a Claude Code skill for building simulators of whole industries that you watch run on their own, drawn entirely in code. Its four examples are an airport, a car plant, a construction site and a warehouse network. A skate line is a much smaller industry, but it has the same parts: a work item, stations, a route, a speed and a pass rate.
+
+The toolkit sets five rules, and Trickline keeps all of them:
+
+- **One camera.** One angle for the whole film, with no cuts, only pans and zooms. Here it follows R-07 down the line and pulls back over the plaza at the end.
+- **Toy scale.** Everything is a toy: R-07, a second skater carving loops on the lower plaza, a filmer at the bottom of the stairs and two people on a bench.
+- **Two colours.** Blue and white on lavender, with yellow only on the machines doing the work. Here the one yellow thing in the plaza is the bottom of board 0712.
+- **Real software on top.** A site switcher, live cards, a tracker and a fleet table, with every number read from the scene. Here the sites are the stations, and the fleet is the people, boards and spots.
+- **Game-style selection.** Whatever is selected gets a wireframe box, a glow on the ground under it and its route drawn on the ground. Here the route runs down the stairs and along the rail.
+
+One thing works differently. The toolkit records its films at 60 frames a second, with sound. Trickline plays live in the page instead, so you can pause it, scrub it and jump to a station, and it has no sound.
+
+![The whole plaza at the end of the film, with a pin on each station and on R-07, and the Line 1 card reading Complete, three of three stations passed](/static/images/trickline/plaza.jpg)
+
+## Three Tricks, as Turns of a Board
+
+In skating terms:
+
+- A **hardflip** is a kickflip and a frontside pop shove-it at once. The board flips over along its length and turns half a turn, and halfway through it stands up on end and passes between the rider's legs. It is one of the harder flip tricks to land, because the board has to be back down and level by the time the feet arrive.
+- A **laser flip** is a heelflip and a 360 frontside shove-it at once. The front heel flips the board the other way while it spins a full turn flat under the rider.
+- A **kickflip backside 50-50** is a kickflip caught over a handrail and landed with both trucks on it (that's the 50-50), then ground down the rail. Backside means the rail is behind the rider, on the heel side, as they ride up to it. R-07 pops off just before the rail ends.
+
+In the code, each trick is three angles that change over the flip: the flip itself, about the board's length; the shove-it, about the vertical; and a pitch, about the board's width.
+
+| Trick        | Flip               | Shove-it       | Pitch              | Flipping         | Caught at |
+| ------------ | ------------------ | -------------- | ------------------ | ---------------- | --------- |
+| Hardflip     | 360°, kickflip way | 180° frontside | Up to 70° and back | 5–60% of the air | 62%       |
+| Laser flip   | 360°, heelflip way | 360° frontside | Rocks 7° each way  | 3–56%            | 58%       |
+| Kickflip, S3 | 360°, kickflip way | None           | None               | 4–46%            | 50%       |
+
+The board's orientation in the air is built from them in a fixed order:
+
+```js
+const r = tk.rot(s) // {phi, psi, theta}, with s running from 0 to 1 over the flip
+qt = qa(AY, r.psi).multiply(qa(AZ, r.theta)).multiply(qa(AX, r.phi))
+qb = qfp.clone().multiply(qt).multiply(qa(AY, base))
+```
+
+`AX` runs along the board, `AY` is up and `AZ` is across it. The quaternions apply from right to left, so the flip turns the board about its own length, the pitch tips the flipping board up, and the shove-it turns the lot about the vertical. Without the pitch, the hardflip's flip and half turn would spin flat under the rider's feet. With it, the board stands up and goes between the legs, which is what makes it a hardflip. `qfp` is the foot plane, which comes next, and `base` is the half turn the hardflip leaves behind: after S1, board 0712 rides the rest of the line the other way round.
+
+![R-07 over the fountain channel in the hardflip, the board standing on end between the legs, with the S1 card showing the flip at 163° of 360° and the shove-it at 81° of 180°](/static/images/trickline/hardflip.jpg)
+
+The flip and the shove-it follow the same curve: close to a steady spin, but eased where the flick starts it and where the feet stop it. In the laser flip both go to 360°, so they read the same all the way round.
+
+## The Board Under the Feet
+
+Every trick starts with the pop. The back foot snaps the tail down, and the board turns about its back axle until the tail hits the ground. That angle isn't chosen. It is solved from the board's shape: with 19° kicks, the tail touches down at 31.1°, which is the "tail down 31°" on every process sheet.
+
+From the pop to the landing, the rider's pelvis flies a ballistic arc. Under it hangs what the code calls the foot plane: where the board would be if the feet were standing on it, at the leg length of that moment. Riding, the pelvis is 0.88 m over the grip tape. It tucks to 0.6 m in the air and reaches to 0.84 m for the landing, and the foot plane rises and falls with it. The real board flips under the foot plane: as much as 24 cm below it in the hardflip, which needs the room to stand up, 17 cm in the laser flip and 15 cm in the kickflip. At the catch it meets the foot plane again.
+
+The feet ride the board through the pop and the flick, then let go and follow their own paths over the foot plane: up and out of the board's way, then back down onto their spots at the catch. Each path is a few keyframes, each a spot on the deck with a lift and an offset, eased between. Two-bone IK bends the legs to reach them.
+
+![The laser flip over the four-stair, the board at 294° of both its heelflip and its shove-it, with the S2 card reading 0.76 m over the steps](/static/images/trickline/laser-flip.jpg)
+
+## Solving the Run Before Drawing It
+
+`motion.js` works out the whole run once, when the page loads, from the plaza's measurements, in steps of half a millisecond. After that, a frame just looks up where everything is.
+
+R-07 starts on the upper terrace with one foot down and pushes five times. A push speeds the board up at 4 m/s² while the foot is down, for at most 0.46 s or a 0.72 m stroke, about what a leg reaches either side of the hip. A faster board covers the stroke sooner, so each push adds less than the one before:
+
+| Push | Foot down     | Adds     |
+| ---- | ------------- | -------- |
+| 1    | 2.50 – 2.96 s | 1.84 m/s |
+| 2    | 3.58 – 3.89 s | 1.23 m/s |
+| 3    | 4.51 – 4.72 s | 0.87 m/s |
+| 4    | 5.34 – 5.52 s | 0.72 m/s |
+| 5    | 6.14 – 6.30 s | 0.63 m/s |
+
+Rolling on smooth paving takes away 0.1 m/s every second, and R-07 reaches S1 at 16.9 km/h. The run is solved from a standing start at zero, then slid along the plaza so that the pop falls 0.32 m before the channel. Where the rider starts is the last thing worked out.
+
+Every air is a ballistic arc of the pelvis, with g at 9.81 m/s², and the spot sets where it begins and ends:
+
+| Station | Pop                                 | Lands                                    | Speed     | Pop, upward | In the air |
+| ------- | ----------------------------------- | ---------------------------------------- | --------- | ----------- | ---------- |
+| S1      | 0.32 m before the channel           | 0.62 m past it, on the same terrace      | 16.9 km/h | 2.79 m/s    | 0.56 s     |
+| S2      | 0.42 m before the top step          | 2.5 m past the top step, a terrace lower | 15.9 km/h | 2.05 m/s    | 0.66 s     |
+| S3      | 1.69 m before the rail's first post | On the rail, 1.15 m past that post       | 16.7 km/h | 3.10 m/s    | 0.61 s     |
+
+S1 and S2 are worked forwards. S1's pop and landing are both fixed, so the speed gives the time in the air, and the time gives the pop. S2's pop is fixed at 2.05 m/s, and it lands wherever that arc meets the middle terrace.
+
+S3 is worked backwards from the rail. The lock, the moment both trucks land on it, is set 1.15 m past the rail's first post, with the board dropping 0.6 m/s faster than the rail itself falls away (the legs absorb that). That drop sets how long the fall from the top of the arc takes, which sets how high the top is, which sets the pop. But where the pop is sets how far R-07 rolls first, so the speed changes and the lock moves. The solver goes round eight times until it settles: a pop at 16.7 km/h, 0.315 s up to the top of the arc, 0.49 m higher, and 0.297 s down onto the rail.
+
+On the way in, R-07 drifts toward the rail. The board's middle is 0.5 m from it at the pop and closing by 8 cm a metre. The board stays on its own side of the rail until 0.185 s before the lock, crosses over it in the next 0.115 s and drops on.
+
+The grind is a slide down a slope. Gravity along a 26.6° rail gives 4.39 m/s², and the hangers' friction on the rail takes that down to 2.2 m/s², a friction coefficient of about 0.25. Over 1.81 m and 0.327 s, R-07 speeds up from 5.18 to 5.90 m/s along the rail. The pop-off at the end adds 0.9 m/s upward to the rail's speed, and 0.296 s later R-07 lands on the lower plaza, 1.56 m on. Falling and moving forward at once, that is the fastest moment of the run: the speed card's peak, 25.0 km/h, comes just before that landing.
+
+Every landing costs a little speed: 1.5% on the flat, 3% at the bottom of the four-stair and 5% off the rail. Then a foot brake slows R-07 at 1.15 m/s² for 2.4 s before it rolls away. From the first frame to the last, the run is 25.41 s long.
+
+![R-07 in the backside 50-50 on the ten-stair rail, 0.78 m into the 1.81 m grind at 5.5 m/s, with the process sheet on OP50](/static/images/trickline/fifty-fifty.jpg)
+
+## The Process Sheets
+
+In a factory, a process sheet lists what happens to a part at a station, one operation to a row, numbered in tens so a new one can go in between later. Each station's card has one:
+
+| Op   | S1 and S2                          | S3                          |
+| ---- | ---------------------------------- | --------------------------- |
+| OP10 | Approach, at the speed going in    | Approach: drift to the rail |
+| OP20 | Pop: tail down 31°                 | Pop: the kickflip's angle   |
+| OP30 | Flip: the flip and shove-it angles | Catch: over the rail        |
+| OP40 | Catch: both feet back on           | Lock: both trucks on        |
+| OP50 | Land (at S2, 0.8 m down)           | Grind: how far, of 1.81 m   |
+| OP60 |                                    | Pop off and land            |
+
+Each row's bar fills over the part of the run it covers. At S1 and S2, OP10 fills over 2.6 s of approach, OP20 over the last 0.42 s before the pop, OP30 over the flip and OP40 from the end of the flip to the catch. So the sheet always says where the rider is. A station's progress in the dropdown and in the table of spots is the average of its rows.
+
+The figures above the sheet come from the same pose the renderer draws, in the same frame: the board's height, the air time, the flip and shove-it angles, and on the rail the grind's length and the rail speed. The board's height is measured over the ground under it, not over the terrace it left. An early version measured from the terrace and showed the board at −0.18 m over the four-stair, so S2's card now says "Over the steps" and measures from a line across the steps' noses.
+
+## One Camera and a Slow Clock
+
+The camera keeps one angle for the whole film, an azimuth of 32° and an elevation of 26° with a 28° field of view, and only pans and zooms. Between the stations it follows R-07, aimed at an average of the board's path over the 0.9 s around that moment and 1.1 m ahead, so a pop or a landing doesn't jolt it. At each station it eases onto a framing of the spot and holds there through the trick. Before S1 and S3 it first widens to take in the rider and the station together, so the cursor can click the station while R-07 is still on the way. At the end it pulls back to 148 m away and shows the whole plaza.
+
+The film has two clocks. World time is the run, 25.41 s of it. Film time is what you watch, 39.8 s, because the film slows down through each trick:
+
+| Stretch                                  | Slowed | Real time         | On screen |
+| ---------------------------------------- | ------ | ----------------- | --------- |
+| S1, the hardflip                         | 4×     | 0.56 s in the air | 2.2 s     |
+| S2, the laser flip                       | 4×     | 0.66 s in the air | 2.6 s     |
+| S3, from the pop to landing off the rail | 5×     | 1.24 s            | 6.2 s     |
+
+Each slow stretch starts 0.25 s before the pop and ends just after the landing, easing in and out over 0.16 s. A table built when the page loads maps each clock to the other.
+
+The film is a pure function of film time. `render(t)` turns `t` into world time, poses everything for that moment and draws it, and nothing carries over from one frame to the next. That is what lets you scrub, jump to a station or step back two seconds, and it is how the stills in this post were made: `?still=9.9` on the address draws that one moment at 1600 × 900.
+
+The cursor is part of the film too. It clicks eight times: R-07, the board, the fountain channel, the station dropdown, S2 in it, the rail, R-07 again after the landing, and the button that zooms home. Each click point was checked in its frame to be on screen and clear of the cards, and every 0.05 s of film was checked to make sure the cards never hide the rider.
+
+## Nothing Goes Through Anything
+
+The toolkit sweeps every film for collisions, every 0.1 s, with oriented boxes built from each body's geometry. That is plenty for a truck reversing into a dock, but the kickflip turns the board right over in about a quarter of a second, so at that rate the sweep would see it at two or three angles. Trickline's version is scaled down to a skateboard: every 2 ms through the run, `sweep.js` rebuilds the board's outline (deck, kicks, trucks and wheels) and the rider's legs from the same poses the page draws, and measures how far anything goes into anything else.
+
+| Check  | Measures                                                            | Allowed | S1     | S2     | S3     |
+| ------ | ------------------------------------------------------------------- | ------- | ------ | ------ | ------ |
+| Ground | The board below the paving, the steps or the channel's floor        | 4 mm    | 0.0 mm | 0.0 mm | 0.0 mm |
+| Rail   | The board inside the rail or a post (the trucks in the grind aside) | 2 mm    | 0.0 mm | 0.0 mm | 0.0 mm |
+| Legs   | The board inside a thigh, a shin or the pelvis                      | 4 mm    | 0.0 mm | 0.0 mm | 0.0 mm |
+| Feet   | A sole below the ground or inside the deck                          | 6 mm    | 3.3 mm | 0.0 mm | 2.3 mm |
+| Reach  | A foot the leg can't reach                                          | 6 mm    | 0.0 mm | 0.0 mm | 0.0 mm |
+
+The legs check matters most in the hardflip, where the board stands up between the legs, and the rail check in the kickflip, where the board crosses over the rail just before it locks. Both come out at zero. The only marks are a back sole sinking 3.3 mm and 2.3 mm into the deck as it comes back onto the board after a push, inside the 6 mm allowed. The sweep takes under a second in Node and exits with an error if anything goes past its limit.
+
+## What Changed in the Toolkit
+
+Trickline copies the toolkit files it uses from commit `57d562c`, under its MIT licence, and keeps them as close to the originals as it can. Every change is marked with a comment that starts `Trickline`:
+
+- `select.js`: the toolkit's routes all sit at ground level, and its ribbons and boxes are sized for vehicles. Here the ribbon sits 6 cm over each point's own height, so a route can run down the stairs, and its widths and the box's padding are options, because a skateboard needs centimetres. An object can say where its ground is, ask for its own padding or have no glow (the boxes over the stairs and the rail have none), and the glow is an oval the size of the box's footprint. One fix as well: the ambient-occlusion pass skipped one kind of line but not the kind the box is drawn with, so up close the box came out as a grey panel. The box is now flagged so the pass skips it too.
+- `ui.js`: a system can bring its own tracker icons, dropdown title and pill text, so the tracker shows a board and the pill says "Slow-mo 4×".
+- `avatar.js`: the operator in the top bar is a drawn silhouette, and the session lead's name is made up.
+
+## Things to Try
+
+- Press **1**, **2** or **3**, or use the buttons under the film, to jump to a station.
+- Pause in the hardflip with **Space** and drag the scrubber slowly. The board stands up on end between the legs, then lies back down a half turn round, just as the feet come back.
+- At S3, scrub through the moment before the lock and watch the board cross over the rail and drop on.
+- Keep an eye on the speed card's peak as R-07 drops off the end of the rail.
+- Watch the S2 card through the laser flip: the heelflip and the shove-it count up together.
+- Turn on reduced motion in your system settings, and the film starts paused just before the hardflip.
+
+## What Is Not in It
+
+There is no sound, and it is a film rather than a game: you can't ride the line, only watch it, pause it and scrub through it. There is no physics engine either. Every arc is a parabola, the grind is a slide at a constant acceleration and the pushes are stepped through in half-milliseconds, all worked out when the page loads, and every pose is built from keyframes and IK rather than motion capture. The frame is fixed at 1600 × 900 and scaled to fit the window, so on a phone held upright it is small. One rider, one board, one line.
+
+[**Watch Trickline**](/trickline)
