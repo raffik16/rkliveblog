@@ -29,6 +29,10 @@ const BackspinPolicy = ContentSecurityPolicy.replace(
   .replace("font-src 'self';", "font-src 'self' https://fonts.gstatic.com;")
   .replace("media-src 'self'", "media-src 'self' blob:")
 
+// Pitline (public/pitline) is one self-contained page built by the simulator skill: its fonts are inlined as data:
+// URLs, so its policy allows fonts from data: as well
+const PitlinePolicy = ContentSecurityPolicy.replace("font-src 'self';", "font-src 'self' data:;")
+
 const securityHeaders = [
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
   {
@@ -127,12 +131,24 @@ module.exports = () => {
           source: '/backspin/:path*',
           headers: [{ key: 'Content-Security-Policy', value: BackspinPolicy.replace(/\n/g, '') }],
         },
+        // Pitline: the site's policy plus inlined fonts
+        {
+          source: '/pitline',
+          headers: [{ key: 'Content-Security-Policy', value: PitlinePolicy.replace(/\n/g, '') }],
+        },
+        {
+          source: '/pitline/:path*',
+          headers: [{ key: 'Content-Security-Policy', value: PitlinePolicy.replace(/\n/g, '') }],
+        },
       ]
     },
-    // BACKSPIN is plain HTML in public/backspin. Next.js serves public files as they are but
-    // doesn't map a folder to its index.html, so /backspin is pointed at it here.
+    // BACKSPIN and Pitline are plain HTML in public/. Next.js serves public files as they are
+    // but doesn't map a folder to its index.html, so /backspin and /pitline are pointed at it here.
     async rewrites() {
-      return [{ source: '/backspin', destination: '/backspin/index.html' }]
+      return [
+        { source: '/backspin', destination: '/backspin/index.html' },
+        { source: '/pitline', destination: '/pitline/index.html' },
+      ]
     },
     webpack: (config, options) => {
       config.module.rules.push({

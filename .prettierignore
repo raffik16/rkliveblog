@@ -4,3 +4,7 @@ app/chaos/teardown
 lib/edition/fibreField.js
 # A minified bundle of three.js, built from public/backspin/vendor/three-entry.js
 public/backspin/vendor/three.js
+# Pitline: written in the simulator skill's own code style (Nyxera0x/simulator), and partly copied from its kit
+simulator/
+# Pitline's page: one self-contained file built by simulator/publish.mjs
+public/pitline/
